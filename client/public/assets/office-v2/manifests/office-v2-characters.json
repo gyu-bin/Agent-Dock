@@ -1,0 +1,125 @@
+{
+  "version": "0.1.0",
+  "packId": "office-v2-characters",
+  "productionTarget": {
+    "frameWidth": 96,
+    "frameHeight": 96,
+    "standingHeightLogical": 72,
+    "anchor": { "x": 0.5, "y": 1.0 },
+    "framesPerAnimation": 4,
+    "animations": [
+      "idle",
+      "walk-down",
+      "walk-up",
+      "walk-left",
+      "walk-right",
+      "work",
+      "sit",
+      "talk"
+    ]
+  },
+  "bakeRules": {
+    "work": "body-only — NEVER bake desk, laptop, monitor, or chair",
+    "sit": "body-only — NEVER bake chair/sofa",
+    "talk": "body-only — NEVER bake other characters or furniture"
+  },
+  "variationSchema": {
+    "enabled": false,
+    "channels": {
+      "hair": ["a", "b", "c", "d"],
+      "outfit": ["navy", "teal", "coral", "sand"],
+      "skin": ["1", "2", "3"],
+      "accessory": ["none", "glasses", "headset", "badge"]
+    },
+    "selection": "hash(agentId) deterministic — not generated in this phase"
+  },
+  "roles": [
+    {
+      "id": "pm",
+      "label": "PM / Orchestrator",
+      "status": "missing",
+      "atlas": "characters/pm/atlas.png",
+      "manifest": "characters/pm/manifest.json",
+      "pilot": false
+    },
+    {
+      "id": "developer",
+      "label": "Developer",
+      "status": "missing",
+      "atlas": "characters/developer/atlas.png",
+      "manifest": "characters/developer/manifest.json",
+      "pilot": true
+    },
+    {
+      "id": "game-developer",
+      "label": "Game Developer",
+      "status": "missing",
+      "atlas": "characters/game-developer/atlas.png",
+      "manifest": "characters/game-developer/manifest.json",
+      "pilot": false
+    },
+    {
+      "id": "designer",
+      "label": "Designer",
+      "status": "missing",
+      "atlas": "characters/designer/atlas.png",
+      "manifest": "characters/designer/manifest.json",
+      "pilot": false
+    },
+    {
+      "id": "researcher",
+      "label": "Researcher",
+      "status": "missing",
+      "atlas": "characters/researcher/atlas.png",
+      "manifest": "characters/researcher/manifest.json",
+      "pilot": false
+    },
+    {
+      "id": "marketer",
+      "label": "Marketer",
+      "status": "missing",
+      "atlas": "characters/marketer/atlas.png",
+      "manifest": "characters/marketer/manifest.json",
+      "pilot": false
+    },
+    {
+      "id": "qa",
+      "label": "QA",
+      "status": "missing",
+      "atlas": "characters/qa/atlas.png",
+      "manifest": "characters/qa/manifest.json",
+      "pilot": false
+    },
+    {
+      "id": "reviewer",
+      "label": "Reviewer",
+      "status": "missing",
+      "atlas": "characters/reviewer/atlas.png",
+      "manifest": "characters/reviewer/manifest.json",
+      "pilot": false
+    }
+  ],
+  "roleManifestSchema": {
+    "roleId": "developer",
+    "status": "missing|ready",
+    "frameWidth": 96,
+    "frameHeight": 96,
+    "anchor": { "x": 0.5, "y": 1.0 },
+    "atlas": "atlas.png",
+    "animations": {
+      "idle": {
+        "row": 0,
+        "frames": 4,
+        "fps": 6,
+        "loop": true,
+        "rects": [{ "x": 0, "y": 0, "w": 96, "h": 96 }]
+      }
+    },
+    "variations": {
+      "hair": ["a", "b", "c", "d"],
+      "outfit": ["navy", "teal", "coral", "sand"],
+      "skin": ["1", "2", "3"],
+      "accessory": ["none", "glasses", "headset", "badge"]
+    }
+  }
+}

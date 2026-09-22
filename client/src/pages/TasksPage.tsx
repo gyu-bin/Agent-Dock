@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ListTodo } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
+import { EmptyState } from '../components/EmptyState'
+import { TaskStatus } from '../components/Status'
 import {
   userFacingTaskStatus,
   userFacingWorkflowLabel,
@@ -104,18 +106,13 @@ export function TasksPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className={md.empty}>
-            <ListTodo size={28} strokeWidth={1.5} />
-            <h2>아직 작업이 없습니다</h2>
-            <p>홈에서 작업을 요청하면 여기에 표시됩니다.</p>
-            <button
-              type="button"
-              className={md.emptyBtn}
-              onClick={() => setNav('home')}
-            >
-              홈에서 작업 요청
-            </button>
-          </div>
+          <EmptyState
+            icon={<ListTodo size={20} strokeWidth={1.5} />}
+            title="아직 작업이 없습니다"
+            description="홈에서 작업을 요청하면 여기에 표시됩니다."
+            actionLabel="홈에서 작업 요청"
+            onAction={() => setNav('home')}
+          />
         ) : (
           <ul className={md.list}>
             {filtered.map((task) => (
@@ -127,10 +124,19 @@ export function TasksPage() {
                   }
                   onClick={() => selectTask(task.id)}
                 >
+                  <TaskStatus
+                    status={task.status}
+                    label={statusFor(task)}
+                  />
                   <strong>{task.title}</strong>
                   <span className={md.meta}>
-                    {statusFor(task)} · {userFacingWorkflowLabel(task)} ·{' '}
-                    {task.progress}%
+                    {userFacingWorkflowLabel(task)} ·{' '}
+                    {new Date(task.updatedAt).toLocaleString('ko-KR', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
                 </button>
               </li>
@@ -141,9 +147,10 @@ export function TasksPage() {
 
       <div className={md.detailPane}>
         {filtered.length === 0 ? (
-          <div className={md.empty}>
-            <p>작업을 선택하면 상세가 여기에 표시됩니다.</p>
-          </div>
+          <EmptyState
+            title="작업을 선택하세요"
+            description="왼쪽 목록에서 작업을 고르면 상세가 여기에 표시됩니다."
+          />
         ) : (
           <TaskDetailPanel embedded />
         )}

@@ -1,0 +1,53 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ad-space-2);
+  padding: var(--ad-space-10) var(--ad-space-6);
+  text-align: center;
+  min-height: 220px;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ad-radius-md);
+  background: var(--ad-control-hover);
+  color: var(--ad-ink-faint);
+  margin-bottom: 2px;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--ad-text-section);
+  font-weight: var(--ad-weight-bold);
+  color: var(--ad-ink);
+  line-height: var(--ad-leading-tight);
+}
+
+.description {
+  margin: 0;
+  font-size: var(--ad-text-secondary);
+  color: var(--ad-ink-soft);
+  max-width: 280px;
+  line-height: var(--ad-leading);
+}
+
+.action {
+  margin-top: var(--ad-space-2);
+  border: 0;
+  background: var(--ad-primary);
+  color: #fff;
+  border-radius: var(--ad-radius);
+  height: var(--ad-btn-h);
+  padding: 0 14px;
+  font-weight: var(--ad-weight-semibold);
+  font-size: var(--ad-text-secondary);
+}
+
+.action:hover {
+  background: var(--ad-primary-hover);
+}

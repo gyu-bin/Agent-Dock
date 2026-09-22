@@ -24,8 +24,9 @@ export function AgentPicker({
   const [division, setDivision] = useState<DivisionId | 'all'>('all')
   const [selectedOnly, setSelectedOnly] = useState(selectedOnlyDefault)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [collapsedDepts, setCollapsedDepts] = useState<Set<string>>(
-    () => new Set(),
+  /** Start collapsed so 18 departments don't flex-crush into colored stripes. */
+  const [collapsedDepts, setCollapsedDepts] = useState<Set<string> | null>(
+    null,
   )
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
 
@@ -51,13 +52,20 @@ export function AgentPicker({
     [filtered],
   )
 
+  const effectiveCollapsed = useMemo(() => {
+    if (collapsedDepts) return collapsedDepts
+    // Default: all departments collapsed (headers stay readable; no flex crush).
+    return new Set(groups.map((g) => g.division))
+  }, [collapsedDepts, groups])
+
   function toggleExpand(id: string) {
     setExpandedId((prev) => (prev === id ? null : id))
   }
 
   function toggleDept(id: string) {
     setCollapsedDepts((prev) => {
-      const next = new Set(prev)
+      const base = prev ?? effectiveCollapsed
+      const next = new Set(base)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
@@ -111,7 +119,7 @@ export function AgentPicker({
           <p className={styles.empty}>조건에 맞는 에이전트가 없습니다.</p>
         ) : (
           groups.map((g) => {
-            const collapsed = collapsedDepts.has(g.division)
+            const collapsed = effectiveCollapsed.has(g.division)
             const selectedInGroup = g.agents.filter((a) =>
               selected.has(a.id),
             ).length

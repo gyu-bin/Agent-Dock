@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { CheckCircle2, Clock } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
+import { EmptyState } from '../components/EmptyState'
+import { StatusBadge } from '../components/Status'
 import {
   approvalKindLabel,
   formatWaitingDuration,
@@ -49,11 +51,11 @@ export function ApprovalsPage() {
         </header>
 
         {enriched.length === 0 ? (
-          <div className={md.empty}>
-            <CheckCircle2 size={28} strokeWidth={1.5} />
-            <h2>현재 승인할 작업이 없습니다</h2>
-            <p>작업이 승인 단계에 도달하면 여기에 표시됩니다.</p>
-          </div>
+          <EmptyState
+            icon={<CheckCircle2 size={20} strokeWidth={1.5} />}
+            title="현재 승인할 작업이 없습니다"
+            description="작업이 승인 단계에 도달하면 여기에 표시됩니다."
+          />
         ) : (
           <ul className={md.list}>
             {enriched.map(({ task, projectName, kind, waited }) => (
@@ -65,7 +67,7 @@ export function ApprovalsPage() {
                   }
                   onClick={() => selectTask(task.id)}
                 >
-                  <span className={md.chip}>{kind}</span>
+                  <StatusBadge tone="warning">{kind}</StatusBadge>
                   <strong>{task.title}</strong>
                   <span className={md.meta}>
                     {projectName} · {userFacingWorkflowLabel(task)} ·{' '}
@@ -81,9 +83,10 @@ export function ApprovalsPage() {
 
       <div className={md.detailPane}>
         {enriched.length === 0 ? (
-          <div className={md.empty}>
-            <p>승인 항목을 선택하면 상세와 승인 버튼이 표시됩니다.</p>
-          </div>
+          <EmptyState
+            title="승인 항목을 선택하세요"
+            description="무엇을 승인하는지, 왜 필요한지, 무엇이 바뀌는지 확인한 뒤 처리합니다."
+          />
         ) : (
           <TaskDetailPanel embedded />
         )}

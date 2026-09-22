@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "kind": "sprite-gen-request",
+  "engine": "component-row",
+  "pack": "office-v2",
+  "character": {
+    "id": "office-v2-pm",
+    "description": "Cute soft pastel SD product manager: neat hair, soft blazer, clipboard vibe, no props baked Fixed top-down / slight 2.5D, thin dark outline, flat shading.",
+    "base_image": null
+  },
+  "cell": {
+    "shape": "square",
+    "width": 96,
+    "height": 96,
+    "safe_margin_x": 8,
+    "safe_margin_y": 8,
+    "size": 96,
+    "safe_margin": 8
+  },
+  "chroma_key": {
+    "name": "magenta",
+    "hex": "#FF00FF",
+    "rgb": [
+      255,
+      0,
+      255
+    ],
+    "selection": "fallback"
+  },
+  "fit_align_y": "bottom",
+  "output": {
+    "atlas": "client/public/assets/office-v2/characters/pm/atlas.png",
+    "manifest": "client/public/assets/office-v2/characters/pm/manifest.json"
+  },
+  "style": "match Office V2 Visual Contract: cute 2D, soft pastel, clean outline, no photorealism, no isometric drift",
+  "states": {
+    "idle": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "action": "front view; subtle breathing and one blink; feet planted; BODY ONLY"
+    },
+    "walk-down": {
+      "frames": 4,
+      "fps": 10,
+      "loop": true,
+      "action": "front-view walk toward camera; clear gait; BODY ONLY"
+    },
+    "walk-up": {
+      "frames": 4,
+      "fps": 10,
+      "loop": true,
+      "action": "back-view walk away; clear gait; BODY ONLY"
+    },
+    "walk-left": {
+      "frames": 4,
+      "fps": 10,
+      "loop": true,
+      "action": "side-view walk left; clear gait; BODY ONLY"
+    },
+    "walk-right": {
+      "frames": 4,
+      "fps": 10,
+      "loop": true,
+      "action": "side-view walk right; clear gait; BODY ONLY"
+    },
+    "work": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "CRITICAL: BODY ONLY typing pose — arms and head move as if at a keyboard. Do NOT draw desk, laptop, monitor, chair, mug, or any furniture."
+    },
+    "sit": {
+      "frames": 4,
+      "fps": 4,
+      "loop": true,
+      "action": "CRITICAL: BODY ONLY seated pose with feet/legs tucked. Do NOT draw chair, sofa, or cushions."
+    },
+    "talk": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "CRITICAL: BODY ONLY standing talk gesture; one hand moves. Do NOT draw other characters or furniture."
+    }
+  }
+}

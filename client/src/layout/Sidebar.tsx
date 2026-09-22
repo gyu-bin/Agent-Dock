@@ -57,7 +57,6 @@ export function Sidebar() {
       </div>
 
       <nav className={styles.nav} aria-label={t('nav.main')}>
-        <div className={styles.sectionLabel}>{t('nav.main')}</div>
         {MAIN.map((item) => {
           const Icon = item.icon
           const count =
@@ -88,6 +87,16 @@ export function Sidebar() {
         <button
           type="button"
           className={
+            activeNav === 'settings' ? styles.navItemActive : styles.navItem
+          }
+          onClick={() => setNav('settings')}
+        >
+          <Settings size={16} strokeWidth={2} />
+          <span>{t('nav.settings')}</span>
+        </button>
+        <button
+          type="button"
+          className={
             aiProvider.configured ? styles.providerOk : styles.providerOff
           }
           title={providerLabel}
@@ -96,17 +105,6 @@ export function Sidebar() {
           <span className={styles.providerDot} />
           {providerLabel}
         </button>
-        <button
-          type="button"
-          className={
-            activeNav === 'settings' ? styles.navItemActive : styles.navItem
-          }
-          onClick={() => setNav('settings')}
-        >
-          <Settings size={16} strokeWidth={2} />
-          <span>{t('nav.settings')}</span>
-        </button>
-        <div className={styles.mission}>{t('brand.mission')}</div>
         <div className={styles.profile}>
           <div className={styles.avatar}>
             {user.name.slice(0, 1).toUpperCase()}

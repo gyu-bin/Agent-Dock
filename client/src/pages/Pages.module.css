@@ -2,7 +2,7 @@
   height: 100%;
   overflow: auto;
   padding: 18px 20px 24px;
-  background: var(--ad-office-floor);
+  background: var(--ad-bg);
   color: var(--ad-ink);
 }
 

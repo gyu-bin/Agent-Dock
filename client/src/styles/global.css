@@ -15,10 +15,11 @@ body,
 
 body {
   font-family: var(--ad-font-ui);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--ad-text-body);
+  font-weight: var(--ad-weight-regular);
+  line-height: var(--ad-leading);
   color: var(--ad-ink);
-  background: var(--ad-surface);
+  background: var(--ad-bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   word-break: keep-all;
@@ -27,8 +28,10 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
+  color: inherit;
 }
 
 button {
@@ -41,6 +44,130 @@ a {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ad-info);
+  outline: 2px solid var(--ad-primary);
   outline-offset: 2px;
+}
+
+/* Typography helpers */
+.ad-page-title {
+  font-size: var(--ad-text-page);
+  font-weight: var(--ad-weight-bold);
+  line-height: var(--ad-leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--ad-ink);
+}
+
+.ad-section-title {
+  font-size: var(--ad-text-section);
+  font-weight: var(--ad-weight-bold);
+  line-height: var(--ad-leading-tight);
+  color: var(--ad-ink);
+}
+
+.ad-body {
+  font-size: var(--ad-text-body);
+  line-height: var(--ad-leading);
+  color: var(--ad-ink);
+}
+
+.ad-secondary {
+  font-size: var(--ad-text-secondary);
+  color: var(--ad-ink-soft);
+}
+
+.ad-caption {
+  font-size: var(--ad-text-caption);
+  color: var(--ad-ink-faint);
+}
+
+/* Markdown document reading surface */
+.ad-prose {
+  font-size: var(--ad-text-body);
+  line-height: var(--ad-leading-relaxed);
+  color: var(--ad-ink);
+  max-width: 72ch;
+}
+
+.ad-prose h1,
+.ad-prose h2,
+.ad-prose h3 {
+  margin: 1.4em 0 0.5em;
+  font-weight: var(--ad-weight-bold);
+  line-height: var(--ad-leading-tight);
+  color: var(--ad-ink);
+}
+
+.ad-prose h1 {
+  font-size: 1.45em;
+}
+.ad-prose h2 {
+  font-size: 1.25em;
+}
+.ad-prose h3 {
+  font-size: 1.1em;
+}
+
+.ad-prose p {
+  margin: 0 0 0.85em;
+}
+
+.ad-prose ul,
+.ad-prose ol {
+  margin: 0 0 0.85em;
+  padding-left: 1.35em;
+}
+
+.ad-prose li {
+  margin: 0.25em 0;
+}
+
+.ad-prose code {
+  font-family: var(--ad-font-mono);
+  font-size: 0.9em;
+  background: var(--ad-control-hover);
+  border-radius: var(--ad-radius-sm);
+  padding: 0.1em 0.35em;
+}
+
+.ad-prose pre {
+  font-family: var(--ad-font-mono);
+  font-size: 0.85em;
+  line-height: 1.55;
+  background: var(--ad-control-hover);
+  border: 1px solid var(--ad-border-soft);
+  border-radius: var(--ad-radius);
+  padding: var(--ad-space-4);
+  overflow: auto;
+  margin: 0 0 1em;
+}
+
+.ad-prose pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.ad-prose blockquote {
+  margin: 0 0 1em;
+  padding: 0.15em 0 0.15em var(--ad-space-4);
+  border-left: 3px solid var(--ad-border);
+  color: var(--ad-ink-soft);
+}
+
+.ad-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1em;
+  font-size: var(--ad-text-secondary);
+}
+
+.ad-prose th,
+.ad-prose td {
+  border: 1px solid var(--ad-border);
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.ad-prose th {
+  background: var(--ad-control-hover);
+  font-weight: var(--ad-weight-semibold);
 }

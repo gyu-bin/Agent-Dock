@@ -27,7 +27,7 @@
 
 .tabActive {
   color: var(--ad-ink);
-  border-bottom-color: var(--ad-ink);
+  border-bottom-color: var(--ad-primary);
 }
 
 .mockBanner {
@@ -157,9 +157,9 @@
 }
 
 .userMsg .bubble {
-  background: var(--ad-control-on-bg);
-  color: var(--ad-control-on-fg);
-  border-radius: 12px 12px 4px 12px;
+  background: var(--ad-primary);
+  color: #fff;
+  border-radius: var(--ad-radius) var(--ad-radius) 4px var(--ad-radius);
   max-width: 92%;
 }
 
@@ -292,49 +292,68 @@
 .startWork {
   margin-top: 10px;
   border: 0;
-  background: var(--ad-control-on-bg);
-  color: var(--ad-control-on-fg);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 650;
+  background: var(--ad-primary);
+  color: #fff;
+  border-radius: var(--ad-radius);
+  height: var(--ad-btn-h);
+  padding: 0 12px;
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-semibold);
+}
+
+.startWork:hover {
+  background: var(--ad-primary-hover);
 }
 
 .composer {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 10px;
+  padding: var(--ad-space-3);
   border-top: 1px solid var(--ad-border);
+  background: var(--ad-surface-raised);
 }
 
 .composer input {
   flex: 1;
+  height: var(--ad-input-h);
   border: 1px solid var(--ad-border);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: var(--ad-radius);
+  padding: 0 12px;
   background: var(--ad-control-bg);
   color: var(--ad-ink);
+  font-size: var(--ad-text-secondary);
+}
+
+.composer input:focus {
+  outline: none;
+  border-color: var(--ad-primary);
+  box-shadow: 0 0 0 3px rgba(74, 127, 229, 0.15);
 }
 
 .icon,
 .send {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: var(--ad-icon-btn);
+  height: var(--ad-icon-btn);
   border: 0;
   background: transparent;
   color: var(--ad-ink-faint);
-  border-radius: 8px;
+  border-radius: var(--ad-radius);
 }
 
 .send {
-  background: var(--ad-control-on-bg);
-  color: var(--ad-control-on-fg);
+  background: var(--ad-primary);
+  color: #fff;
+}
+
+.send:hover {
+  background: var(--ad-primary-hover);
 }
 
 .composer button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }
+

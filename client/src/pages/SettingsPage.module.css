@@ -12,7 +12,7 @@
   grid-template-columns: 200px minmax(0, 1fr);
   height: 100%;
   min-height: 0;
-  background: var(--ad-office-floor, #f8fafc);
+  background: var(--ad-bg);
 }
 
 .nav {
@@ -31,25 +31,26 @@
 
 .navHead h1 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 750;
+  font-size: var(--ad-text-page);
+  font-weight: var(--ad-weight-bold);
+  letter-spacing: -0.02em;
 }
 
 .navHead p {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--ad-text-caption);
   color: var(--ad-ink-soft);
 }
 
 .modeBadge {
   display: inline-block;
   margin-top: 8px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--ad-text-caption);
+  font-weight: var(--ad-weight-semibold);
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--ad-radius-sm);
   background: var(--ad-control-hover);
-  color: #334155;
+  color: var(--ad-ink-soft);
 }
 
 .navItem,
@@ -57,58 +58,67 @@
   text-align: left;
   border: 0;
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--ad-radius);
   padding: 8px 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-medium);
+  color: var(--ad-ink-soft);
   cursor: pointer;
 }
 
 .navItem:hover {
   background: var(--ad-control-hover);
+  color: var(--ad-ink);
 }
 
 .navItemOn {
   background: var(--ad-control-active);
-  color: var(--ad-ink);
+  color: var(--ad-primary);
+  font-weight: var(--ad-weight-semibold);
 }
 
 .content {
-  padding: 20px 28px 48px;
+  padding: var(--ad-space-5) var(--ad-space-8) var(--ad-space-10);
   overflow: auto;
   min-width: 0;
-  max-width: 960px;
+  max-width: 720px;
 }
 
 .head h1 {
   margin: 0 0 6px;
-  font-size: 22px;
-  font-weight: 700;
+  font-size: var(--ad-text-page);
+  font-weight: var(--ad-weight-bold);
+  letter-spacing: -0.02em;
 }
 
 .head p {
-  margin: 0 0 24px;
+  margin: 0 0 var(--ad-space-6);
   color: var(--ad-ink-soft);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--ad-text-secondary);
+  line-height: var(--ad-leading);
 }
 
 .card {
-  border: 1px solid var(--ad-border);
-  border-radius: 12px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
-  background: var(--ad-surface-raised);
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 var(--ad-space-6);
+  margin-bottom: var(--ad-space-6);
+  background: transparent;
+  border-bottom: 1px solid var(--ad-border-soft);
+}
+
+.card:last-child {
+  border-bottom: 0;
+  margin-bottom: 0;
 }
 
 .card h2 {
-  margin: 0 0 12px;
-  font-size: 14px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: #475569;
+  margin: 0 0 var(--ad-space-3);
+  font-size: var(--ad-text-section);
+  font-weight: var(--ad-weight-bold);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ad-ink);
 }
 
 .row {
@@ -124,15 +134,15 @@
 }
 
 .ok {
-  color: #15803d;
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--ad-success);
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-semibold);
 }
 
 .off {
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--ad-ink-faint);
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-semibold);
 }
 
 .hint {
@@ -187,10 +197,10 @@
 }
 
 .statusChip {
-  border: 1px solid var(--ad-border);
-  border-radius: 10px;
+  border: 0;
+  border-radius: var(--ad-radius);
   padding: 10px 12px;
-  background: var(--ad-surface-raised);
+  background: var(--ad-control-hover);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -207,17 +217,14 @@
 }
 
 .statusOk {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  background: var(--ad-success-soft);
 }
 
 .statusWarn {
-  border-color: #fde68a;
-  background: #fffbeb;
+  background: var(--ad-warning-soft);
 }
 
 .statusOff {
-  border-color: #e2e8f0;
   background: var(--ad-control-hover);
 }
 
@@ -253,15 +260,28 @@
 
 .primary {
   border: 0;
-  background: var(--ad-control-on-bg);
-  color: var(--ad-control-on-fg);
+  background: var(--ad-primary);
+  color: #fff;
   margin-top: 12px;
+  height: var(--ad-btn-h);
+  padding: 0 14px;
+}
+
+.primary:hover {
+  background: var(--ad-primary-hover);
 }
 
 .ghost {
   border: 1px solid var(--ad-border);
-  background: var(--ad-surface-raised);
-  color: #334155;
+  background: transparent;
+  color: var(--ad-ink-soft);
+  height: var(--ad-btn-h);
+  padding: 0 12px;
+}
+
+.ghost:hover {
+  background: var(--ad-control-hover);
+  color: var(--ad-ink);
 }
 
 .profileBlock {

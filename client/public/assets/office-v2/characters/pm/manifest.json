@@ -1,0 +1,48 @@
+{
+  "roleId": "pm",
+  "status": "missing",
+  "frameWidth": 96,
+  "frameHeight": 96,
+  "anchor": { "x": 0.5, "y": 1.0 },
+  "atlas": "atlas.png",
+  "columns": 4,
+  "animations": {
+    "idle": { "row": 0, "frames": 4, "fps": 6, "loop": true, "rects": [] },
+    "walk-down": { "row": 1, "frames": 4, "fps": 10, "loop": true, "rects": [] },
+    "walk-up": { "row": 2, "frames": 4, "fps": 10, "loop": true, "rects": [] },
+    "walk-left": { "row": 3, "frames": 4, "fps": 10, "loop": true, "rects": [] },
+    "walk-right": { "row": 4, "frames": 4, "fps": 10, "loop": true, "rects": [] },
+    "work": {
+      "row": 5,
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "rects": [],
+      "bake": "body-only"
+    },
+    "sit": {
+      "row": 6,
+      "frames": 4,
+      "fps": 4,
+      "loop": true,
+      "rects": [],
+      "bake": "body-only"
+    },
+    "talk": {
+      "row": 7,
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "rects": [],
+      "bake": "body-only"
+    }
+  },
+  "variations": {
+    "enabled": false,
+    "hair": ["a", "b", "c", "d"],
+    "outfit": ["navy", "teal", "coral", "sand"],
+    "skin": ["1", "2", "3"],
+    "accessory": ["none", "glasses", "headset", "badge"]
+  },
+  "notes": "Fill rects from sprite-gen output. Do not hardcode atlas layout in renderer."
+}

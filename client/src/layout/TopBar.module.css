@@ -2,9 +2,9 @@
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 12px;
+  gap: var(--ad-space-3);
   height: var(--ad-topbar-h);
-  padding: 0 16px;
+  padding: 0 var(--ad-space-4);
   background: var(--ad-surface-raised);
   border-bottom: 1px solid var(--ad-border);
   z-index: var(--ad-z-topbar);
@@ -13,7 +13,7 @@
 .left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--ad-space-3);
   min-width: 0;
 }
 
@@ -25,21 +25,26 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: var(--ad-btn-h);
   border: 1px solid var(--ad-border);
   background: var(--ad-control-bg);
-  border-radius: 8px;
-  padding: 5px 10px;
+  border-radius: var(--ad-radius);
+  padding: 0 10px;
   color: var(--ad-ink);
+}
+
+.projectSwitch:hover {
+  background: var(--ad-control-hover);
 }
 
 .projectMenu {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  min-width: 220px;
+  min-width: 240px;
   background: var(--ad-surface-raised);
   border: 1px solid var(--ad-border);
-  border-radius: 10px;
+  border-radius: var(--ad-radius-md);
   box-shadow: var(--ad-shadow);
   padding: 6px;
   z-index: 40;
@@ -54,7 +59,7 @@
   text-align: left;
   border: 0;
   background: transparent;
-  border-radius: 7px;
+  border-radius: var(--ad-radius-sm);
   padding: 8px 10px;
   gap: 2px;
   color: var(--ad-ink);
@@ -71,19 +76,19 @@
 
 .menuItem strong,
 .menuItemOn strong {
-  font-size: 12px;
-  font-weight: 650;
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-semibold);
 }
 
 .menuItem span,
 .menuItemOn span {
-  font-size: 11px;
+  font-size: var(--ad-text-caption);
   color: var(--ad-ink-faint);
 }
 
 .menuEmpty {
   padding: 10px;
-  font-size: 12px;
+  font-size: var(--ad-text-secondary);
   color: var(--ad-ink-soft);
 }
 
@@ -93,9 +98,9 @@
   gap: 6px;
   margin-top: 4px;
   border-top: 1px solid var(--ad-border);
-  border-radius: 0 0 7px 7px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: 0 0 var(--ad-radius-sm) var(--ad-radius-sm);
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-semibold);
   color: var(--ad-ink);
 }
 
@@ -103,105 +108,54 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: var(--ad-btn-h);
   border: 1px solid var(--ad-border);
-  background: var(--ad-control-bg);
+  background: transparent;
+  color: var(--ad-ink-soft);
+  padding: 0 12px;
+  border-radius: var(--ad-radius);
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-medium);
+}
+
+.ghostBtn:hover {
+  background: var(--ad-control-hover);
   color: var(--ad-ink);
-  padding: 7px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .projectLabel {
-  font-size: 10px;
+  font-size: var(--ad-text-caption);
   color: var(--ad-ink-faint);
-  font-weight: 600;
+  font-weight: var(--ad-weight-medium);
 }
 
 .projectSwitch strong {
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.emptyProject {
-  font-size: 13px;
-  color: var(--ad-ink-soft);
-}
-
-.meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--ad-ink-soft);
-  white-space: nowrap;
-}
-
-.metaIcon {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #cbd5e1;
-}
-
-.tabs {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: var(--ad-surface);
-  padding: 3px;
-  border-radius: 9px;
-}
-
-.tab,
-.tabActive {
-  border: 0;
-  background: transparent;
-  padding: 6px 12px;
-  border-radius: 7px;
-  font-size: 12px;
-  font-weight: 550;
-  color: var(--ad-ink-soft);
-}
-
-.tab:hover {
-  color: var(--ad-ink);
-}
-
-.tabActive {
-  background: var(--ad-control-bg);
-  color: var(--ad-ink);
-  box-shadow: var(--ad-shadow-soft);
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-semibold);
 }
 
 .right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-}
-
-.clock {
-  font-size: 11px;
-  color: var(--ad-ink-faint);
+  gap: var(--ad-space-2);
 }
 
 .iconBtn {
   position: relative;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--ad-border);
-  border-radius: 8px;
-  background: var(--ad-control-bg);
+  width: var(--ad-icon-btn);
+  height: var(--ad-icon-btn);
+  border: 0;
+  border-radius: var(--ad-radius);
+  background: transparent;
   color: var(--ad-ink-soft);
+}
+
+.iconBtn:hover {
+  background: var(--ad-control-hover);
+  color: var(--ad-ink);
 }
 
 .bellBadge {
@@ -215,7 +169,7 @@
   min-width: 14px;
   padding: 2px 4px;
   border-radius: 999px;
-  background: #ea580c;
+  background: var(--ad-warning);
   color: #fff;
 }
 
@@ -223,85 +177,22 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: var(--ad-btn-h);
   border: 0;
-  background: var(--ad-accent);
+  background: var(--ad-primary);
   color: #fff;
-  padding: 7px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 0 12px;
+  border-radius: var(--ad-radius);
+  font-size: var(--ad-text-secondary);
+  font-weight: var(--ad-weight-semibold);
 }
 
 .primaryBtn:hover {
-  background: var(--ad-accent-hover);
-}
-
-@media (max-width: 900px) {
-  .clock {
-    display: none;
-  }
+  background: var(--ad-primary-hover);
 }
 
 @media (max-width: 720px) {
-  .topbar {
-    grid-template-columns: 1fr auto;
-  }
-
-  .tabs {
+  .ghostBtn span {
     display: none;
   }
-
-  .meta {
-    display: none;
-  }
-}
-
-.statusPills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.statusPills span {
-  font-size: 11px;
-  font-weight: 650;
-  padding: 4px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.statusPills em {
-  font-style: normal;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-  min-width: 1ch;
-}
-
-.pillWorking {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.pillMeeting {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.pillLounge {
-  background: #ffedd5;
-  color: #c2410c;
-}
-
-.pillOffline {
-  background: var(--ad-control-hover);
-  color: #64748b;
-}
-
-.metaQuiet {
-  font-size: 11px;
-  color: var(--ad-ink-soft);
 }
