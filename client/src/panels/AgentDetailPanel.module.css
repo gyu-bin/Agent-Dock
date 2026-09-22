@@ -26,6 +26,21 @@
   border-left: 1px solid var(--ad-border);
 }
 
+.embedded {
+  margin-top: 12px;
+  border: 1px solid var(--ad-border-soft);
+  border-radius: 12px;
+  background: var(--ad-surface-raised);
+  color: var(--ad-ink);
+  padding: 16px;
+  overflow: auto;
+  max-height: min(520px, 60vh);
+}
+
+.embedded .head {
+  padding-top: 0;
+}
+
 @keyframes slideIn {
   from {
     transform: translateX(12px);

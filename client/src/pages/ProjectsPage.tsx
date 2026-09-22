@@ -2,15 +2,23 @@ import { FolderKanban, Plus, Trash2, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   deleteProject,
+  fetchProjectArtifacts,
   fetchProjectKnowledge,
   fetchProjectUsage,
   setActiveProject,
   setProjectTeam,
   updateProjectContext,
 } from '../api/client'
+import { ARTIFACT_TYPE_LABEL } from '../domain/artifactUi'
 import { groupAgentsByDepartment } from '../domain/groupAgents'
+import {
+  KNOWLEDGE_STATUS_FILTERS,
+  KNOWLEDGE_STATUS_LABEL,
+} from '../domain/knowledgeUi'
 import type {
+  Artifact,
   KnowledgeItem,
+  KnowledgeStatus,
   ProjectContext,
   UsageAggregation,
 } from '../domain/types'
@@ -18,6 +26,8 @@ import { formatCost, formatTokens } from '../domain/usageUi'
 import { userFacingTaskStatus } from '../domain/taskDisplay'
 import { displayAgentDescription, displayAgentName } from '../i18n'
 import { t } from '../i18n/ko'
+import { AgentDetailPanel } from '../panels/AgentDetailPanel'
+import { KnowledgeDetailPanel } from '../panels/KnowledgeDetailPanel'
 import {
   selectVisibleProjects,
   useDeckStore,
@@ -36,7 +46,13 @@ const TYPE_LABEL: Record<string, string> = {
   custom: t('projectType.custom'),
 }
 
-type DetailTab = 'info' | 'team' | 'knowledge'
+type DetailTab =
+  | 'overview'
+  | 'team'
+  | 'tasks'
+  | 'artifacts'
+  | 'knowledge'
+  | 'settings'
 
 export function ProjectsPage() {
   const projects = useDeckStore(selectVisibleProjects)
@@ -49,9 +65,17 @@ export function ProjectsPage() {
   const setNav = useDeckStore((s) => s.setNav)
   const selectAgent = useDeckStore((s) => s.selectAgent)
   const selectKnowledge = useDeckStore((s) => s.selectKnowledge)
+  const selectTask = useDeckStore((s) => s.selectTask)
+  const selectArtifact = useDeckStore((s) => s.selectArtifact)
+  const selectedAgentId = useDeckStore((s) => s.selectedAgentId)
+  const selectedKnowledgeId = useDeckStore((s) => s.selectedKnowledgeId)
   const [selectedId, setSelectedId] = useState<string | null>(activeProjectId)
-  const [tab, setTab] = useState<DetailTab>('info')
+  const [tab, setTab] = useState<DetailTab>('overview')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [knowledgeFilter, setKnowledgeFilter] = useState<
+    'all' | KnowledgeStatus
+  >('all')
+  const [artifacts, setArtifacts] = useState<Artifact[]>([])
 
   const selected =
     projects.find((p) => p.id === selectedId) ??
@@ -87,13 +111,16 @@ export function ProjectsPage() {
   useEffect(() => {
     setCtx(selected?.context ?? {})
     setCtxMsg(null)
-    setTab('info')
-  }, [selected?.id, selected?.context])
+    setTab('overview')
+    selectAgent(null)
+    selectKnowledge(null)
+  }, [selected?.id, selected?.context, selectAgent, selectKnowledge])
 
   useEffect(() => {
     if (!selected) {
       setUsage(null)
       setKnowledge([])
+      setArtifacts([])
       return
     }
     let cancelled = false
@@ -114,6 +141,13 @@ export function ProjectsPage() {
       })
       .catch(() => {
         if (!cancelled) setKnowledge([])
+      })
+    void fetchProjectArtifacts(selected.id)
+      .then((list) => {
+        if (!cancelled) setArtifacts(list)
+      })
+      .catch(() => {
+        if (!cancelled) setArtifacts([])
       })
     return () => {
       cancelled = true
@@ -305,31 +339,29 @@ export function ProjectsPage() {
             </header>
 
             <nav className={proj.tabs} aria-label="프로젝트 섹션">
-              <button
-                type="button"
-                className={tab === 'info' ? proj.tabOn : proj.tab}
-                onClick={() => setTab('info')}
-              >
-                정보
-              </button>
-              <button
-                type="button"
-                className={tab === 'team' ? proj.tabOn : proj.tab}
-                onClick={() => setTab('team')}
-              >
-                팀 · {selected.agentIds.length}
-              </button>
-              <button
-                type="button"
-                className={tab === 'knowledge' ? proj.tabOn : proj.tab}
-                onClick={() => setTab('knowledge')}
-              >
-                지식 · {knowledge.length}
-              </button>
+              {(
+                [
+                  ['overview', '개요'],
+                  ['team', `팀 · ${selected.agentIds.length}`],
+                  ['tasks', `작업 · ${projectTasks.length}`],
+                  ['artifacts', `결과물 · ${artifacts.length}`],
+                  ['knowledge', `프로젝트 지식 · ${knowledge.length}`],
+                  ['settings', '설정'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={tab === id ? proj.tabOn : proj.tab}
+                  onClick={() => setTab(id)}
+                >
+                  {label}
+                </button>
+              ))}
             </nav>
 
             <div className={proj.body}>
-              {tab === 'info' ? (
+              {tab === 'overview' ? (
                 <>
                   <section className={proj.section}>
                     <h3>최근 작업</h3>
@@ -345,7 +377,7 @@ export function ProjectsPage() {
                             <button
                               type="button"
                               onClick={() => {
-                                useDeckStore.getState().selectTask(task.id)
+                                selectTask(task.id)
                                 setNav('tasks')
                               }}
                             >
@@ -359,91 +391,17 @@ export function ProjectsPage() {
                       </ul>
                     )}
                   </section>
-
                   <section className={proj.section}>
-                    <h3>{t('project.context')}</h3>
+                    <h3>팀 요약</h3>
                     <p className={proj.sectionHint}>
-                      에이전트가 참고할 프로젝트 배경을 적어 두세요.
+                      {selected.agentIds.length}명 · 부서 {teamGroups.length}개
                     </p>
-                    <div className={proj.contextGrid}>
-                      <label>
-                        {t('project.contextDesc')}
-                        <textarea
-                          value={ctx.description ?? ''}
-                          onChange={(e) =>
-                            setCtx((c) => ({
-                              ...c,
-                              description: e.target.value,
-                            }))
-                          }
-                          rows={3}
-                        />
-                      </label>
-                      <label>
-                        {t('project.contextGoals')}
-                        <textarea
-                          value={ctx.goals ?? ''}
-                          onChange={(e) =>
-                            setCtx((c) => ({ ...c, goals: e.target.value }))
-                          }
-                          rows={3}
-                        />
-                      </label>
-                      <label>
-                        {t('project.contextConstraints')}
-                        <textarea
-                          value={ctx.constraints ?? ''}
-                          onChange={(e) =>
-                            setCtx((c) => ({
-                              ...c,
-                              constraints: e.target.value,
-                            }))
-                          }
-                          rows={2}
-                        />
-                      </label>
-                      <label>
-                        {t('project.contextTech')}
-                        <textarea
-                          value={ctx.techStack ?? ''}
-                          onChange={(e) =>
-                            setCtx((c) => ({
-                              ...c,
-                              techStack: e.target.value,
-                            }))
-                          }
-                          rows={2}
-                        />
-                      </label>
-                    </div>
-                    <div className={proj.ctxActions}>
-                      <button
-                        type="button"
-                        className={styles.primary}
-                        disabled={ctxBusy}
-                        onClick={() => void saveContext()}
-                      >
-                        {t('project.contextSave')}
-                      </button>
-                      {ctxMsg ? (
-                        <span className={styles.muted}>{ctxMsg}</span>
-                      ) : null}
-                    </div>
-                  </section>
-
-                  <section className={proj.dangerZone}>
-                    <div>
-                      <h3>위험 구역</h3>
-                      <p>프로젝트와 연결된 작업·결과물·지식이 함께 삭제됩니다.</p>
-                    </div>
                     <button
                       type="button"
-                      className={styles.dangerGhost}
-                      disabled={deleteBusy}
-                      onClick={() => void removeProject()}
+                      className={proj.teamBtn}
+                      onClick={() => setTab('team')}
                     >
-                      <Trash2 size={13} style={{ verticalAlign: '-2px' }} />{' '}
-                      {t('project.delete')}
+                      <Users size={14} /> 팀 탭으로
                     </button>
                   </section>
                 </>
@@ -548,29 +506,76 @@ export function ProjectsPage() {
                       ))}
                     </div>
                   )}
+                  {selectedAgentId ? (
+                    <AgentDetailPanel embedded agentId={selectedAgentId} />
+                  ) : null}
                 </section>
               ) : null}
 
-              {tab === 'knowledge' ? (
+              {tab === 'tasks' ? (
                 <section className={proj.section}>
-                  <h3>프로젝트 지식</h3>
-                  {knowledge.length === 0 ? (
+                  <h3>프로젝트 작업</h3>
+                  {projectTasks.length === 0 ? (
                     <p className={styles.muted}>
-                      등록된 지식이 없습니다. 결과물에서 「프로젝트 지식으로
-                      확정」하면 여기에 모입니다.
+                      아직 작업이 없습니다.{' '}
+                      <button
+                        type="button"
+                        className={styles.ghost}
+                        onClick={() => setNav('home')}
+                      >
+                        홈에서 작업 요청
+                      </button>
                     </p>
                   ) : (
                     <ul className={proj.taskList}>
-                      {knowledge.map((k) => (
-                        <li key={k.id}>
+                      {projectTasks
+                        .slice()
+                        .sort((a, b) =>
+                          b.updatedAt.localeCompare(a.updatedAt),
+                        )
+                        .map((task) => (
+                          <li key={task.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                selectTask(task.id)
+                                setNav('tasks')
+                              }}
+                            >
+                              <strong>{task.title}</strong>
+                              <span>
+                                {userFacingTaskStatus(task)} · {task.progress}%
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </section>
+              ) : null}
+
+              {tab === 'artifacts' ? (
+                <section className={proj.section}>
+                  <h3>결과물</h3>
+                  {artifacts.length === 0 ? (
+                    <p className={styles.muted}>
+                      완료된 작업의 결과물이 여기에 저장됩니다.
+                    </p>
+                  ) : (
+                    <ul className={proj.taskList}>
+                      {artifacts.map((a) => (
+                        <li key={a.id}>
                           <button
                             type="button"
-                            onClick={() => selectKnowledge(k.id)}
+                            onClick={() => {
+                              selectArtifact(a.id)
+                              setNav('documents')
+                            }}
                           >
-                            <strong>{k.title}</strong>
+                            <strong>{a.title}</strong>
                             <span>
-                              {k.status} · {k.content.slice(0, 80)}
-                              {k.content.length > 80 ? '…' : ''}
+                              {ARTIFACT_TYPE_LABEL[a.type] ?? a.type} · v
+                              {a.version}
                             </span>
                           </button>
                         </li>
@@ -578,6 +583,159 @@ export function ProjectsPage() {
                     </ul>
                   )}
                 </section>
+              ) : null}
+
+              {tab === 'knowledge' ? (
+                <section className={proj.section}>
+                  <h3>프로젝트 지식</h3>
+                  <div className={md.filters} style={{ padding: '0 0 12px', border: 0 }}>
+                    {KNOWLEDGE_STATUS_FILTERS.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        className={
+                          knowledgeFilter === f.id ? md.filterOn : md.filter
+                        }
+                        onClick={() => setKnowledgeFilter(f.id)}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                  {knowledge.filter(
+                    (k) =>
+                      knowledgeFilter === 'all' ||
+                      k.status === knowledgeFilter,
+                  ).length === 0 ? (
+                    <p className={styles.muted}>
+                      등록된 지식이 없습니다. 결과물에서 「프로젝트 지식으로
+                      확정」하면 여기에 모입니다.
+                    </p>
+                  ) : (
+                    <ul className={proj.taskList}>
+                      {knowledge
+                        .filter(
+                          (k) =>
+                            knowledgeFilter === 'all' ||
+                            k.status === knowledgeFilter,
+                        )
+                        .map((k) => (
+                          <li key={k.id}>
+                            <button
+                              type="button"
+                              onClick={() => selectKnowledge(k.id)}
+                            >
+                              <strong>{k.title}</strong>
+                              <span>
+                                {KNOWLEDGE_STATUS_LABEL[k.status]} ·{' '}
+                                {k.content.slice(0, 80)}
+                                {k.content.length > 80 ? '…' : ''}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                  {selectedKnowledgeId ? (
+                    <KnowledgeDetailPanel embedded />
+                  ) : null}
+                </section>
+              ) : null}
+
+              {tab === 'settings' ? (
+                <>
+                  <section className={proj.section}>
+                    <h3>프로젝트 설정</h3>
+                    <p className={proj.sectionHint}>
+                      경로: {selected.path || '미설정'}
+                    </p>
+                    <h3 style={{ marginTop: 20 }}>{t('project.context')}</h3>
+                    <p className={proj.sectionHint}>
+                      에이전트가 참고할 프로젝트 배경을 적어 두세요.
+                    </p>
+                    <div className={proj.contextGrid}>
+                      <label>
+                        {t('project.contextDesc')}
+                        <textarea
+                          value={ctx.description ?? ''}
+                          onChange={(e) =>
+                            setCtx((c) => ({
+                              ...c,
+                              description: e.target.value,
+                            }))
+                          }
+                          rows={3}
+                        />
+                      </label>
+                      <label>
+                        {t('project.contextGoals')}
+                        <textarea
+                          value={ctx.goals ?? ''}
+                          onChange={(e) =>
+                            setCtx((c) => ({ ...c, goals: e.target.value }))
+                          }
+                          rows={3}
+                        />
+                      </label>
+                      <label>
+                        {t('project.contextConstraints')}
+                        <textarea
+                          value={ctx.constraints ?? ''}
+                          onChange={(e) =>
+                            setCtx((c) => ({
+                              ...c,
+                              constraints: e.target.value,
+                            }))
+                          }
+                          rows={2}
+                        />
+                      </label>
+                      <label>
+                        {t('project.contextTech')}
+                        <textarea
+                          value={ctx.techStack ?? ''}
+                          onChange={(e) =>
+                            setCtx((c) => ({
+                              ...c,
+                              techStack: e.target.value,
+                            }))
+                          }
+                          rows={2}
+                        />
+                      </label>
+                    </div>
+                    <div className={proj.ctxActions}>
+                      <button
+                        type="button"
+                        className={styles.primary}
+                        disabled={ctxBusy}
+                        onClick={() => void saveContext()}
+                      >
+                        {t('project.contextSave')}
+                      </button>
+                      {ctxMsg ? (
+                        <span className={styles.muted}>{ctxMsg}</span>
+                      ) : null}
+                    </div>
+                  </section>
+                  <section className={proj.dangerZone}>
+                    <div>
+                      <h3>위험 구역</h3>
+                      <p>
+                        프로젝트와 연결된 작업·결과물·지식이 함께 삭제됩니다.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.dangerGhost}
+                      disabled={deleteBusy}
+                      onClick={() => void removeProject()}
+                    >
+                      <Trash2 size={13} style={{ verticalAlign: '-2px' }} />{' '}
+                      {t('project.delete')}
+                    </button>
+                  </section>
+                </>
               ) : null}
             </div>
           </div>

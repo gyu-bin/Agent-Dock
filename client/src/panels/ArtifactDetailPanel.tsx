@@ -155,6 +155,26 @@ export function ArtifactDetailPanel({
           )}
         </section>
 
+        {(() => {
+          const raw = artifact.metadata?.changedFiles
+          const files = Array.isArray(raw)
+            ? raw.filter((x): x is string => typeof x === 'string')
+            : []
+          if (files.length === 0) return null
+          return (
+            <section className={styles.section}>
+              <h3>변경 파일</h3>
+              <ul className={styles.runList}>
+                {files.map((f) => (
+                  <li key={f}>
+                    <code>{f}</code>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        })()}
+
         {artifact.sources && artifact.sources.length > 0 ? (
           <section className={styles.section}>
             <h3>출처</h3>

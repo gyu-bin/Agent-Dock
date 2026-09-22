@@ -38,7 +38,7 @@ export function Sidebar() {
 
   const providerLabel =
     executionMode === 'MOCK' && developerAllowMock
-      ? '개발자 모드'
+      ? '로컬 실행'
       : aiProvider.configured
         ? 'AI 준비됨'
         : 'AI 설정 필요'

@@ -1,61 +1,88 @@
 # Agent Deck
 
-AI Studio Control Center — organize AI agents like a company, visualize work in a 2D Office, and (later) run tasks via GPT / Codex.
+로컬에서 돌아가는 **AI 개발 스튜디오**입니다. AI 직원을 회사처럼 조직하고, 2D 오피스에서 상태를 보며, 작업·승인·결과물·지식을 한 흐름으로 관리합니다.
 
-> Design reference: `references/agent-deck-ui-reference.png`
+## 주요 기능
 
-## Phase 1/2 (this branch of work)
+- **프로젝트 / 팀** — 프로젝트별 에이전트 채용·부서 분류
+- **홈 오피스** — 팀 상태 시각화 + 「무엇을 시킬까요?」작업 요청
+- **작업 흐름** — WorkflowTemplate 기반 자동 매칭·파이프라인
+- **AI 서비스** — OpenAI Provider, Codex 실행, 웹 검색
+- **승인** — 계획 승인 · 코드 변경 승인 (Diff / Rollback)
+- **결과물 · 프로젝트 지식** — Artifact / Handoff / Knowledge
+- **사용량 · 설정** — 비용·토큰, 안전·고급 옵션
+- **로컬 보안** — Local Session, Execution Lock, Path Sandbox, Persistence
 
-- Desktop layout: Sidebar · Top Bar · **2D Office (hero)** · AI Chat (mock) · Bottom status
-- Domain models: Agent, Project, Task, Department, Team presets
-- Zustand store + seed data
-- Local Node server with Agent Registry (reads `~/.codex/agents/*.toml`, falls back to mock)
-- AI provider is **Mock Mode** only — no API keys, no fake “Connected” state
+## 아키텍처
 
-## Stack
+| 영역 | 기술 |
+|------|------|
+| Client | React · Vite · TypeScript · Zustand |
+| Server | Express · Agent Registry (TOML) · Persistence |
+| Office | DOM / CSS / SVG (독립 viewport, 교체 가능) |
 
-- Client: React + Vite + TypeScript + Zustand + Lucide
-- Server: Express + TOML parser
-- Office: DOM / CSS / SVG (PixiJS-ready separation)
+기본 Happy Path:
 
-## Setup
+프로젝트 선택 → 무엇을 시킬까요? → 작업 흐름 자동 구성 → (필요 시) 계획 승인 → AI 작업 → (필요 시) 코드 변경 승인 → 검증/리뷰 → 결과 확인
+
+Provider · Model · Workflow ID · Agent ID 등은 **설정 → 고급**에서만 다룹니다.
+
+## 실행
 
 ```bash
 npm install
 npm run dev
 ```
 
-- UI: http://localhost:5173  
-- API: http://localhost:8787  
+- UI: http://localhost:5173
+- API: http://localhost:8787
 
-Optional: `AGENT_DECK_AGENTS_DIR=/path/to/agents` to override the Codex agents directory.
+환경 변수는 `.env.example`을 참고해 `.env`에 설정합니다.
 
-## Scripts
+```bash
+# 예
+OPENAI_API_KEY=sk-...
+# CODEX_BIN=/path/to/codex
+```
+
+## AI 실행 모드
+
+| 상태 | 의미 |
+|------|------|
+| **REAL** | Provider 설정됨 — 실제 AI 사용 (기본) |
+| **NOT_CONFIGURED** | AI 설정 필요 |
+| **MOCK** | Settings → **고급** → **Developer Mode**에서만 명시 활성화 |
+
+Provider 실패 시 **자동 Mock 전환은 하지 않습니다.**  
+테스트 fixture의 Mock 사용은 유지됩니다.
+
+## 보안 · 로컬 정책
+
+- 기본은 **로컬 전용** 실행
+- 프로젝트 path sandbox
+- Execution lock으로 동시 실행 충돌 방지
+- 세션·프로젝트 데이터는 서버 로컬 persistence
+
+## 스크립트
 
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Client + server |
 | `npm run build` | Production build |
 | `npm run typecheck` | TypeScript check |
+| `npm run generate:divisions` | agency-agents → division map 갱신 |
 
-## Agent divisions
+## Agent Registry
 
-Division comes from the **agency-agents directory layout** (not heuristics):
+Division은 agency-agents 디렉터리 레이아웃을 따릅니다.
 
-1. Prefer live scan of `~/Desktop/Coding/agency-agents` (override with `AGENT_DECK_AGENCY_DIR`)
-2. Fall back to committed `shared/agencyDivisionMap.json`
+1. `AGENT_DECK_AGENCY_DIR` 또는 기본 agency-agents 경로 스캔
+2. 없으면 `shared/agencyDivisionMap.json`
 
-Regenerate the committed map:
+외부 `agency-agents` 저장소는 수정하지 않습니다.
 
-```bash
-npm run generate:divisions
-```
+## 네비게이션
 
-Codex agent slug = `slugify(frontmatter name)` from the source `.md` file; folder name = division.
+**사이드바:** 홈 · 프로젝트 · 작업 · 결과물 · 승인 대기 · (하단) 설정  
 
-Example: `product/product-trend-researcher.md` → `trend-researcher` → **product**.
-
-## Notes
-
-- Does **not** modify `agency-agents` or other external repos.
-- Phase 2/2 will connect chat, project creation, and task pipeline without rewriting Office/layout shells.
+전체 Agent Directory · Usage · Departments는 핵심 메뉴가 아니며, 팀 관리 / 설정 고급에서 접근합니다.

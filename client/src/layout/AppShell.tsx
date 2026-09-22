@@ -20,8 +20,6 @@ import { UsagePage } from '../pages/UsagePage'
 import { ApprovalsPage } from '../pages/ApprovalsPage'
 import { TasksPage } from '../pages/TasksPage'
 import { DepartmentsPage } from '../pages/DepartmentsPage'
-import { AgentDetailPanel } from '../panels/AgentDetailPanel'
-import { KnowledgeDetailPanel } from '../panels/KnowledgeDetailPanel'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
@@ -29,8 +27,6 @@ export function AppShell() {
   const project = useDeckStore(selectActiveProject)
   const hydrated = useDeckStore((s) => s.hydrated)
   const theme = useDeckStore((s) => s.theme)
-  const selectedAgentId = useDeckStore((s) => s.selectedAgentId)
-  const selectedKnowledgeId = useDeckStore((s) => s.selectedKnowledgeId)
 
   const isHome = activeNav === 'home'
 
@@ -119,8 +115,6 @@ export function AppShell() {
       <ProjectWizard />
       <ManageTeamModal />
       <WorkRequestModal />
-      {selectedAgentId ? <AgentDetailPanel /> : null}
-      {selectedKnowledgeId ? <KnowledgeDetailPanel /> : null}
     </div>
   )
 }

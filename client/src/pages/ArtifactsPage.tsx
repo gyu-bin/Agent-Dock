@@ -98,7 +98,11 @@ export function ArtifactsPage() {
             </button>
           </div>
         </div>
-        <div className={md.detailPane} />
+        <div className={md.detailPane}>
+          <div className={md.empty}>
+            <p>프로젝트를 선택하면 결과물 상세가 여기에 표시됩니다.</p>
+          </div>
+        </div>
       </div>
     )
   }

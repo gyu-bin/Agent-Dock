@@ -1,3 +1,8 @@
+/**
+ * @deprecated Runtime planning SoT is WorkflowTemplate → templateSelector →
+ * agent matching → safetyPipeline. DeterministicTaskRouter is not used by the
+ * live orchestrator; keep only for compatibility/tests.
+ */
 import type { Agent, DivisionId, ProjectType, WorkflowKind } from './types'
 import { providerForRoleKey } from './providerRouting'
 

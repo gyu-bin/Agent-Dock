@@ -22,7 +22,7 @@ export function OfficeScene() {
   const selectAgent = useDeckStore((s) => s.selectAgent)
   const selectedDepartment = useDeckStore((s) => s.selectedDepartment)
   const selectDepartment = useDeckStore((s) => s.selectDepartment)
-  const setNav = useDeckStore((s) => s.setNav)
+  const openManageTeam = useDeckStore((s) => s.openManageTeam)
 
   const deptIds = useMemo(() => activeDepartmentIds(agents), [agents])
   const deskCounts = useMemo(() => deskCountByDivision(agents), [agents])
@@ -41,7 +41,12 @@ export function OfficeScene() {
 
   function openDept(id: DivisionId) {
     selectDepartment(id)
-    setNav('departments')
+    openManageTeam()
+  }
+
+  function onSelectAgent(id: string) {
+    selectAgent(id)
+    openManageTeam()
   }
 
   return (
@@ -67,7 +72,7 @@ export function OfficeScene() {
                     visuals={emptyVisuals}
                     deskCount={deskCounts[room.id] ?? 1}
                     highlighted={selectedDepartment === room.id}
-                    onSelectAgent={selectAgent}
+                    onSelectAgent={onSelectAgent}
                     onOpenDepartment={() => openDept(room.id as DivisionId)}
                   />
                 ))}
@@ -78,7 +83,7 @@ export function OfficeScene() {
               <Lounge
                 agents={agents}
                 visuals={emptyVisuals}
-                onSelectAgent={selectAgent}
+                onSelectAgent={onSelectAgent}
               />
             </div>
 
@@ -87,14 +92,14 @@ export function OfficeScene() {
                 <MeetingRoom
                   agents={agents}
                   visuals={emptyVisuals}
-                  onSelectAgent={selectAgent}
+                  onSelectAgent={onSelectAgent}
                 />
               </div>
               <div className={styles.reception}>
                 <Reception
                   agents={agents}
                   visuals={emptyVisuals}
-                  onSelectAgent={selectAgent}
+                  onSelectAgent={onSelectAgent}
                 />
               </div>
               <div className={styles.entrance}>
@@ -112,7 +117,7 @@ export function OfficeScene() {
                   key={v.agentId}
                   agent={agent}
                   visual={v}
-                  onSelect={selectAgent}
+                  onSelect={onSelectAgent}
                 />
               )
             })}

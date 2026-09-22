@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ListTodo } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import {
@@ -13,9 +13,10 @@ import {
 } from '../store/useDeckStore'
 import md from './MasterDetail.module.css'
 
-type TaskFilter = 'active' | 'approval' | 'done' | 'failed'
+type TaskFilter = 'all' | 'active' | 'approval' | 'done' | 'failed'
 
 const FILTERS: Array<{ id: TaskFilter; label: string }> = [
+  { id: 'all', label: '전체' },
   { id: 'active', label: '진행 중' },
   { id: 'approval', label: '승인 대기' },
   { id: 'done', label: '완료' },
@@ -23,6 +24,7 @@ const FILTERS: Array<{ id: TaskFilter; label: string }> = [
 ]
 
 function matchesFilter(task: Task, filter: TaskFilter): boolean {
+  if (filter === 'all') return true
   const s = task.status
   if (filter === 'approval') return s === 'awaiting_approval'
   if (filter === 'done') return s === 'completed'
@@ -50,12 +52,21 @@ export function TasksPage() {
   const selectTask = useDeckStore((s) => s.selectTask)
   const setNav = useDeckStore((s) => s.setNav)
   const pipelineSteps = useDeckStore((s) => s.pipelineSteps)
-  const [filter, setFilter] = useState<TaskFilter>('active')
+  const [filter, setFilter] = useState<TaskFilter>('all')
 
   const filtered = useMemo(
     () => tasks.filter((t) => matchesFilter(t, filter)),
     [tasks, filter],
   )
+
+  useEffect(() => {
+    if (filtered.length === 0) {
+      if (selectedTaskId) selectTask(null)
+      return
+    }
+    const still = filtered.some((t) => t.id === selectedTaskId)
+    if (!still) selectTask(filtered[0]!.id)
+  }, [filtered, selectedTaskId, selectTask])
 
   function statusFor(task: Task) {
     const steps = pipelineSteps
@@ -95,14 +106,14 @@ export function TasksPage() {
         {filtered.length === 0 ? (
           <div className={md.empty}>
             <ListTodo size={28} strokeWidth={1.5} />
-            <h2>작업이 없습니다</h2>
-            <p>홈에서 첫 작업을 요청하면 여기에 표시됩니다.</p>
+            <h2>아직 작업이 없습니다</h2>
+            <p>홈에서 작업을 요청하면 여기에 표시됩니다.</p>
             <button
               type="button"
               className={md.emptyBtn}
               onClick={() => setNav('home')}
             >
-              홈에서 요청하기
+              홈에서 작업 요청
             </button>
           </div>
         ) : (
@@ -129,7 +140,13 @@ export function TasksPage() {
       </div>
 
       <div className={md.detailPane}>
-        <TaskDetailPanel embedded />
+        {filtered.length === 0 ? (
+          <div className={md.empty}>
+            <p>작업을 선택하면 상세가 여기에 표시됩니다.</p>
+          </div>
+        ) : (
+          <TaskDetailPanel embedded />
+        )}
       </div>
     </div>
   )

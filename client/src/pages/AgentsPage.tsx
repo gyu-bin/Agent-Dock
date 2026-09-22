@@ -6,6 +6,7 @@ import { groupAgentsByDepartment } from '../domain/groupAgents'
 import { setProjectTeam } from '../api/client'
 import { displayAgentDescription, displayAgentName } from '../i18n'
 import { t } from '../i18n/ko'
+import { AgentDetailPanel } from '../panels/AgentDetailPanel'
 import {
   useDeckStore,
   selectActiveProject,
@@ -23,6 +24,7 @@ export function AgentsPage() {
   const project = useDeckStore(selectActiveProject)
   const applyProjectsSnapshot = useDeckStore((s) => s.applyProjectsSnapshot)
   const selectAgent = useDeckStore((s) => s.selectAgent)
+  const selectedAgentId = useDeckStore((s) => s.selectedAgentId)
   const agentRuntime = useDeckStore((s) => s.agentRuntime)
 
   const [query, setQuery] = useState('')
@@ -240,6 +242,10 @@ export function AgentsPage() {
           )
         })}
       </div>
+
+      {selectedAgentId ? (
+        <AgentDetailPanel embedded agentId={selectedAgentId} />
+      ) : null}
     </div>
   )
 }

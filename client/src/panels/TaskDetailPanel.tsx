@@ -222,6 +222,10 @@ export function TaskDetailPanel({
               {currentStep ? ` — ${currentStep.label}` : ''}
             </li>
             <li>
+              <strong>요청</strong>{' '}
+              {(task.description ?? '').trim() || '—'}
+            </li>
+            <li>
               <strong>작업자</strong> {worker}
             </li>
             <li>
@@ -324,9 +328,22 @@ export function TaskDetailPanel({
                     <br />
                     {(task.approval?.planExcerpt ?? task.planSummary ?? '')
                       .split('\n')
-                      .slice(0, 4)
+                      .slice(0, 6)
                       .join(' ')
-                      .slice(0, 280) || '계획 요약이 준비되면 여기에 표시됩니다.'}
+                      .slice(0, 400) || '작업 범위가 준비되면 여기에 표시됩니다.'}
+                  </li>
+                  <li>
+                    <strong>{t('task.planApproach')}</strong>
+                    <br />
+                    {userFacingWorkflowLabel(task)}
+                    {task.workflow ? ` · ${task.workflow}` : ''}
+                  </li>
+                  <li>
+                    <strong>{t('task.planRisks')}</strong>
+                    <br />
+                    {task.approval?.kind === 'plan'
+                      ? '계획 승인 후 구현·파일 변경이 진행될 수 있습니다.'
+                      : '코드 변경 시 별도 승인이 필요할 수 있습니다.'}
                   </li>
                 </dl>
                 {showDiffDetail ? (

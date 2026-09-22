@@ -18,7 +18,11 @@ import {
 import styles from '../panels/TaskDetailPanel.module.css'
 import shell from './AgentDetailPanel.module.css'
 
-export function KnowledgeDetailPanel() {
+export function KnowledgeDetailPanel({
+  embedded = false,
+}: {
+  embedded?: boolean
+} = {}) {
   const project = useDeckStore(selectActiveProject)
   const knowledgeId = useDeckStore((s) => s.selectedKnowledgeId)
   const selectKnowledge = useDeckStore((s) => s.selectKnowledge)
@@ -106,14 +110,21 @@ export function KnowledgeDetailPanel() {
   }
 
   return (
-    <div className={shell.overlay} role="dialog" aria-modal aria-label="지식 상세">
-      <button
-        type="button"
-        className={shell.backdrop}
-        aria-label="닫기"
-        onClick={() => selectKnowledge(null)}
-      />
-      <aside className={shell.panel}>
+    <div
+      className={embedded ? undefined : shell.overlay}
+      role={embedded ? undefined : 'dialog'}
+      aria-modal={embedded ? undefined : true}
+      aria-label="지식 상세"
+    >
+      {!embedded ? (
+        <button
+          type="button"
+          className={shell.backdrop}
+          aria-label="닫기"
+          onClick={() => selectKnowledge(null)}
+        />
+      ) : null}
+      <aside className={embedded ? shell.embedded : shell.panel}>
       <header className={styles.head}>
         <div>
           <h2>{item.title}</h2>
