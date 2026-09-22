@@ -72,7 +72,6 @@ export function ProjectWizard() {
       useDeckStore.setState({
         agentRuntime: defaultRuntimeForNewTeam(agentIds),
         activeNav: 'home',
-        activeTab: 'office',
       })
       closeWizard()
       setNav('home')

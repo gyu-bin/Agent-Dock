@@ -24,7 +24,6 @@ export function TopBar() {
   const applyProjectsSnapshot = useDeckStore((s) => s.applyProjectsSnapshot)
   const setNav = useDeckStore((s) => s.setNav)
   const setChatTab = useDeckStore((s) => s.setChatTab)
-  const setTab = useDeckStore((s) => s.setTab)
   const theme = useDeckStore((s) => s.theme)
   const toggleTheme = useDeckStore((s) => s.toggleTheme)
   const pendingCount = useDeckStore(selectPendingApprovalCount)
@@ -46,12 +45,10 @@ export function TopBar() {
     applyProjectsSnapshot(snap)
     setMenuOpen(false)
     setNav('home')
-    setTab('office')
   }
 
   function focusNewWork() {
     setNav('home')
-    setTab('office')
     setChatTab('chat')
     requestAnimationFrame(() => {
       document.getElementById('ad-home-composer')?.focus()

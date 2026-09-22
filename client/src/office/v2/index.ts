@@ -27,6 +27,21 @@ export {
   type WorkstationGroup,
 } from './workstationPolicy'
 
+export {
+  assignOfficeDestinations,
+  assignmentForAgent,
+  destinationTypeForStatus,
+  DESTINATION_CAPACITY,
+  LOUNGE_WAYPOINTS,
+  MEETING_SEATS,
+  TESTING_DESKS,
+  RECEPTION_SPAWN,
+  type OfficeAssignment,
+  type OfficeAssignmentResult,
+  type OfficeAssignmentOptions,
+  type OfficeDestinationType,
+} from './officeAssignmentPolicy'
+
 /** Public URL prefix for Office V2 assets. */
 export const OFFICE_V2_ASSET_BASE = '/assets/office-v2'
 

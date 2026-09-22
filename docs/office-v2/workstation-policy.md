@@ -1,18 +1,19 @@
-# Office V2 — Workstation Policy
+# Office V2 — Workstation Policy (desk helper)
 
-Canonical capacity comes from `docs/office-v2/office-map-layout.json` (30 slots).
+Canonical **destination** policy: [`office-assignment-policy.md`](./office-assignment-policy.md)  
+(`client/src/office/v2/officeAssignmentPolicy.ts`).
 
-Implementation helper: `client/src/office/v2/workstationPolicy.ts` (not wired to OfficeScene).
+This file documents the **desk capacity helper** only:
+`client/src/office/v2/workstationPolicy.ts` (not wired to OfficeScene).
 
 ## Rules
 
-1. **Idle / Waiting** → Lounge waypoints — **no** permanent desk claim.
-2. **Working / Blocked** → department workstation (priority).
-3. **Reviewing / Verifying** → may claim desk or Meeting/Testing seats (mapper decides zone; policy assigns desk only for desk-claim statuses).
-4. Assignment order within claimants: `working` → `blocked` → `reviewing|verifying`, then `agentId` sort.
-5. If group capacity exceeded → **overflow flag**; **do not** spawn extra desks.
-6. Engineering uses **Development** group (no Engineering room).
-7. Game developers use **game-development** sub-group (4 desks).
+1. **Working / Blocked** → department workstation desks.
+2. **Idle / Waiting / Reviewing / Verifying / Offline** → handled by `officeAssignmentPolicy` (lounge / meeting / testing / reception|hidden) — **not** here.
+3. Assignment order within desk claimants: `working` → `blocked`, then `agentId` sort.
+4. If group capacity exceeded → **overflow flag**; **do not** spawn extra desks.
+5. Engineering uses **Development** group (no Engineering room).
+6. Game developers use **game-development** sub-group (4 desks).
 
 ## Capacities
 

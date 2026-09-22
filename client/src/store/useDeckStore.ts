@@ -62,8 +62,6 @@ export type NavId =
 
 export type ThemeMode = 'light' | 'dark'
 
-export type WorkspaceTab = 'office' | 'work-status' | 'files' | 'analysis' | 'settings'
-
 const THEME_KEY = 'agent-deck-theme'
 
 function readStoredTheme(): ThemeMode {
@@ -105,7 +103,6 @@ interface DeckState {
   executionSpeed: 1 | 2 | 4
 
   activeNav: NavId
-  activeTab: WorkspaceTab
   chatTab: 'chat' | 'history'
   selectedAgentId: string | null
   selectedDepartment: DivisionId | null
@@ -118,7 +115,6 @@ interface DeckState {
   workRequestOpen: boolean
 
   setNav: (nav: NavId) => void
-  setTab: (tab: WorkspaceTab) => void
   setChatTab: (tab: 'chat' | 'history') => void
   setTheme: (theme: ThemeMode) => void
   toggleTheme: () => void
@@ -373,7 +369,6 @@ function createDeckStore() {
       executionSpeed: 1,
 
       activeNav: 'home',
-      activeTab: 'office',
       chatTab: 'chat',
       selectedAgentId: null,
       selectedDepartment: null,
@@ -386,7 +381,6 @@ function createDeckStore() {
       workRequestOpen: false,
 
       setNav: (nav) => set({ activeNav: nav }),
-      setTab: (tab) => set({ activeTab: tab }),
       setChatTab: (tab) => set({ chatTab: tab }),
       setTheme: (theme) => {
         try {
@@ -756,7 +750,6 @@ function createDeckStore() {
 
           workRequestOpen: false,
           activeNav: 'home',
-          activeTab: 'office',
         }))
         deckEvents.emit({
           type: 'task.created',

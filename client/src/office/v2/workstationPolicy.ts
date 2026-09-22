@@ -45,12 +45,13 @@ const ROLE_TO_GROUP: Record<OfficeV2VisualRole, WorkstationGroup> = {
   reviewer: 'testing',
 }
 
-/** Active statuses that may claim a desk. Idle/waiting stay in Lounge. */
+/**
+ * Desk claim statuses only.
+ * reviewing → meeting, verifying → testing (see officeAssignmentPolicy).
+ */
 const DESK_CLAIM_STATUS: ReadonlySet<AgentStatus> = new Set([
   'working',
   'blocked',
-  'reviewing',
-  'verifying',
 ])
 
 export function workstationGroupForAgent(agent: Agent): WorkstationGroup {
@@ -74,15 +75,12 @@ export interface WorkstationAssignmentResult {
 function claimPriority(status: AgentStatus): number {
   if (status === 'working') return 0
   if (status === 'blocked') return 1
-  if (status === 'reviewing' || status === 'verifying') return 2
   return 9
 }
 
 /**
- * Assign desks only to active agents.
- * Priority: working → blocked → reviewing/verifying.
- * Idle/waiting are excluded (Lounge).
- * Never creates dynamic furniture when capacity is exceeded.
+ * Desk-only helper. Prefer `assignOfficeDestinations` for full runtime policy.
+ * Priority: working → blocked. Never creates dynamic furniture on overflow.
  */
 export function assignWorkstations(agents: Agent[]): WorkstationAssignmentResult {
   const active = agents
