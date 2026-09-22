@@ -60,8 +60,12 @@ export function userFacingTaskStatus(
   return '준비 중'
 }
 
-export function approvalKindLabel(kind: 'plan' | 'change' | undefined): string {
-  return kind === 'plan' ? '계획 승인' : '변경 승인'
+export function approvalKindLabel(
+  kind: 'plan' | 'change' | 'publish' | undefined,
+): string {
+  if (kind === 'plan') return '계획 승인'
+  if (kind === 'publish') return '게시 승인'
+  return '변경 승인'
 }
 
 /** WorkflowKind chip label — never expose raw BUILD/RESEARCH/etc. */

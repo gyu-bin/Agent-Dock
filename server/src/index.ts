@@ -52,6 +52,42 @@ import {
 } from './search/searchHistoryStore.js'
 import { knowledgeRepository } from './persistence/knowledgeRepository.js'
 import { KnowledgeService } from './persistence/knowledgeService.js'
+import { operationsRepository } from './persistence/operationsRepository.js'
+import { OperationsService } from './persistence/operationsService.js'
+import {
+  RoutineExecutionService,
+  RoutineSchedulerRuntime,
+  readSchedulerConfigFromEnv,
+} from './operations/index.js'
+import {
+  MarketingService,
+  marketingRepository,
+} from './marketing/index.js'
+import {
+  createImageGenerationService,
+  imageStorage,
+} from './image/index.js'
+import {
+  createDefaultSocialRegistry,
+  socialRepository,
+  SocialPublishService,
+  SocialAnalyticsService,
+} from './social/index.js'
+import {
+  createMediaDeliveryService,
+  mediaDeliveryRepository,
+} from './mediaDelivery/index.js'
+import { credentialStore } from './credentials/index.js'
+import { assertNoTokenLeak } from './credentials/redact.js'
+import {
+  setImageGenerateAvailable,
+  setSocialPublishAvailable,
+  setAnalyticsReadAvailable,
+} from './operations/capabilityPreflight.js'
+import type {
+  ProjectGoalType,
+  ProjectStage,
+} from './persistence/operationsTypes.js'
 import type {
   KnowledgeCategory,
   KnowledgeStatus,
@@ -90,7 +126,64 @@ const webSearchProvider = createWebSearchProvider()
 const projects = new ProjectService(projectRepository)
 const artifacts = new ArtifactService(artifactRepository)
 const knowledge = new KnowledgeService(knowledgeRepository)
+const operations = new OperationsService(operationsRepository)
 const usage = new UsageService(usageRepository)
+const imageService = createImageGenerationService({
+  artifacts,
+  usage,
+  storage: imageStorage,
+})
+setImageGenerateAvailable(imageService.isAvailable())
+
+const socialRegistry = createDefaultSocialRegistry(credentialStore)
+const threadsConnector = socialRegistry.getThreadsConnector()
+if (threadsConnector) {
+  void threadsConnector.refreshConnectionCache().then(() => {
+    setSocialPublishAvailable(socialRegistry.hasAnyPublishAvailable())
+  })
+}
+setSocialPublishAvailable(socialRegistry.hasAnyPublishAvailable())
+setAnalyticsReadAvailable(socialRegistry.hasAnyAnalyticsAvailable())
+
+const mediaDelivery = createMediaDeliveryService({
+  artifacts,
+  usage,
+  repo: mediaDeliveryRepository,
+})
+
+const socialPublish = new SocialPublishService(
+  socialRegistry,
+  socialRepository,
+  marketingRepository,
+  artifacts,
+  mediaDelivery,
+)
+const socialAnalytics = new SocialAnalyticsService(
+  socialRegistry,
+  socialRepository,
+  artifacts,
+)
+
+const marketing = new MarketingService(
+  marketingRepository,
+  projects,
+  artifacts,
+  knowledge,
+  operations,
+  imageService,
+  socialRegistry,
+  socialAnalytics,
+)
+const routineExecution = new RoutineExecutionService(
+  operations,
+  projects,
+  marketing,
+)
+const schedulerRuntime = new RoutineSchedulerRuntime(
+  operations,
+  projects,
+  readSchedulerConfigFromEnv(),
+)
 const settings = new SettingsService(
   settingsRepository,
   aiProvider,
@@ -175,12 +268,18 @@ function sendError(res: express.Response, err: unknown) {
   if (err && typeof err === 'object') {
     const e = err as {
       code?: string
+      category?: string
+      userMessage?: string
+      technicalSummary?: string
       run?: unknown
       output?: string
       userMessageKo?: string
       diagnostics?: unknown
     }
+    if (e.userMessage) payload.error = e.userMessage
+    if (e.category) payload.code = e.category
     if (e.code) payload.code = e.code
+    if (e.technicalSummary) payload.technicalSummary = e.technicalSummary
     if (e.run) payload.run = e.run
     if (e.output) payload.output = e.output
     if (e.userMessageKo) payload.userMessageKo = e.userMessageKo
@@ -816,6 +915,8 @@ app.delete('/api/projects/:id', async (req, res) => {
     const snap = await projects.remove(req.params.id)
     await artifacts.deleteProject(req.params.id).catch(() => undefined)
     await knowledgeRepository.deleteProject(req.params.id).catch(() => undefined)
+    await operations.deleteProject(req.params.id).catch(() => undefined)
+    await marketing.deleteProject(req.params.id).catch(() => undefined)
     await usageRepository.deleteProject(req.params.id).catch(() => undefined)
     res.json(snap)
   } catch (err) {
@@ -1210,6 +1311,841 @@ app.post(
   },
 )
 
+// ——— Project Operations (Goals / Routines / Runs) ———
+
+app.get('/api/projects/:projectId/operations', async (req, res) => {
+  try {
+    const board = await operations.getBoard(req.params.projectId)
+    res.json(board)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/projects/:projectId/goals', async (req, res) => {
+  try {
+    const board = await operations.getBoard(req.params.projectId)
+    res.json({ goals: board.goals })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/projects/:projectId/goals', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    if (!body.title) {
+      res.status(400).json({ error: 'title required' })
+      return
+    }
+    const goal = await operations.createGoal(req.params.projectId, {
+      type: (body.type as ProjectGoalType) ?? 'custom',
+      title: String(body.title),
+      description: body.description ? String(body.description) : undefined,
+      priority: body.priority,
+      successCriteria: Array.isArray(body.successCriteria)
+        ? body.successCriteria.map(String)
+        : undefined,
+    })
+    res.status(201).json({ goal })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.patch('/api/goals/:goalId', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const goal = await operations.patchGoal(req.params.goalId, {
+      projectId: body.projectId ? String(body.projectId) : undefined,
+      title: body.title != null ? String(body.title) : undefined,
+      description:
+        body.description != null ? String(body.description) : undefined,
+      status: body.status,
+      priority: body.priority,
+      type: body.type,
+      successCriteria: Array.isArray(body.successCriteria)
+        ? body.successCriteria.map(String)
+        : undefined,
+    })
+    res.json({ goal })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/projects/:projectId/routines', async (req, res) => {
+  try {
+    const board = await operations.getBoard(req.params.projectId)
+    res.json({ routines: board.routines })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/projects/:projectId/routines', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const routine = await operations.createRoutine(req.params.projectId, {
+      name: body.name ? String(body.name) : undefined,
+      description: body.description ? String(body.description) : undefined,
+      goalId: body.goalId ? String(body.goalId) : undefined,
+      templateId: body.templateId ? String(body.templateId) : undefined,
+      trigger: body.trigger,
+      schedule: body.schedule,
+      requiredCapabilities: Array.isArray(body.requiredCapabilities)
+        ? body.requiredCapabilities.map(String)
+        : undefined,
+      futureCapabilities: Array.isArray(body.futureCapabilities)
+        ? body.futureCapabilities.map(String)
+        : undefined,
+      workflowTemplateId: body.workflowTemplateId
+        ? String(body.workflowTemplateId)
+        : undefined,
+      status: body.status,
+    })
+    res.status(201).json({ routine })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.patch('/api/routines/:routineId', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const routine = await operations.patchRoutine(req.params.routineId, {
+      projectId: body.projectId ? String(body.projectId) : undefined,
+      name: body.name != null ? String(body.name) : undefined,
+      description:
+        body.description != null ? String(body.description) : undefined,
+      status: body.status,
+      trigger: body.trigger,
+      schedule: body.schedule,
+      goalId: body.goalId != null ? String(body.goalId) : undefined,
+      executionPolicy: body.executionPolicy,
+    })
+    res.json({ routine })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/projects/:projectId/routine-runs', async (req, res) => {
+  try {
+    const board = await operations.getBoard(req.params.projectId)
+    res.json({ runs: board.runs })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/routines/:routineId/run', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const result = await routineExecution.start({
+      routineId: req.params.routineId,
+      projectId: body.projectId ? String(body.projectId) : undefined,
+      triggerSource: 'manual',
+      taskId: body.taskId ? String(body.taskId) : undefined,
+      teamAgentIds: Array.isArray(body.teamAgentIds)
+        ? body.teamAgentIds.map(String)
+        : undefined,
+      specialistCandidates: Array.isArray(body.specialistCandidates)
+        ? body.specialistCandidates.map(String)
+        : undefined,
+      preferredAgentId: body.preferredAgentId
+        ? String(body.preferredAgentId)
+        : undefined,
+      idempotent: false,
+    })
+    res.status(201).json({
+      run: result.run,
+      routine: result.routine,
+      taskSeed: result.taskSeed,
+      task: result.task,
+    })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/scheduler/status', async (_req, res) => {
+  try {
+    const status = await schedulerRuntime.getStatus()
+    res.json(status)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.patch('/api/projects/:projectId/operations/stage', async (req, res) => {
+  try {
+    const stage = req.body?.stage as ProjectStage | undefined | null
+    const board = await operations.setStage(
+      req.params.projectId,
+      stage === null ? undefined : stage,
+    )
+    res.json(board)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+// ——— Marketing Operations ———
+app.get('/api/projects/:projectId/marketing/campaigns', async (req, res) => {
+  try {
+    const campaigns = await marketing.listCampaigns(req.params.projectId)
+    res.json({ campaigns })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/marketing/campaigns/:id', async (req, res) => {
+  try {
+    const hit = await marketing.getCampaign(
+      req.params.id,
+      req.query.projectId ? String(req.query.projectId) : undefined,
+    )
+    if (!hit) {
+      res.status(404).json({ error: 'Campaign not found' })
+      return
+    }
+    res.json(hit)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/projects/:projectId/marketing/campaigns', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const result = await marketing.runCampaign({
+      projectId: req.params.projectId,
+      title: body.title != null ? String(body.title) : undefined,
+      objective: body.objective,
+      request: body.request != null ? String(body.request) : undefined,
+      goalId: body.goalId != null ? String(body.goalId) : undefined,
+      routineId: body.routineId != null ? String(body.routineId) : undefined,
+      routineRunId:
+        body.routineRunId != null ? String(body.routineRunId) : undefined,
+      taskId: body.taskId != null ? String(body.taskId) : undefined,
+      teamAgentIds: Array.isArray(body.teamAgentIds)
+        ? body.teamAgentIds.map(String)
+        : undefined,
+      specialistAgentIds: Array.isArray(body.specialistAgentIds)
+        ? body.specialistAgentIds.map(String)
+        : undefined,
+      stage: body.stage,
+      allowWithoutSearch: body.allowWithoutSearch === true,
+      searchAvailable: body.searchAvailable !== false,
+      fixtureSources: Array.isArray(body.fixtureSources)
+        ? body.fixtureSources
+        : undefined,
+      autoGenerateImages: body.autoGenerateImages === true,
+    })
+    res.status(201).json(result)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.patch('/api/marketing/campaigns/:id', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const campaign = await marketing.patchCampaign(req.params.id, {
+      projectId: body.projectId ? String(body.projectId) : undefined,
+      title: body.title != null ? String(body.title) : undefined,
+      status: body.status,
+      objective: body.objective,
+      targetAudience:
+        body.targetAudience != null ? String(body.targetAudience) : undefined,
+      positioning:
+        body.positioning != null ? String(body.positioning) : undefined,
+      keyMessages: Array.isArray(body.keyMessages)
+        ? body.keyMessages.map(String)
+        : undefined,
+      taskId: body.taskId != null ? String(body.taskId) : undefined,
+    })
+    res.json({ campaign })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/marketing/campaigns/:id/content', async (req, res) => {
+  try {
+    const contents = await marketing.listContent(req.params.id)
+    res.json({ contents })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/marketing/campaigns/:id/approve', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const campaign = await marketing.approveCampaign(req.params.id, {
+      projectId: body.projectId ? String(body.projectId) : undefined,
+      note: body.note != null ? String(body.note) : undefined,
+    })
+    res.json({ campaign })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/marketing/campaigns/:id/request-changes', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const campaign = await marketing.requestChanges(req.params.id, {
+      projectId: body.projectId ? String(body.projectId) : undefined,
+      feedback: String(body.feedback ?? body.note ?? 'Changes requested'),
+    })
+    res.json({ campaign })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+// ——— Image Generation Tool ———
+app.get('/api/tools/image/status', (_req, res) => {
+  const state = imageService.getState()
+  setImageGenerateAvailable(state.available && state.configured)
+  res.json({
+    configured: state.configured,
+    available: state.available,
+    fastModel: state.fastModel,
+    qualityModel: state.qualityModel,
+    label: state.label,
+    providerName: state.providerName,
+  })
+})
+
+app.post('/api/tools/image/generate', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const projectId = String(body.projectId ?? '')
+    if (!projectId) {
+      res.status(400).json({ error: 'projectId required' })
+      return
+    }
+    setImageGenerateAvailable(imageService.isAvailable())
+    const result = await imageService.generate({
+      projectId,
+      taskId: body.taskId ? String(body.taskId) : undefined,
+      campaignId: body.campaignId ? String(body.campaignId) : undefined,
+      contentId: body.contentId ? String(body.contentId) : undefined,
+      prompt: String(body.prompt ?? ''),
+      purpose: body.purpose ?? 'marketing',
+      size: body.size ? String(body.size) : undefined,
+      quality: body.quality,
+      background: body.background,
+      modelProfile: body.modelProfile === 'quality' ? 'quality' : 'fast',
+      feedback: body.feedback ? String(body.feedback) : undefined,
+      previousArtifactId: body.previousArtifactId
+        ? String(body.previousArtifactId)
+        : undefined,
+      agentId: body.agentId ? String(body.agentId) : undefined,
+      title: body.title ? String(body.title) : undefined,
+      skipBudget: body.skipBudget === true,
+    })
+    // Never return file bytes / base64 — only paths + artifact refs
+    res.status(201).json({
+      imageId: result.result.id,
+      model: result.result.model,
+      mimeType: result.result.mimeType,
+      width: result.result.width,
+      height: result.result.height,
+      publicPath: result.result.publicPath,
+      revisedPrompt: result.result.revisedPrompt,
+      artifactId: result.artifactId,
+      version: result.version,
+      familyId: result.familyId,
+      executionId: result.executionId,
+      createdAt: result.result.createdAt,
+    })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/tools/image/regenerate', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const projectId = String(body.projectId ?? '')
+    const previousArtifactId = String(body.previousArtifactId ?? '')
+    if (!projectId || !previousArtifactId) {
+      res.status(400).json({ error: 'projectId and previousArtifactId required' })
+      return
+    }
+    const result = await imageService.regenerate({
+      projectId,
+      previousArtifactId,
+      feedback: body.feedback ? String(body.feedback) : undefined,
+      taskId: body.taskId ? String(body.taskId) : undefined,
+      campaignId: body.campaignId ? String(body.campaignId) : undefined,
+      contentId: body.contentId ? String(body.contentId) : undefined,
+      agentId: body.agentId ? String(body.agentId) : undefined,
+      modelProfile: body.modelProfile === 'quality' ? 'quality' : 'fast',
+    })
+    res.status(201).json({
+      imageId: result.result.id,
+      model: result.result.model,
+      publicPath: result.result.publicPath,
+      artifactId: result.artifactId,
+      version: result.version,
+      familyId: result.familyId,
+      executionId: result.executionId,
+    })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/tools/image/files/:projectId/:imageFile', async (req, res) => {
+  try {
+    const publicPath = `${req.params.projectId}/images/${req.params.imageFile}`
+    const abs = imageStorage.resolvePublicPath(publicPath)
+    res.setHeader('Content-Type', 'image/png')
+    res.sendFile(abs)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post(
+  '/api/marketing/campaigns/:id/generate-image',
+  async (req, res) => {
+    try {
+      const body = req.body ?? {}
+      const contentId = String(body.contentId ?? '')
+      const hit = await marketing.getCampaign(req.params.id)
+      if (!hit) {
+        res.status(404).json({ error: 'Campaign not found' })
+        return
+      }
+      const content = hit.contents.find((c) => c.id === contentId)
+      if (!content?.creativeBrief) {
+        res.status(400).json({ error: 'content with creativeBrief required' })
+        return
+      }
+      setImageGenerateAvailable(imageService.isAvailable())
+      if (!imageService.isAvailable()) {
+        res.status(503).json({
+          error: '이미지 생성 도구가 연결되지 않았습니다.',
+          code: 'IMAGE_NOT_CONFIGURED',
+        })
+        return
+      }
+      const gen = await imageService.generateFromBrief({
+        brief: content.creativeBrief,
+        projectId: hit.campaign.projectId,
+        campaignId: hit.campaign.id,
+        contentId: content.id,
+        taskId: hit.campaign.taskId,
+        purpose: 'social',
+        modelProfile: body.modelProfile === 'quality' ? 'quality' : 'fast',
+        feedback: body.feedback ? String(body.feedback) : undefined,
+        title: `Creative — ${content.channel}`,
+      })
+      const snap = await marketingRepository.load(hit.campaign.projectId)
+      const c = snap.contents.find((x) => x.id === contentId)
+      if (c) {
+        c.creativeArtifactIds = [
+          ...(c.creativeArtifactIds ?? []),
+          gen.artifactId,
+        ]
+        c.creativeBrief = {
+          ...c.creativeBrief!,
+          imageToolStatus: 'available',
+        }
+        c.updatedAt = new Date().toISOString()
+        const camp = snap.campaigns.find((x) => x.id === hit.campaign.id)
+        if (camp && !camp.artifactIds.includes(gen.artifactId)) {
+          camp.artifactIds.push(gen.artifactId)
+        }
+        await marketingRepository.save(snap)
+      }
+      res.status(201).json({
+        artifactId: gen.artifactId,
+        version: gen.version,
+        publicPath: gen.result.publicPath,
+        contentId,
+      })
+    } catch (err) {
+      sendError(res, err)
+    }
+  },
+)
+
+// ——— Social Connector Foundation ———
+app.get('/api/social/connectors', async (_req, res) => {
+  try {
+    const states = await socialRegistry.listStatesAsync()
+    setSocialPublishAvailable(
+      states.some(
+        (s) =>
+          s.available &&
+          (s.capabilities.includes('text.publish') ||
+            s.capabilities.includes('image.publish') ||
+            s.capabilities.includes('video.publish')),
+      ),
+    )
+    setAnalyticsReadAvailable(
+      states.some(
+        (s) => s.available && s.capabilities.includes('analytics.read'),
+      ),
+    )
+    const payload = {
+      connectors: states.map((s) => ({
+        id: s.id,
+        channel: s.channel,
+        state: s.state,
+        label: s.label,
+        configured: s.configured,
+        available: s.available,
+        capabilities: s.capabilities,
+        policy: s.policy,
+        connection: s.connection,
+      })),
+      socialPublishAvailable: socialRegistry.hasAnyPublishAvailable(),
+      analyticsReadAvailable: socialRegistry.hasAnyAnalyticsAvailable(),
+    }
+    assertNoTokenLeak(payload)
+    res.json(payload)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/social/threads/oauth/start', async (_req, res) => {
+  try {
+    const tc = socialRegistry.getThreadsConnector()
+    if (!tc) {
+      res.status(503).json({ error: 'Threads connector unavailable' })
+      return
+    }
+    const { authorizeUrl } = tc.getOAuth().startAuthorize()
+    // Never include secrets
+    res.json({ authorizeUrl })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/social/threads/oauth/callback', async (req, res) => {
+  try {
+    const tc = socialRegistry.getThreadsConnector()
+    if (!tc) {
+      res.status(503).send('Threads connector unavailable')
+      return
+    }
+    const result = await tc.getOAuth().handleCallback({
+      code: req.query.code ? String(req.query.code) : undefined,
+      state: req.query.state ? String(req.query.state) : undefined,
+      error: req.query.error ? String(req.query.error) : undefined,
+      errorDescription: req.query.error_description
+        ? String(req.query.error_description)
+        : undefined,
+    })
+    await tc.refreshConnectionCache()
+    setSocialPublishAvailable(socialRegistry.hasAnyPublishAvailable())
+    // Redirect to settings — no token in URL
+    const clientOrigin =
+      process.env.AGENT_DECK_CLIENT_ORIGIN?.trim() || 'http://127.0.0.1:5173'
+    res.redirect(
+      `${clientOrigin}/?settings=sns&threads=connected&user=${encodeURIComponent(result.username ?? '')}`,
+    )
+  } catch (err) {
+    const msg =
+      err && typeof err === 'object' && 'userMessage' in err
+        ? String((err as { userMessage: string }).userMessage)
+        : 'Threads OAuth failed'
+    const clientOrigin =
+      process.env.AGENT_DECK_CLIENT_ORIGIN?.trim() || 'http://127.0.0.1:5173'
+    res.redirect(
+      `${clientOrigin}/?settings=sns&threads=error&msg=${encodeURIComponent(msg)}`,
+    )
+  }
+})
+
+app.post('/api/social/threads/disconnect', async (_req, res) => {
+  try {
+    const tc = socialRegistry.getThreadsConnector()
+    if (!tc) {
+      res.status(503).json({ error: 'Threads connector unavailable' })
+      return
+    }
+    await tc.getOAuth().disconnect()
+    await tc.refreshConnectionCache()
+    setSocialPublishAvailable(socialRegistry.hasAnyPublishAvailable())
+    res.json({ ok: true, connected: false })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+// ——— Media Delivery Foundation ———
+app.get('/api/media-delivery/status', (_req, res) => {
+  const state = mediaDelivery.getState()
+  const payload = {
+    configured: state.configured,
+    available: state.available,
+    provider: state.provider,
+    label: state.label,
+    defaultTtlSeconds: state.defaultTtlSeconds,
+    bucket: state.bucket ?? null,
+    region: state.region ?? null,
+  }
+  assertNoTokenLeak(payload)
+  res.json(payload)
+})
+
+app.post('/api/media-delivery/prepare', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const projectId = String(body.projectId ?? '')
+    const artifactId = String(body.artifactId ?? '')
+    if (!projectId || !artifactId) {
+      res.status(400).json({ error: 'projectId and artifactId required' })
+      return
+    }
+    const delivered = await mediaDelivery.prepare({
+      projectId,
+      artifactId,
+      purpose: body.purpose ?? 'social-publish',
+      requestedTtlSeconds:
+        body.requestedTtlSeconds != null
+          ? Number(body.requestedTtlSeconds)
+          : undefined,
+      publishAttemptId: body.publishAttemptId
+        ? String(body.publishAttemptId)
+        : undefined,
+      maxBytes: body.maxBytes != null ? Number(body.maxBytes) : undefined,
+    })
+    // Return delivery metadata; URL is transient for this response only
+    const payload = {
+      id: delivered.id,
+      projectId: delivered.projectId,
+      artifactId: delivered.artifactId,
+      provider: delivered.provider,
+      mimeType: delivered.mimeType,
+      bytes: delivered.bytes,
+      createdAt: delivered.createdAt,
+      expiresAt: delivered.expiresAt,
+      status: delivered.status,
+      // URL included for immediate publish use — not stored in project knowledge
+      url: delivered.url,
+    }
+    assertNoTokenLeak(payload)
+    res.status(201).json(payload)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/media-delivery/:id/revoke', async (req, res) => {
+  try {
+    const projectId = String(req.body?.projectId ?? '')
+    if (!projectId) {
+      res.status(400).json({ error: 'projectId required' })
+      return
+    }
+    await mediaDelivery.revoke(projectId, req.params.id)
+    res.json({ ok: true, id: req.params.id, status: 'revoked' })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/marketing/content/:id/publish-preview', async (req, res) => {
+  try {
+    const projectId = String(req.query.projectId ?? '')
+    if (!projectId) {
+      res.status(400).json({ error: 'projectId required' })
+      return
+    }
+    const snap = await marketingRepository.load(projectId)
+    const content = snap.contents.find((c) => c.id === req.params.id)
+    if (!content) {
+      res.status(404).json({ error: 'Content not found' })
+      return
+    }
+    const campaign = snap.campaigns.find((c) => c.id === content.campaignId)
+    const tc = socialRegistry.getThreadsConnector()
+    const threadsState = tc ? await tc.getStateAsync() : null
+    const payload = {
+      contentId: content.id,
+      campaignId: content.campaignId,
+      channel: content.channel,
+      title: content.title,
+      body: content.body,
+      hashtags: content.hashtags,
+      mediaArtifactIds: content.creativeArtifactIds ?? [],
+      approvalStatus: campaign?.publishPackage?.approvalStatus ?? 'pending',
+      account:
+        content.channel === 'threads'
+          ? {
+              username: threadsState?.connection?.username,
+              profileId: threadsState?.connection?.profileId,
+              connected: threadsState?.available ?? false,
+            }
+          : null,
+    }
+    assertNoTokenLeak(payload)
+    res.json(payload)
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/projects/:projectId/social/posts', async (req, res) => {
+  try {
+    const posts = await socialPublish.listPosts(req.params.projectId)
+    res.json({ posts })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/marketing/content/:id/publish', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const projectId = String(body.projectId ?? '')
+    if (!projectId) {
+      res.status(400).json({ error: 'projectId required' })
+      return
+    }
+    await socialRegistry.getThreadsConnector()?.refreshConnectionCache()
+    setSocialPublishAvailable(socialRegistry.hasAnyPublishAvailable())
+    const startedAt = new Date().toISOString()
+    const t0 = Date.now()
+    try {
+      const result = await socialPublish.publishContent({
+        projectId,
+        contentId: req.params.id,
+        campaignId: body.campaignId ? String(body.campaignId) : undefined,
+      })
+      if (result.post?.channel === 'threads') {
+        await usage.recordManual({
+          projectId,
+          taskId: `social_pub_${result.post.contentId}`,
+          provider: 'threads',
+          operation: 'social.publish',
+          status: 'completed',
+          startedAt,
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - t0,
+          sourceId: result.post.id,
+        })
+      }
+      const payload = {
+        post: result.post,
+        attempt: {
+          id: result.attempt.id,
+          status: result.attempt.status,
+          idempotencyKey: result.attempt.idempotencyKey,
+          errorCode: result.attempt.errorCode,
+        },
+        duplicate: result.duplicate,
+        campaignStatus: result.campaignStatus,
+      }
+      assertNoTokenLeak(payload)
+      res.status(result.duplicate ? 200 : 201).json(payload)
+    } catch (err) {
+      const category =
+        err && typeof err === 'object' && 'category' in err
+          ? String((err as { category: string }).category)
+          : 'UNKNOWN'
+      await usage
+        .recordManual({
+          projectId,
+          taskId: `social_pub_fail_${req.params.id}`,
+          provider: 'threads',
+          operation: 'social.publish',
+          status: 'failed',
+          startedAt,
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - t0,
+          errorCategory:
+            category.includes('RATE')
+              ? 'RATE_LIMIT'
+              : category.includes('AUTH') || category.includes('NOT_CONFIGURED')
+                ? 'AUTH'
+                : category.includes('INVALID')
+                  ? 'INVALID_REQUEST'
+                  : 'UPSTREAM',
+          userMessage:
+            err && typeof err === 'object' && 'userMessage' in err
+              ? String((err as { userMessage: string }).userMessage)
+              : undefined,
+          technicalSummary:
+            err && typeof err === 'object' && 'technicalSummary' in err
+              ? String((err as { technicalSummary: string }).technicalSummary)
+              : undefined,
+          sourceId: `fail_${req.params.id}_${Date.now().toString(36)}`,
+        })
+        .catch(() => undefined)
+      throw err
+    }
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/social/posts/:id/metrics', async (req, res) => {
+  try {
+    const projectId = String(req.query.projectId ?? '')
+    if (!projectId) {
+      res.status(400).json({ error: 'projectId query required' })
+      return
+    }
+    const existing = await socialAnalytics.getLatestMetrics(
+      projectId,
+      req.params.id,
+    )
+    if (existing && req.query.refresh !== '1') {
+      res.json({ metrics: existing, cached: true })
+      return
+    }
+    const collected = await socialAnalytics.collectMetrics({
+      projectId,
+      publishedPostId: req.params.id,
+    })
+    res.json({
+      metrics: collected.metrics,
+      snapshotId: collected.snapshot.id,
+      artifactId: collected.artifactId,
+      cached: false,
+    })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.patch('/api/marketing/content/:id', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const content = await marketing.patchContent(req.params.id, {
+      projectId: body.projectId ? String(body.projectId) : undefined,
+      title: body.title != null ? String(body.title) : undefined,
+      body: body.body != null ? String(body.body) : undefined,
+      hashtags: Array.isArray(body.hashtags)
+        ? body.hashtags.map(String)
+        : undefined,
+      callToAction:
+        body.callToAction != null ? String(body.callToAction) : undefined,
+      creativeArtifactIds: Array.isArray(body.creativeArtifactIds)
+        ? body.creativeArtifactIds.map(String)
+        : undefined,
+    })
+    res.json({ content })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
 app.get('/api/projects/:projectId/handoffs', async (req, res) => {
   try {
     const list = await artifacts.listHandoffs(req.params.projectId, {
@@ -1550,7 +2486,7 @@ export async function ensureReady(): Promise<void> {
 export { app }
 
 if (!isCloudRuntime()) {
-  app.listen(PORT, HOST, async () => {
+  const server = app.listen(PORT, HOST, async () => {
     await ensureReady()
     const state = aiProvider.getState()
     const codex = await getCodexProviderState()
@@ -1596,6 +2532,26 @@ if (!isCloudRuntime()) {
       } catch (err) {
         console.warn('[agent-deck] usage sync on boot failed', err)
       }
+      // Reconcile open RoutineRuns against Task state after harden recovery
+      try {
+        for (const p of s.projects) {
+          await routineExecution.reconcileProject(p.id)
+        }
+      } catch (err) {
+        console.warn('[agent-deck] routine run reconcile on boot failed', err)
+      }
     })
+    schedulerRuntime.start()
   })
+
+  const shutdown = async (signal: string) => {
+    console.log(`[agent-deck] ${signal}: shutting down scheduler…`)
+    await schedulerRuntime.stop()
+    server.close(() => {
+      process.exit(0)
+    })
+    setTimeout(() => process.exit(0), 8000).unref()
+  }
+  process.once('SIGINT', () => void shutdown('SIGINT'))
+  process.once('SIGTERM', () => void shutdown('SIGTERM'))
 }

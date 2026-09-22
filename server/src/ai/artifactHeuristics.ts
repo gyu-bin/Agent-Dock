@@ -62,6 +62,8 @@ export function defaultArtifactTitle(input: {
     research: '리서치 결과',
     plan: '기획안',
     design: '디자인 결과',
+    'creative-image': '생성 이미지',
+    'marketing-performance': '마케팅 성과',
     document: '문서',
     'code-change': '코드 변경',
     review: '리뷰',

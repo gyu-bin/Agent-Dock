@@ -1,10 +1,18 @@
-import type { Agent, DivisionId, ProjectType } from './types'
+import type { Agent, DivisionId, ProjectType, StepProvider } from './types'
 import type {
   WorkflowRoleKey,
   WorkflowTemplate,
   WorkflowTemplateStep,
 } from './workflowTemplates'
 import { WORKFLOW_TEMPLATES } from './workflowTemplates'
+import {
+  deriveAgentCapabilities,
+  detectCapabilityConflicts,
+  matchAgentForCapabilities,
+  resolveToolForCapability,
+  toolToExecutionBinding,
+} from './capabilities'
+import type { AgentCapability } from './capabilities'
 
 const ROLE_HINTS: Record<
   WorkflowRoleKey,
@@ -83,12 +91,15 @@ function scoreRole(agent: Agent, role: WorkflowRoleKey): number {
   return score
 }
 
-/** Team first, then full registry. Human role prefers product-manager. */
+/** Team first, then full registry. Human role prefers product-manager.
+ * When requiredCapabilities are provided, capability coverage dominates.
+ */
 export function matchAgentForRole(input: {
   role: WorkflowRoleKey
   team: Agent[]
   registry: Agent[]
   usedIds: Set<string>
+  requiredCapabilities?: AgentCapability[]
 }): Agent | null {
   if (input.role === 'human') {
     const prefer = ['product-manager', 'studio-producer']
@@ -101,6 +112,24 @@ export function matchAgentForRole(input: {
       if (any) return any
     }
     return null
+  }
+
+  const required = input.requiredCapabilities ?? []
+  if (required.length > 0) {
+    const assignment = matchAgentForCapabilities({
+      requiredCapabilities: required,
+      role: input.role,
+      team: input.team,
+      registry: input.registry,
+      usedIds: input.usedIds,
+      roleScore: (agent) => scoreRole(agent, input.role),
+    })
+    if (assignment) {
+      const hit =
+        input.team.find((a) => a.id === assignment.agentId) ??
+        input.registry.find((a) => a.id === assignment.agentId)
+      if (hit) return hit
+    }
   }
 
   for (const pool of [input.team, input.registry]) {
@@ -219,6 +248,24 @@ export interface ResolvedTemplateStep {
   outputArtifactType?: WorkflowTemplateStep['outputArtifactType']
   inputArtifactTypes?: WorkflowTemplateStep['inputArtifactTypes']
   requiresWebSearch?: boolean
+  requiredCapabilities?: AgentCapability[]
+  /** Capability diagnostics — missing/unavailable tools (no fake execution) */
+  capabilityConflicts?: Array<{
+    capability: AgentCapability
+    code: string
+    message: string
+  }>
+  assignmentSource?: 'core-team' | 'specialist'
+  /** Provider declared on the template step (before tool binding) */
+  templateProvider?: WorkflowTemplateStep['provider']
+  /** When tool resolver picks a different provider — never silent */
+  providerConflict?: {
+    stepKey: string
+    templateProvider: StepProvider
+    resolvedProvider: StepProvider
+    toolId?: string
+    message: string
+  }
 }
 
 export function resolveTemplateToSteps(input: {
@@ -247,11 +294,13 @@ export function resolveTemplateToSteps(input: {
       continue
     }
 
+    const requiredCapabilities = s.requiredCapabilities
     const agent = matchAgentForRole({
       role: s.role,
       team: input.team,
       registry: input.registry,
       usedIds: used,
+      requiredCapabilities,
     })
     // Allow reuse for human / reviewer roles across steps
     const agentId =
@@ -266,13 +315,59 @@ export function resolveTemplateToSteps(input: {
       used.add(agent.id)
     }
 
+    const profile = agent ? deriveAgentCapabilities(agent) : null
+    const templateProvider: StepProvider = s.provider
+    let provider: StepProvider = s.provider
+    let requiresWebSearch = s.requiresWebSearch
+    let assignmentSource: 'core-team' | 'specialist' | undefined
+    let capabilityConflicts:
+      | ResolvedTemplateStep['capabilityConflicts']
+      | undefined
+    let providerConflict: ResolvedTemplateStep['providerConflict']
+
+    if (requiredCapabilities && requiredCapabilities.length > 0) {
+      capabilityConflicts = detectCapabilityConflicts({
+        required: requiredCapabilities,
+        agent: profile,
+      })
+      // Resolve primary tool from first required capability that has a binding
+      for (const cap of requiredCapabilities) {
+        const resolved = resolveToolForCapability({
+          capability: cap,
+          agent: profile,
+        })
+        if (resolved.status === 'ok' && resolved.toolId) {
+          const binding = toolToExecutionBinding(resolved.toolId)
+          if (binding.provider && s.provider !== 'human') {
+            if (binding.provider !== s.provider) {
+              providerConflict = {
+                stepKey: s.key,
+                templateProvider: s.provider,
+                resolvedProvider: binding.provider,
+                toolId: resolved.toolId,
+                message: `Tool resolver selected ${binding.provider} (tool=${resolved.toolId}) over template provider ${s.provider}`,
+              }
+            }
+            provider = binding.provider
+          }
+          if (binding.requiresWebSearch) requiresWebSearch = true
+          break
+        }
+      }
+      if (agent) {
+        assignmentSource = input.team.some((a) => a.id === agent.id)
+          ? 'core-team'
+          : 'specialist'
+      }
+    }
+
     assignments[s.role] = agentId
     steps.push({
       key: s.key,
       label: s.label,
       agentId,
       role: s.role,
-      provider: s.provider,
+      provider,
       mode: s.mode,
       approvalKind:
         s.approvalPolicy === 'plan'
@@ -283,7 +378,15 @@ export function resolveTemplateToSteps(input: {
             : undefined,
       outputArtifactType: s.outputArtifactType,
       inputArtifactTypes: s.inputArtifactTypes,
-      requiresWebSearch: s.requiresWebSearch,
+      requiresWebSearch,
+      requiredCapabilities,
+      capabilityConflicts:
+        capabilityConflicts && capabilityConflicts.length > 0
+          ? capabilityConflicts
+          : undefined,
+      assignmentSource,
+      templateProvider,
+      providerConflict,
     })
   }
 

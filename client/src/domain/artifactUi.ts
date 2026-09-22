@@ -9,6 +9,8 @@ export const ARTIFACT_TYPE_LABEL: Record<ArtifactType, string> = {
   review: '리뷰',
   verification: '검증',
   report: '보고서',
+  'creative-image': '생성 이미지',
+  'marketing-performance': '마케팅 성과',
   other: '기타',
 }
 

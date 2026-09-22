@@ -6,6 +6,9 @@
 
 export type ExecutionProvider =
   | 'openai'
+  | 'openai-image'
+  | 'threads'
+  | 'media-delivery'
   | 'codex'
   | 'web-search'
   | 'mock'

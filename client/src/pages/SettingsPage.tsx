@@ -3,6 +3,11 @@ import {
   fetchSettingsBoard,
   patchSettings,
   testOpenAIConnection,
+  fetchImageToolStatus,
+  fetchSocialConnectors,
+  startThreadsOAuth,
+  disconnectThreads,
+  fetchMediaDeliveryStatus,
 } from '../api/client'
 import type {
   DeckSettings,
@@ -13,6 +18,10 @@ import type {
   ExecutionMode,
 } from '../domain/types'
 import { useDeckStore } from '../store/useDeckStore'
+import {
+  buildCapabilityDiagnosticsSummary,
+  setToolAvailability,
+} from '../domain/capabilities'
 import styles from './SettingsPage.module.css'
 
 type SettingsSection =
@@ -22,6 +31,7 @@ type SettingsSection =
   | 'search'
   | 'safety'
   | 'budget'
+  | 'sns'
   | 'advanced'
 
 const NAV: Array<{ id: SettingsSection; label: string }> = [
@@ -29,6 +39,7 @@ const NAV: Array<{ id: SettingsSection; label: string }> = [
   { id: 'ai', label: 'AI' },
   { id: 'codex', label: 'Codex' },
   { id: 'search', label: '검색' },
+  { id: 'sns', label: 'SNS' },
   { id: 'safety', label: '안전' },
   { id: 'budget', label: '비용' },
   { id: 'advanced', label: '고급' },
@@ -44,9 +55,40 @@ export function SettingsPage() {
   const setDeveloperAllowMock = useDeckStore((s) => s.setDeveloperAllowMock)
   const setAiProvider = useDeckStore((s) => s.setAiProvider)
 
+  const registry = useDeckStore((s) => s.registry)
+  const capabilityDiag = buildCapabilityDiagnosticsSummary(registry)
+
   const [section, setSection] = useState<SettingsSection>('general')
   const [board, setBoard] = useState<SettingsBoard | null>(null)
   const [draft, setDraft] = useState<DeckSettings | null>(null)
+  const [imageTool, setImageTool] = useState<{
+    configured: boolean
+    available: boolean
+    fastModel: string
+    qualityModel: string
+  } | null>(null)
+  const [socialConnectors, setSocialConnectors] = useState<
+    Array<{
+      channel: string
+      label: string
+      configured: boolean
+      available: boolean
+      state: string
+      connection?: {
+        status: string
+        username?: string
+        profileId?: string
+      }
+    }>
+  >([])
+  const [snsBusy, setSnsBusy] = useState(false)
+  const [mediaDeliveryStatus, setMediaDeliveryStatus] = useState<{
+    configured: boolean
+    available: boolean
+    provider: string
+    label: string
+    defaultTtlSeconds: number
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -59,6 +101,31 @@ export function SettingsPage() {
     try {
       const b = await fetchSettingsBoard()
       setBoard(b)
+      void fetchImageToolStatus()
+        .then((img) => {
+          setImageTool(img)
+          setToolAvailability(
+            'image-generation',
+            img.available && img.configured ? 'available' : 'unavailable',
+          )
+        })
+        .catch(() => setImageTool(null))
+      void fetchSocialConnectors()
+        .then((soc) => {
+          setSocialConnectors(soc.connectors)
+          setToolAvailability(
+            'social-publisher',
+            soc.socialPublishAvailable ? 'available' : 'unavailable',
+          )
+          setToolAvailability(
+            'analytics',
+            soc.analyticsReadAvailable ? 'available' : 'unavailable',
+          )
+        })
+        .catch(() => setSocialConnectors([]))
+      void fetchMediaDeliveryStatus()
+        .then(setMediaDeliveryStatus)
+        .catch(() => setMediaDeliveryStatus(null))
       setDraft(b.settings)
       setAiProvider({
         mode: b.runtime.openai.configured ? 'openai' : 'not-configured',
@@ -252,6 +319,32 @@ export function SettingsPage() {
                   <span className={styles.off}>○ 미설정</span>
                 )}
               </div>
+              <div className={styles.row}>
+                <span className={styles.label}>이미지 생성</span>
+                <span
+                  className={
+                    imageTool?.available ? styles.ok : styles.off
+                  }
+                >
+                  {imageTool?.available
+                    ? '● 사용 가능'
+                    : '○ 설정 필요'}
+                </span>
+              </div>
+              {imageTool ? (
+                <>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Fast model</span>
+                    <span className={styles.hintInline}>{imageTool.fastModel}</span>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Quality model</span>
+                    <span className={styles.hintInline}>
+                      {imageTool.qualityModel}
+                    </span>
+                  </div>
+                </>
+              ) : null}
               <div className={styles.row}>
                 <span className={styles.label}>API Key</span>
                 <span
@@ -524,6 +617,164 @@ export function SettingsPage() {
             >
               검색 설정 저장
             </button>
+          </section>
+        ) : null}
+
+        {section === 'sns' ? (
+          <section className={styles.card}>
+            <h2>SNS 연결</h2>
+            <p className={styles.hint}>
+              Threads만 OAuth 연결을 지원합니다. Instagram 등은 지원 예정입니다.
+            </p>
+            {(socialConnectors.length
+              ? socialConnectors
+              : [
+                  {
+                    channel: 'threads',
+                    label: 'Threads',
+                    configured: false,
+                    available: false,
+                    state: 'unconfigured',
+                  },
+                  {
+                    channel: 'instagram',
+                    label: 'Instagram',
+                    configured: false,
+                    available: false,
+                    state: 'unconfigured',
+                  },
+                  {
+                    channel: 'x',
+                    label: 'X',
+                    configured: false,
+                    available: false,
+                    state: 'unconfigured',
+                  },
+                  {
+                    channel: 'youtube',
+                    label: 'YouTube',
+                    configured: false,
+                    available: false,
+                    state: 'unconfigured',
+                  },
+                  {
+                    channel: 'reddit',
+                    label: 'Reddit',
+                    configured: false,
+                    available: false,
+                    state: 'unconfigured',
+                  },
+                ]
+            )
+              .filter((c) =>
+                ['threads', 'instagram', 'x', 'youtube', 'reddit'].includes(
+                  c.channel,
+                ),
+              )
+              .map((c) => {
+                const isThreads = c.channel === 'threads'
+                const connected = Boolean(c.available && c.connection?.status === 'connected') ||
+                  (isThreads && c.available)
+                const label =
+                  c.channel === 'threads'
+                    ? 'Threads'
+                    : c.channel === 'instagram'
+                      ? 'Instagram'
+                      : c.channel === 'x'
+                        ? 'X'
+                        : c.channel === 'youtube'
+                          ? 'YouTube'
+                          : 'Reddit'
+                return (
+                  <div className={styles.row} key={c.channel}>
+                    <span className={styles.label}>{label}</span>
+                    <span className={connected ? styles.ok : styles.off}>
+                      {connected
+                        ? `● 연결됨${c.connection?.username ? ` · @${c.connection.username}` : ''}`
+                        : c.connection?.status === 'expired'
+                          ? '○ 인증 만료'
+                          : '○ 연결 안 됨'}
+                    </span>
+                    {isThreads ? (
+                      connected ? (
+                        <button
+                          type="button"
+                          className={styles.mode}
+                          disabled={snsBusy}
+                          onClick={() => {
+                            setSnsBusy(true)
+                            void disconnectThreads()
+                              .then(() => reload())
+                              .finally(() => setSnsBusy(false))
+                          }}
+                        >
+                          연결 해제
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.primary}
+                          disabled={snsBusy}
+                          onClick={() => {
+                            setSnsBusy(true)
+                            void startThreadsOAuth()
+                              .then((r) => {
+                                window.location.href = r.authorizeUrl
+                              })
+                              .catch((err) => {
+                                setError(
+                                  err instanceof Error
+                                    ? err.message
+                                    : String(err),
+                                )
+                                setSnsBusy(false)
+                              })
+                          }}
+                        >
+                          연결
+                        </button>
+                      )
+                    ) : (
+                      <span className={styles.hintInline}>지원 예정</span>
+                    )}
+                  </div>
+                )
+              })}
+            <p className={styles.hint}>
+              THREADS_APP_ID / THREADS_APP_SECRET / THREADS_REDIRECT_URI 환경변수
+              필요. 토큰은 서버에만 저장됩니다.
+            </p>
+            <h3 style={{ marginTop: 20 }}>미디어 전달</h3>
+            <div className={styles.row}>
+              <span className={styles.label}>Provider</span>
+              <span className={styles.hintInline}>
+                {mediaDeliveryStatus?.provider ?? 'unconfigured'}
+              </span>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.label}>상태</span>
+              <span
+                className={
+                  mediaDeliveryStatus?.available ? styles.ok : styles.off
+                }
+              >
+                {mediaDeliveryStatus?.available
+                  ? '● 사용 가능'
+                  : '○ 설정 필요'}
+              </span>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.label}>기본 TTL</span>
+              <span className={styles.hintInline}>
+                {mediaDeliveryStatus?.defaultTtlSeconds
+                  ? `${Math.round(mediaDeliveryStatus.defaultTtlSeconds / 60)}분`
+                  : '30분'}
+              </span>
+            </div>
+            <p className={styles.hint}>
+              로컬 서버를 공개하지 않습니다. Production은 private object + signed
+              URL (MEDIA_DELIVERY_PROVIDER).
+            </p>
           </section>
         ) : null}
 
@@ -810,6 +1061,41 @@ export function SettingsPage() {
                 Codex 실행 시 프로젝트 경로 필수
               </label>
               <p className={styles.hint}>{s?.project.sandboxNote}</p>
+            </section>
+
+            <section className={styles.card}>
+              <h2>Capability Foundation</h2>
+              <p className={styles.hint}>
+                Agent → Capability → Tool 진단 (일반 UI에는 노출하지 않음)
+              </p>
+              <ul className={styles.metaList}>
+                <li>
+                  Agents profiled: {capabilityDiag.agentCount} (with caps:{' '}
+                  {capabilityDiag.withCapabilities})
+                </li>
+                <li>
+                  Without capabilities:{' '}
+                  {capabilityDiag.withoutCapabilities.length === 0
+                    ? 'none'
+                    : capabilityDiag.withoutCapabilities.join(', ')}
+                </li>
+                <li>
+                  Available tools: {capabilityDiag.availableTools.join(', ')}
+                </li>
+                <li>
+                  Future tools: {capabilityDiag.futureTools.join(', ') || '—'}
+                </li>
+                <li>
+                  Future capabilities:{' '}
+                  {capabilityDiag.futureCapabilities.join(', ') || '—'}
+                </li>
+              </ul>
+              <p className={styles.hint}>
+                Preferred tools:{' '}
+                {Object.entries(capabilityDiag.preferredToolDistribution)
+                  .map(([k, v]) => `${k}=${v}`)
+                  .join(' · ')}
+              </p>
             </section>
 
             <section className={styles.card}>

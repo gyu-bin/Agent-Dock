@@ -22,7 +22,22 @@ export function estimateExecutionCost(input: {
 
   if (!hasTokens) {
     // Codex / web-search / empty usage — no token cost to report
-    if (input.provider === 'codex' || input.provider === 'web-search') {
+    if (
+      input.provider === 'codex' ||
+      input.provider === 'web-search' ||
+      input.provider === 'openai-image' ||
+      input.provider === 'threads' ||
+      input.provider === 'media-delivery'
+    ) {
+      if (input.provider === 'openai-image') {
+        return input.model ? { kind: 'unknown' } : { kind: 'na' }
+      }
+      if (
+        input.provider === 'threads' ||
+        input.provider === 'media-delivery'
+      ) {
+        return { kind: 'unknown' }
+      }
       return { kind: 'na' }
     }
     if (input.provider === 'human') return { kind: 'na' }
@@ -36,7 +51,9 @@ export function estimateExecutionCost(input: {
       : null
 
   if (!priceProvider) {
-    return hasTokens ? { kind: 'unknown' } : { kind: 'na' }
+    return hasTokens || input.provider === 'openai-image'
+      ? { kind: 'unknown' }
+      : { kind: 'na' }
   }
 
   const row = lookupModelPrice(priceProvider, input.model)

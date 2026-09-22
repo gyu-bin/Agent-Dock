@@ -46,6 +46,11 @@ export interface WorkflowTemplateStep {
   approvalPolicy: ApprovalPolicy
   /** Artifact types this step prefers as input (hints for context) */
   inputArtifactTypes?: ArtifactType[]
+  /**
+   * Capability Layer — optional required skills for this step.
+   * Role matching still applies; capabilities bias agent + tool choice.
+   */
+  requiredCapabilities?: import('./capabilities/capabilityTypes').AgentCapability[]
 }
 
 export interface WorkflowTemplate {
@@ -91,6 +96,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'plan',
         approvalPolicy: 'none',
+        requiredCapabilities: ['project.plan', 'document.write'],
       },
       {
         key: 'tech-plan',
@@ -102,6 +108,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         outputArtifactType: 'plan',
         approvalPolicy: 'none',
         inputArtifactTypes: ['plan'],
+        requiredCapabilities: ['project.plan', 'code.inspect'],
       },
       {
         key: 'implement',
@@ -113,6 +120,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         outputArtifactType: 'code-change',
         approvalPolicy: 'none',
         inputArtifactTypes: ['plan'],
+        requiredCapabilities: ['code.inspect', 'code.write'],
       },
       {
         key: 'change-approval',
@@ -131,6 +139,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'verification',
         approvalPolicy: 'none',
+        requiredCapabilities: ['code.test', 'qa.verify'],
       },
       {
         key: 'review',
@@ -142,6 +151,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         outputArtifactType: 'review',
         approvalPolicy: 'none',
         inputArtifactTypes: ['code-change', 'verification'],
+        requiredCapabilities: ['code.inspect', 'code.review'],
       },
       {
         key: 'reality',
@@ -151,6 +161,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'report',
         approvalPolicy: 'none',
+        requiredCapabilities: ['qa.verify', 'research.analyze'],
       },
     ],
   },
@@ -475,6 +486,11 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         requiresWebSearch: true,
         outputArtifactType: 'research',
         approvalPolicy: 'none',
+        requiredCapabilities: [
+          'research.web',
+          'research.analyze',
+          'research.synthesize',
+        ],
       },
       {
         key: 'synthesis',
@@ -485,6 +501,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         outputArtifactType: 'plan',
         approvalPolicy: 'none',
         inputArtifactTypes: ['research'],
+        requiredCapabilities: ['project.plan', 'research.analyze'],
       },
       {
         key: 'impl-plan',
@@ -495,6 +512,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         outputArtifactType: 'plan',
         approvalPolicy: 'none',
         inputArtifactTypes: ['plan', 'research'],
+        requiredCapabilities: ['project.plan', 'code.inspect'],
       },
       {
         key: 'plan-approval',
@@ -514,6 +532,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'code-change',
         approvalPolicy: 'none',
+        requiredCapabilities: ['code.inspect', 'code.write'],
       },
       {
         key: 'change-approval',
@@ -532,6 +551,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'verification',
         approvalPolicy: 'none',
+        requiredCapabilities: ['code.test', 'qa.verify'],
       },
       {
         key: 'review',
@@ -542,6 +562,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'review',
         approvalPolicy: 'none',
+        requiredCapabilities: ['code.inspect', 'code.review'],
       },
     ],
   },
@@ -554,6 +575,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     intents: [
       '마케팅',
       'marketing',
+      '홍보',
+      '홍보해',
+      '마케팅해',
       'steam page',
       '출시 마케팅',
       '경쟁 앱',
@@ -571,6 +595,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         requiresWebSearch: true,
         outputArtifactType: 'research',
         approvalPolicy: 'none',
+        requiredCapabilities: ['research.web', 'marketing.research'],
       },
       {
         key: 'marketing-plan',
@@ -581,25 +606,38 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         outputArtifactType: 'plan',
         approvalPolicy: 'none',
         inputArtifactTypes: ['research'],
+        requiredCapabilities: ['marketing.plan', 'marketing.content'],
       },
       {
         key: 'content',
-        label: '콘텐츠 초안',
+        label: '채널별 콘텐츠',
         role: 'content',
         provider: 'openai',
         required: true,
         outputArtifactType: 'document',
         approvalPolicy: 'none',
         inputArtifactTypes: ['research', 'plan'],
+        requiredCapabilities: ['content.write', 'marketing.content'],
       },
       {
-        key: 'reality',
-        label: '최종 검토',
-        role: 'reality',
+        key: 'review',
+        label: '마케팅 리뷰',
+        role: 'reviewer',
         provider: 'openai',
         required: true,
-        outputArtifactType: 'report',
+        outputArtifactType: 'review',
         approvalPolicy: 'none',
+        inputArtifactTypes: ['document', 'plan'],
+        requiredCapabilities: ['research.analyze', 'document.write'],
+      },
+      {
+        key: 'publish-approval',
+        label: '게시 패키지 승인',
+        role: 'human',
+        provider: 'human',
+        required: true,
+        approvalPolicy: 'change',
+        requiredCapabilities: [],
       },
     ],
   },
@@ -622,6 +660,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'document',
         approvalPolicy: 'none',
+        requiredCapabilities: ['code.inspect'],
       },
       {
         key: 'review',
@@ -632,6 +671,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'review',
         approvalPolicy: 'none',
+        requiredCapabilities: ['code.inspect', 'code.review'],
       },
       {
         key: 'reality',
@@ -641,6 +681,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'report',
         approvalPolicy: 'none',
+        requiredCapabilities: ['qa.verify', 'research.analyze'],
       },
     ],
   },

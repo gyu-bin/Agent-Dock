@@ -118,6 +118,8 @@ export type ArtifactType =
   | 'review'
   | 'verification'
   | 'report'
+  | 'creative-image'
+  | 'marketing-performance'
   | 'other'
 
 export type ArtifactContentType = 'markdown' | 'text' | 'json' | 'diff'
@@ -185,6 +187,9 @@ export interface KnowledgeConflictCandidate {
 
 export type ExecutionProvider =
   | 'openai'
+  | 'openai-image'
+  | 'threads'
+  | 'media-delivery'
   | 'codex'
   | 'web-search'
   | 'mock'
@@ -356,6 +361,10 @@ export interface Task {
     stepId?: string
     at: string
   }
+  /** Operations Foundation — who/what spawned this task */
+  source?: import('./operations').TaskSource
+  /** Canonical planner version when task was planned */
+  planningVersion?: number
 }
 
 export interface WebSearchSession {
@@ -400,7 +409,7 @@ export type ApprovalDecision = 'pending' | 'approved' | 'rejected' | 'changes_re
 export interface TaskApprovalState {
   status: ApprovalDecision
   stepId: string
-  kind?: 'plan' | 'change'
+  kind?: 'plan' | 'change' | 'publish'
   runId?: string
   snapshotId?: string
   decidedAt?: string

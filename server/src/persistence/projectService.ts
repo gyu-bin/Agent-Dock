@@ -203,6 +203,31 @@ export class ProjectService {
     })
   }
 
+  /** Append tasks/steps without replacing the whole work-state (scheduler). */
+  async appendWork(input: {
+    tasks?: StoredTask[]
+    pipelineSteps?: StoredPipelineStep[]
+  }): Promise<ProjectStoreSnapshot> {
+    return this.enqueue(async () => {
+      const snap = this.normalize(await this.repo.load())
+      if (input.tasks?.length) {
+        const existing = new Set(snap.tasks.map((t) => t.id))
+        for (const t of input.tasks) {
+          if (!existing.has(t.id)) snap.tasks.push(t)
+        }
+      }
+      if (input.pipelineSteps?.length) {
+        const existing = new Set(snap.pipelineSteps.map((s) => s.id))
+        for (const s of input.pipelineSteps) {
+          if (!existing.has(s.id)) snap.pipelineSteps.push(s)
+        }
+      }
+      snap.revision = (snap.revision ?? 0) + 1
+      await this.repo.save(snap)
+      return snap
+    })
+  }
+
   private assertRevision(
     snap: ProjectStoreSnapshot,
     expected?: number,

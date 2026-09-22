@@ -9,6 +9,8 @@ export type ArtifactType =
   | 'review'
   | 'verification'
   | 'report'
+  | 'creative-image'
+  | 'marketing-performance'
   | 'other'
 
 export type ArtifactContentType = 'markdown' | 'text' | 'json' | 'diff'

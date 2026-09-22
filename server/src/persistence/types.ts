@@ -60,7 +60,7 @@ export type ApprovalDecision =
 export interface StoredTaskApproval {
   status: ApprovalDecision
   stepId: string
-  kind?: 'plan' | 'change'
+  kind?: 'plan' | 'change' | 'publish'
   runId?: string
   snapshotId?: string
   decidedAt?: string
@@ -200,6 +200,14 @@ export interface StoredTask {
     stepId?: string
     at: string
   }
+  /** Operations Foundation */
+  source?: {
+    type: 'user' | 'routine' | 'system'
+    routineId?: string
+    routineRunId?: string
+  }
+  /** Canonical planner version when task was planned */
+  planningVersion?: number
 }
 
 export interface StoredWebSource {

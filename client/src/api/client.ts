@@ -31,6 +31,12 @@ import type {
   DeckSettings,
   SettingsBoard,
 } from '../domain/types'
+import type {
+  OperationsSnapshot,
+  ProjectGoal,
+  ProjectRoutine,
+  RoutineRun,
+} from '../domain/operations'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -504,6 +510,307 @@ export async function updateProjectContext(
     },
   )
   if (!res.ok) throw new Error(`Update context failed: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchProjectOperations(
+  projectId: string,
+): Promise<OperationsSnapshot> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/operations`,
+  )
+  if (!res.ok) throw new Error(`Operations fetch failed: ${res.status}`)
+  return res.json() as Promise<OperationsSnapshot>
+}
+
+export async function createProjectGoal(
+  projectId: string,
+  input: {
+    type: ProjectGoal['type']
+    title: string
+    description?: string
+    priority?: ProjectGoal['priority']
+    successCriteria?: string[]
+  },
+): Promise<ProjectGoal> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/goals`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+  if (!res.ok) throw new Error(`Create goal failed: ${res.status}`)
+  const body = (await res.json()) as { goal: ProjectGoal }
+  return body.goal
+}
+
+export async function createProjectRoutine(
+  projectId: string,
+  input: Record<string, unknown>,
+): Promise<ProjectRoutine> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/routines`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+  if (!res.ok) throw new Error(`Create routine failed: ${res.status}`)
+  const body = (await res.json()) as { routine: ProjectRoutine }
+  return body.routine
+}
+
+export async function patchProjectRoutine(
+  routineId: string,
+  patch: Record<string, unknown>,
+): Promise<ProjectRoutine> {
+  const res = await apiFetch(
+    `${API_BASE}/api/routines/${encodeURIComponent(routineId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    },
+  )
+  if (!res.ok) throw new Error(`Patch routine failed: ${res.status}`)
+  const body = (await res.json()) as { routine: ProjectRoutine }
+  return body.routine
+}
+
+export async function runProjectRoutine(
+  routineId: string,
+  body: Record<string, unknown> = {},
+): Promise<{
+  run: RoutineRun
+  routine: ProjectRoutine
+  taskSeed: {
+    title: string
+    description: string
+    workflowTemplateId?: string
+    missingCapabilities: string[]
+    specialistAgentIds: string[]
+  } | null
+}> {
+  const res = await apiFetch(
+    `${API_BASE}/api/routines/${encodeURIComponent(routineId)}/run`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+  if (!res.ok) throw new Error(`Routine run failed: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchMarketingCampaigns(
+  projectId: string,
+): Promise<import('../domain/marketing').MarketingCampaign[]> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/marketing/campaigns`,
+  )
+  if (!res.ok) throw new Error(`Marketing campaigns failed: ${res.status}`)
+  const body = (await res.json()) as {
+    campaigns: import('../domain/marketing').MarketingCampaign[]
+  }
+  return body.campaigns
+}
+
+export async function createMarketingCampaign(
+  projectId: string,
+  input: Record<string, unknown> = {},
+): Promise<{
+  campaign: import('../domain/marketing').MarketingCampaign
+  contents: import('../domain/marketing').MarketingContent[]
+  publishPackage: import('../domain/marketing').MarketingPublishPackage
+}> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/marketing/campaigns`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+  if (!res.ok) throw new Error(`Create marketing campaign failed: ${res.status}`)
+  return res.json()
+}
+
+export async function approveMarketingCampaign(
+  campaignId: string,
+  input: { projectId?: string; note?: string } = {},
+): Promise<{ campaign: import('../domain/marketing').MarketingCampaign }> {
+  const res = await apiFetch(
+    `${API_BASE}/api/marketing/campaigns/${encodeURIComponent(campaignId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+  if (!res.ok) throw new Error(`Approve marketing campaign failed: ${res.status}`)
+  return res.json()
+}
+
+export async function regenerateMarketingImage(
+  previousArtifactId: string,
+  body: {
+    projectId: string
+    feedback?: string
+    campaignId?: string
+    contentId?: string
+    modelProfile?: 'fast' | 'quality'
+  },
+): Promise<{
+  artifactId: string
+  version: number
+  familyId: string
+  publicPath?: string
+  model: string
+}> {
+  const res = await apiFetch(`${API_BASE}/api/tools/image/regenerate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ previousArtifactId, ...body }),
+  })
+  if (!res.ok) throw new Error(`Regenerate image failed: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchImageToolStatus(): Promise<{
+  configured: boolean
+  available: boolean
+  fastModel: string
+  qualityModel: string
+  label: string
+  providerName: string
+}> {
+  const res = await apiFetch(`${API_BASE}/api/tools/image/status`)
+  if (!res.ok) throw new Error(`Image status failed: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSocialConnectors(): Promise<{
+  connectors: Array<{
+    id: string
+    channel: string
+    state: string
+    label: string
+    configured: boolean
+    available: boolean
+    capabilities: string[]
+    connection?: {
+      status: string
+      username?: string
+      profileId?: string
+    }
+  }>
+  socialPublishAvailable: boolean
+  analyticsReadAvailable: boolean
+}> {
+  const res = await apiFetch(`${API_BASE}/api/social/connectors`)
+  if (!res.ok) throw new Error(`Social connectors failed: ${res.status}`)
+  return res.json()
+}
+
+export async function startThreadsOAuth(): Promise<{ authorizeUrl: string }> {
+  const res = await apiFetch(`${API_BASE}/api/social/threads/oauth/start`, {
+    method: 'POST',
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(
+      (err as { error?: string }).error ?? `Threads OAuth start failed: ${res.status}`,
+    )
+  }
+  return res.json()
+}
+
+export async function disconnectThreads(): Promise<{ ok: boolean }> {
+  const res = await apiFetch(`${API_BASE}/api/social/threads/disconnect`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error(`Threads disconnect failed: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchMediaDeliveryStatus(): Promise<{
+  configured: boolean
+  available: boolean
+  provider: string
+  label: string
+  defaultTtlSeconds: number
+}> {
+  const res = await apiFetch(`${API_BASE}/api/media-delivery/status`)
+  if (!res.ok) throw new Error(`Media delivery status failed: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchPublishPreview(
+  contentId: string,
+  projectId: string,
+): Promise<{
+  contentId: string
+  channel: string
+  body: string
+  title?: string
+  account: { username?: string; connected: boolean } | null
+  approvalStatus: string
+}> {
+  const q = new URLSearchParams({ projectId })
+  const res = await apiFetch(
+    `${API_BASE}/api/marketing/content/${encodeURIComponent(contentId)}/publish-preview?${q}`,
+  )
+  if (!res.ok) throw new Error(`Publish preview failed: ${res.status}`)
+  return res.json()
+}
+
+export async function publishMarketingContent(
+  contentId: string,
+  body: { projectId: string; campaignId?: string },
+): Promise<{
+  post?: unknown
+  duplicate: boolean
+  campaignStatus?: string
+}> {
+  const res = await apiFetch(
+    `${API_BASE}/api/marketing/content/${encodeURIComponent(contentId)}/publish`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(
+      (err as { error?: string }).error ?? `Publish failed: ${res.status}`,
+    )
+  }
+  return res.json()
+}
+
+export async function generateMarketingContentImage(
+  campaignId: string,
+  body: Record<string, unknown>,
+): Promise<{
+  artifactId: string
+  version: number
+  publicPath?: string
+  contentId: string
+}> {
+  const res = await apiFetch(
+    `${API_BASE}/api/marketing/campaigns/${encodeURIComponent(campaignId)}/generate-image`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+  if (!res.ok) throw new Error(`Generate image failed: ${res.status}`)
   return res.json()
 }
 

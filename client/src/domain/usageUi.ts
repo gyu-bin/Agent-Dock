@@ -6,6 +6,9 @@ import type {
 
 export const PROVIDER_LABEL: Record<ExecutionProvider, string> = {
   openai: 'OpenAI',
+  'openai-image': 'OpenAI Image',
+  threads: 'Threads',
+  'media-delivery': 'Media Delivery',
   codex: 'Codex',
   'web-search': '웹 검색',
   mock: 'Mock',
@@ -26,6 +29,9 @@ export const PROVIDER_FILTERS: Array<{
 }> = [
   { id: 'all', label: '전체 프로바이더' },
   { id: 'openai', label: 'OpenAI' },
+  { id: 'openai-image', label: 'OpenAI Image' },
+  { id: 'threads', label: 'Threads' },
+  { id: 'media-delivery', label: 'Media Delivery' },
   { id: 'codex', label: 'Codex' },
   { id: 'web-search', label: '웹 검색' },
   { id: 'mock', label: 'Mock' },

@@ -39,11 +39,10 @@ import {
   selectWorkflowTemplate,
   previewLabels,
 } from '../domain/templateSelector'
-import { getTemplateById } from '../domain/workflowTemplates'
 import {
-  normalizeStepDefsWithSafety,
-  resolveSafetyAgents,
-} from '../domain/safetyPipeline'
+  planTask,
+  materializeTaskFromPlan,
+} from '../domain/taskPlanning'
 import { createMockExecutionEngine } from '../engine/mockExecutionEngine'
 import { createRealAIExecutionEngine } from '../engine/realAiExecutionEngine'
 import { taskProgress, type ExecutionEngine } from '../engine/types'
@@ -157,6 +156,7 @@ interface DeckState {
     routePlan?: RoutePlan
     executionMode?: ExecutionMode
     workflowTemplateId?: string
+    source?: import('../domain/operations').TaskSource
   }) => string | null
   startTask: (taskId: string) => void
   pauseTask: (taskId: string) => void
@@ -639,108 +639,50 @@ function createDeckStore() {
         const team = selectTeamAgents(state)
         const requestText = `${input.title}\n${input.description ?? ''}`.trim()
 
-        // Harden-0: WorkflowTemplate is the only planning SoT.
-        // routePlan / DeterministicTaskRouter are not used to build pipelines.
-        const tplId = input.workflowTemplateId
-        const tpl =
-          (tplId ? getTemplateById(tplId) : undefined) ??
-          selectWorkflowTemplate({
-            request: requestText,
-            projectType: project.type,
-            preferredTemplateId: tplId,
-          }).template
-
-        const resolved = resolveTemplateToSteps({
-          template: tpl,
+        const plan = planTask({
+          project: {
+            id: project.id,
+            type: project.type,
+            name: project.name,
+          },
           request: requestText,
+          source: input.source ?? { type: 'user' },
+          preferredTemplateId: input.workflowTemplateId,
+          preferredAgentId: input.preferredAgentId,
           team,
           registry: state.registry,
+          executionMode: mode,
         })
-        if (resolved.steps.length === 0) return null
-
-        const workflow = tpl.workflowKind
-        const templateId = tpl.id
-        const templateVersion = tpl.version
-        const agentRoleAssignments = resolved.assignments
-        const workflowPreview = previewLabels(resolved.steps)
-        const assignedAgentIdsBase = [
-          ...new Set(resolved.steps.map((s) => s.agentId)),
-        ]
-        const recommendedExtraAgentIds: string[] = []
-        let stepDefs: import('../domain/safetyPipeline').StepDefLike[] =
-          resolved.steps.map((s) => ({
-          agentId: s.agentId,
-          label: s.label,
-          provider: s.provider,
-          mode: s.mode,
-          role: s.role,
-          templateStepKey: s.key,
-          approvalKind: s.approvalKind,
-          outputArtifactType: s.outputArtifactType,
-          inputArtifactTypes: s.inputArtifactTypes,
-          requiresWebSearch: s.requiresWebSearch,
-        }))
-
-        // System policy: any Codex IMPLEMENT must be followed by safety chain.
-        const safetyAgents = resolveSafetyAgents({
-          assignedAgentIds: assignedAgentIdsBase.length
-            ? assignedAgentIdsBase
-            : stepDefs.map((s) => s.agentId),
-          steps: stepDefs,
-          registryIds: state.registry.map((a) => a.id),
-        })
-        stepDefs = normalizeStepDefsWithSafety(stepDefs, safetyAgents)
-        const assignedAgentIds = [
-          ...new Set([
-            ...assignedAgentIdsBase,
-            ...stepDefs.map((s) => s.agentId),
-          ]),
-        ]
-
-        if (stepDefs.length === 0 || !workflow) return null
+        if (plan.steps.length === 0) return null
 
         const now = new Date().toISOString()
         const taskId = `task_${Date.now().toString(36)}`
-        const task: Task = {
-          id: taskId,
-          projectId: project.id,
-          title: input.title.trim(),
-          description: (input.description ?? '').trim(),
-          status: 'queued',
-          workflow,
-          priority: input.priority ?? 'normal',
-          assignedAgentIds,
-          recommendedExtraAgentIds,
-          preferredAgentId: input.preferredAgentId,
-          progress: 0,
-          createdAt: now,
-          updatedAt: now,
-          simulateFailure: input.simulateFailure === true,
-          executionMode: mode,
-          workflowTemplateId: templateId,
-          workflowTemplateVersion: templateVersion,
-          workflowPreview,
-          agentRoleAssignments,
-        }
-        const steps: PipelineStep[] = stepDefs.map((s, i) => ({
-          id: `${taskId}_step_${i + 1}`,
+        const { task: planned, steps: plannedSteps } = materializeTaskFromPlan({
+          plan,
           taskId,
-          agentId: s.agentId,
-          order: i + 1,
-          label: s.label,
-          status: 'queued',
-          provider: s.provider,
-          mode: s.mode,
+          projectId: project.id,
+          title: input.title,
+          description: input.description ?? '',
+          now,
+          priority: input.priority ?? 'normal',
+          preferredAgentId: input.preferredAgentId,
+          executionMode: mode,
+        })
+
+        const task: Task = {
+          ...planned,
+          simulateFailure: input.simulateFailure === true,
+          source: planned.source,
+        }
+        const steps: PipelineStep[] = plannedSteps.map((s) => ({
+          ...s,
           role: s.role as import('../domain/workflowTemplates').WorkflowRoleKey | undefined,
-          templateStepKey: s.templateStepKey,
-          approvalKind: s.approvalKind,
           outputArtifactType: s.outputArtifactType as
             | import('../domain/types').ArtifactType
             | undefined,
           inputArtifactTypes: s.inputArtifactTypes as
             | import('../domain/types').ArtifactType[]
             | undefined,
-          requiresWebSearch: s.requiresWebSearch,
         }))
 
         set((s) => ({

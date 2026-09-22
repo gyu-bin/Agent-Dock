@@ -4,7 +4,15 @@ import {
   deleteProject,
   fetchProjectArtifacts,
   fetchProjectKnowledge,
+  fetchProjectOperations,
   fetchProjectUsage,
+  fetchMarketingCampaigns,
+  createMarketingCampaign,
+  approveMarketingCampaign,
+  fetchPublishPreview,
+  publishMarketingContent,
+  patchProjectRoutine,
+  runProjectRoutine,
   setActiveProject,
   setProjectTeam,
   updateProjectContext,
@@ -22,6 +30,8 @@ import type {
   ProjectContext,
   UsageAggregation,
 } from '../domain/types'
+import type { OperationsSnapshot } from '../domain/operations'
+import type { MarketingCampaign } from '../domain/marketing'
 import { formatCost, formatTokens } from '../domain/usageUi'
 import { userFacingTaskStatus } from '../domain/taskDisplay'
 import { displayAgentDescription, displayAgentName } from '../i18n'
@@ -52,6 +62,7 @@ type DetailTab =
   | 'tasks'
   | 'artifacts'
   | 'knowledge'
+  | 'operations'
   | 'settings'
 
 export function ProjectsPage() {
@@ -91,7 +102,11 @@ export function ProjectsPage() {
     totalTasks: number
     aggregation: UsageAggregation
   } | null>(null)
+  const createAndStartTask = useDeckStore((s) => s.createAndStartTask)
   const [knowledge, setKnowledge] = useState<KnowledgeItem[]>([])
+  const [operations, setOperations] = useState<OperationsSnapshot | null>(null)
+  const [opsBusy, setOpsBusy] = useState(false)
+  const [campaigns, setCampaigns] = useState<MarketingCampaign[]>([])
 
   const teamAgents = useMemo(() => {
     if (!selected) return []
@@ -121,6 +136,8 @@ export function ProjectsPage() {
       setUsage(null)
       setKnowledge([])
       setArtifacts([])
+      setOperations(null)
+      setCampaigns([])
       return
     }
     let cancelled = false
@@ -148,6 +165,20 @@ export function ProjectsPage() {
       })
       .catch(() => {
         if (!cancelled) setArtifacts([])
+      })
+    void fetchProjectOperations(selected.id)
+      .then((board) => {
+        if (!cancelled) setOperations(board)
+      })
+      .catch(() => {
+        if (!cancelled) setOperations(null)
+      })
+    void fetchMarketingCampaigns(selected.id)
+      .then((list) => {
+        if (!cancelled) setCampaigns(list)
+      })
+      .catch(() => {
+        if (!cancelled) setCampaigns([])
       })
     return () => {
       cancelled = true
@@ -346,6 +377,10 @@ export function ProjectsPage() {
                   ['tasks', `작업 · ${projectTasks.length}`],
                   ['artifacts', `결과물 · ${artifacts.length}`],
                   ['knowledge', `프로젝트 지식 · ${knowledge.length}`],
+                  [
+                    'operations',
+                    `운영 · ${(operations?.routines.length ?? 0) + (operations?.goals.length ?? 0)}`,
+                  ],
                   ['settings', '설정'],
                 ] as const
               ).map(([id, label]) => (
@@ -639,6 +674,310 @@ export function ProjectsPage() {
                   {selectedKnowledgeId ? (
                     <KnowledgeDetailPanel embedded />
                   ) : null}
+                </section>
+              ) : null}
+
+              {tab === 'operations' ? (
+                <section className={proj.section}>
+                  <h3>운영</h3>
+                  <p className={proj.sectionHint}>
+                    Goal → Routine → Marketing Campaign. SNS 실게시는 다음
+                    Phase.
+                  </p>
+                  <h4 style={{ marginTop: 16 }}>Marketing Campaigns</h4>
+                  <div style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      className={proj.teamBtn}
+                      disabled={opsBusy || !selected}
+                      onClick={() => {
+                        if (!selected) return
+                        setOpsBusy(true)
+                        void createMarketingCampaign(selected.id, {
+                          request: '이 앱 마케팅해줘.',
+                          objective: 'awareness',
+                          teamAgentIds: selected.agentIds,
+                          allowWithoutSearch: true,
+                          searchAvailable: false,
+                          fixtureSources: [
+                            {
+                              id: 'src_ui_threads',
+                              title: 'Threads short-form trends',
+                              url: 'https://example.com/threads-trends',
+                              domain: 'example.com',
+                              snippet:
+                                'Conversational threads posts and instagram reels for mobile apps; reddit communities discuss competitors',
+                            },
+                          ],
+                        })
+                          .then(() => fetchMarketingCampaigns(selected.id))
+                          .then(setCampaigns)
+                          .finally(() => setOpsBusy(false))
+                      }}
+                    >
+                      마케팅 캠페인 실행
+                    </button>
+                  </div>
+                  {campaigns.length === 0 ? (
+                    <p className={styles.muted}>아직 Campaign이 없습니다.</p>
+                  ) : (
+                    <ul className={proj.taskList}>
+                      {campaigns.slice(0, 6).map((c) => (
+                        <li key={c.id}>
+                          <strong>{c.title}</strong>
+                          <span>
+                            {c.status} ·{' '}
+                            {c.channels
+                              .filter((ch) => ch.enabled)
+                              .map((ch) => ch.channel)
+                              .join(', ') || 'no channels'}
+                          </span>
+                          <span>
+                            contents {c.contentIds.length} · sources{' '}
+                            {c.sourceIds.length}
+                          </span>
+                          {c.publishPackage?.unavailableActions?.length ? (
+                            <span>
+                              unavailable:{' '}
+                              {c.publishPackage.unavailableActions
+                                .map((u) => u.capability)
+                                .join(', ')}
+                            </span>
+                          ) : null}
+                          <span>
+                            images:{' '}
+                            {c.artifactIds?.filter((id) =>
+                              id.startsWith('art_'),
+                            ).length
+                              ? `${c.artifactIds.length} artifact(s) · creative via content`
+                              : '—'}
+                          </span>
+                          {c.status === 'awaiting_approval' ? (
+                            <button
+                              type="button"
+                              className={proj.teamBtn}
+                              disabled={opsBusy}
+                              onClick={() => {
+                                const ok = window.confirm(
+                                  `게시 패키지를 승인할까요?\n\n캠페인: ${c.title}\n채널: ${c.channels
+                                    .filter((ch) => ch.enabled)
+                                    .map((ch) => ch.channel)
+                                    .join(', ')}\n\n승인 후에도 실제 SNS 게시는 별도 Publish 단계입니다.`,
+                                )
+                                if (!ok) return
+                                setOpsBusy(true)
+                                void approveMarketingCampaign(c.id, {
+                                  projectId: c.projectId,
+                                })
+                                  .then(() =>
+                                    selected
+                                      ? fetchMarketingCampaigns(selected.id)
+                                      : [],
+                                  )
+                                  .then(setCampaigns)
+                                  .finally(() => setOpsBusy(false))
+                              }}
+                            >
+                              게시 패키지 승인
+                            </button>
+                          ) : null}
+                          {c.status === 'approved' ||
+                          c.status === 'partially_published' ? (
+                            <button
+                              type="button"
+                              className={proj.teamBtn}
+                              disabled={opsBusy}
+                              onClick={() => {
+                                const contentId = c.contentIds[0]
+                                if (!contentId || !selected) return
+                                setOpsBusy(true)
+                                void fetchPublishPreview(contentId, selected.id)
+                                  .then((preview) => {
+                                    const ok = window.confirm(
+                                      `Threads 게시를 진행할까요?\n\n계정: ${
+                                        preview.account?.username
+                                          ? `@${preview.account.username}`
+                                          : preview.account?.connected
+                                            ? '연결됨'
+                                            : '미연결'
+                                      }\n승인: ${preview.approvalStatus}\n\n본문:\n${preview.body.slice(0, 500)}`,
+                                    )
+                                    if (!ok) return null
+                                    return publishMarketingContent(contentId, {
+                                      projectId: selected.id,
+                                      campaignId: c.id,
+                                    })
+                                  })
+                                  .then(() =>
+                                    fetchMarketingCampaigns(selected.id),
+                                  )
+                                  .then(setCampaigns)
+                                  .catch((err) => {
+                                    window.alert(
+                                      err instanceof Error
+                                        ? err.message
+                                        : String(err),
+                                    )
+                                  })
+                                  .finally(() => setOpsBusy(false))
+                              }}
+                            >
+                              Threads 게시
+                            </button>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <h4 style={{ marginTop: 16 }}>Goals</h4>
+                  {(operations?.goals.length ?? 0) === 0 ? (
+                    <p className={styles.muted}>아직 Goal이 없습니다.</p>
+                  ) : (
+                    <ul className={proj.taskList}>
+                      {operations!.goals.map((g) => (
+                        <li key={g.id}>
+                          <strong>{g.title}</strong>
+                          <span>
+                            {g.type} · {g.status}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <h4 style={{ marginTop: 16 }}>Routines</h4>
+                  {(operations?.routines.length ?? 0) === 0 ? (
+                    <p className={styles.muted}>아직 Routine이 없습니다.</p>
+                  ) : (
+                    <ul className={proj.taskList}>
+                      {operations!.routines.map((r) => (
+                        <li key={r.id}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: 8,
+                              flexWrap: 'wrap',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <strong>{r.name}</strong>
+                            <span>
+                              {r.status} · {r.trigger}
+                            </span>
+                            {r.nextRunAt ? (
+                              <span>
+                                다음 실행{' '}
+                                {new Date(r.nextRunAt).toLocaleString()}
+                              </span>
+                            ) : null}
+                            {(() => {
+                              const last = operations?.runs.find(
+                                (run) => run.routineId === r.id,
+                              )
+                              return last ? (
+                                <span>
+                                  최근 {last.status}
+                                  {last.triggerSource
+                                    ? ` · ${last.triggerSource}`
+                                    : ''}
+                                </span>
+                              ) : null
+                            })()}
+                            <button
+                              type="button"
+                              className={proj.teamBtn}
+                              disabled={opsBusy}
+                              onClick={() => {
+                                if (!selected) return
+                                setOpsBusy(true)
+                                void patchProjectRoutine(r.id, {
+                                  projectId: selected.id,
+                                  status:
+                                    r.status === 'paused' ? 'active' : 'paused',
+                                })
+                                  .then(() =>
+                                    fetchProjectOperations(selected.id),
+                                  )
+                                  .then(setOperations)
+                                  .finally(() => setOpsBusy(false))
+                              }}
+                            >
+                              {r.status === 'paused' ? '재개' : '일시정지'}
+                            </button>
+                            <button
+                              type="button"
+                              className={proj.teamBtn}
+                              disabled={opsBusy || r.status === 'archived'}
+                              onClick={() => {
+                                if (!selected) return
+                                setOpsBusy(true)
+                                void runProjectRoutine(r.id, {
+                                  projectId: selected.id,
+                                  teamAgentIds: selected.agentIds,
+                                })
+                                  .then((result) => {
+                                    if (
+                                      result.run.status === 'blocked' ||
+                                      !result.taskSeed
+                                    ) {
+                                      return fetchProjectOperations(
+                                        selected.id,
+                                      ).then(setOperations)
+                                    }
+                                    const taskId = createAndStartTask({
+                                      title: result.taskSeed.title,
+                                      description: result.taskSeed.description,
+                                      workflowTemplateId:
+                                        result.taskSeed.workflowTemplateId,
+                                      autoStart: false,
+                                      source: {
+                                        type: 'routine',
+                                        routineId: r.id,
+                                        routineRunId: result.run.id,
+                                      },
+                                    })
+                                    return fetchProjectOperations(
+                                      selected.id,
+                                    ).then((board) => {
+                                      setOperations(board)
+                                      if (taskId) {
+                                        selectTask(taskId)
+                                      }
+                                    })
+                                  })
+                                  .finally(() => setOpsBusy(false))
+                              }}
+                            >
+                              수동 실행
+                            </button>
+                          </div>
+                          {r.futureCapabilities &&
+                          r.futureCapabilities.length > 0 ? (
+                            <span>
+                              future: {r.futureCapabilities.join(', ')}
+                            </span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <h4 style={{ marginTop: 16 }}>최근 Routine Runs</h4>
+                  {(operations?.runs.length ?? 0) === 0 ? (
+                    <p className={styles.muted}>실행 기록이 없습니다.</p>
+                  ) : (
+                    <ul className={proj.taskList}>
+                      {operations!.runs.slice(0, 8).map((run) => (
+                        <li key={run.id}>
+                          <strong>{run.status}</strong>
+                          <span>
+                            {run.summary ?? run.id}
+                            {run.missingCapabilities?.length
+                              ? ` · missing: ${run.missingCapabilities.join(', ')}`
+                              : ''}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </section>
               ) : null}
 

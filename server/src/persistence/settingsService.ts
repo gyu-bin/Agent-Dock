@@ -324,7 +324,13 @@ export class SettingsService {
       },
       diagnostics,
       advanced: {
-        openaiEnvKeys: ['OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_BASE_URL'],
+        openaiEnvKeys: [
+          'OPENAI_API_KEY',
+          'OPENAI_MODEL',
+          'OPENAI_BASE_URL',
+          'OPENAI_IMAGE_MODEL_FAST',
+          'OPENAI_IMAGE_MODEL_QUALITY',
+        ],
         codexEnvKeys: ['CODEX_BIN', 'CODEX_API_KEY', 'CODEX_TIMEOUT_MS'],
         note: '환경변수 이름은 Advanced에서만 표시합니다. 값은 절대 노출하지 않습니다. OPENAI_API_KEY와 CODEX_API_KEY는 서로 다른 키입니다.',
       },
