@@ -1,11 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { app, ensureReady } from '../server/src/index.js'
 
 export const config = {
   maxDuration: 60,
 }
 
-let boot: Promise<void> | null = null
+type ServerMod = {
+  app: (req: unknown, res: unknown) => void
+  ensureReady: () => Promise<void>
+}
+
+let boot: Promise<ServerMod> | null = null
+
+async function loadServer(): Promise<ServerMod> {
+  if (!boot) {
+    // Dynamic import: server package is ESM; Vercel api handlers compile as CJS.
+    boot = import('../server/src/index.js') as Promise<ServerMod>
+  }
+  const mod = await boot
+  await mod.ensureReady()
+  return mod
+}
 
 /**
  * Catch-all serverless entry so Vite static + Express /api share one Vercel project.
@@ -15,7 +29,6 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ): Promise<void> {
-  if (!boot) boot = ensureReady()
-  await boot
-  app(req as never, res as never)
+  const { app } = await loadServer()
+  app(req, res)
 }
