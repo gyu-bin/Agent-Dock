@@ -1,0 +1,74 @@
+{
+  "version": 3,
+  "artDirection": {
+    "style": "soft-flat-2d-sd",
+    "characterPipeline": "sprite-gen atlas + manifest",
+    "furniturePipeline": "transparent PNG via AssetResolver; SheetProps SVG fallback only",
+    "notes": "Do not invent furniture SVG. Drop PNGs into furniture/, plants/, environment/ and registerProductionPng."
+  },
+  "characters": {
+    "shippedRoleAtlases": ["developer"],
+    "plannedRoleAtlases": [
+      "pm",
+      "developer",
+      "game-designer",
+      "designer",
+      "researcher",
+      "marketer",
+      "tester",
+      "manager"
+    ],
+    "states": [
+      "idle",
+      "walk-down",
+      "walk-up",
+      "walk-left",
+      "walk-right",
+      "work",
+      "talk"
+    ],
+    "variation": "Role Base + hair/color/outfit recolor — not 279 unique sprites",
+    "paths": {
+      "developer": "sprites/roles/developer/"
+    }
+  },
+  "furniturePng": {
+    "status": "awaiting_pack",
+    "required": [
+      "furniture/desk.png",
+      "furniture/dual-monitor-desk.png",
+      "furniture/chair.png",
+      "furniture/bookshelf.png",
+      "furniture/sofa.png",
+      "furniture/armchair.png",
+      "furniture/coffee-table.png",
+      "furniture/coffee-machine.png",
+      "furniture/meeting-table.png",
+      "furniture/whiteboard.png",
+      "furniture/server-rack.png",
+      "furniture/reception-desk.png"
+    ]
+  },
+  "plantsPng": {
+    "status": "awaiting_pack",
+    "required": [
+      "plants/plant-small.png",
+      "plants/plant-medium.png",
+      "plants/plant-large.png",
+      "plants/tree.png",
+      "plants/garden-plant.png"
+    ]
+  },
+  "environmentPng": {
+    "status": "awaiting_pack",
+    "required": [
+      "environment/bench.png",
+      "environment/rug.png",
+      "environment/floor.png",
+      "environment/wall.png",
+      "environment/doorway.png",
+      "environment/grass.png",
+      "environment/garden-path.png"
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "kind": "sprite-gen-request",
+  "engine": "component-row",
+  "character": {
+    "id": "pilot-developer",
+    "description": "",
+    "base_image": "base-source.png"
+  },
+  "cell": {
+    "shape": "square",
+    "width": 128,
+    "height": 128,
+    "safe_margin_x": 12,
+    "safe_margin_y": 12,
+    "size": 128,
+    "safe_margin": 12
+  },
+  "chroma_key": {
+    "name": "manual",
+    "hex": "#F307CE",
+    "rgb": [
+      243,
+      7,
+      206
+    ],
+    "selection": "manual"
+  },
+  "states": {
+    "idle": {
+      "frames": 4,
+      "fps": 4,
+      "loop": true,
+      "action": "subtle breathing and one blink; feet planted; front view"
+    },
+    "walk-down": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "front-view walking toward camera; alternating legs and arms; clear gait cycle"
+    },
+    "walk-up": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "back-view walking away from camera; alternating legs and arms; clear gait cycle"
+    },
+    "walk-left": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "side-view walking left; alternating legs and arms; clear gait cycle"
+    },
+    "walk-right": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "side-view walking right; alternating legs and arms; clear gait cycle"
+    },
+    "work": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "action": "sitting or standing at desk typing on a laptop; small arm and head motion; no detached UI"
+    },
+    "talk": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "action": "standing talking gesture; mouth and one hand move slightly; feet planted"
+    }
+  },
+  "style": "match the attached base/anchor reference image EXACTLY: same pixel density, same body proportions, same outline weight, same palette, same shading style. Do not restyle.",
+  "layout": "taxonomy/v1",
+  "chroma": {
+    "mode": "rgb",
+    "unmix_reach": 4,
+    "spill_max_fraction": 0.005
+  }
+}

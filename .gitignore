@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Logs / OS
+*.log
+.DS_Store
+npm-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Build
+client/dist/
+server/dist/
+
+# Local disposable E2E / scratch
+tmp/
+.tmp/
+
+# Runtime project data (local only)
+server/data/
+
+# sprite-gen tool venv + heavy run intermediates (keep public atlas)
+tools/sprite-gen/.venv/
+tools/sprite-runs/**/raw/
+tools/sprite-runs/**/*.raw.png
+tools/sprite-runs/**/frames/
+
+# Nested tool repo (own .git) — sources live under tools/sprite-gen locally
+tools/sprite-gen/

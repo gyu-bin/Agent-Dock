@@ -1,0 +1,83 @@
+.wrap {
+  position: relative;
+  width: 56px;
+  height: 72px;
+  filter: drop-shadow(0 2px 2px rgba(30, 41, 59, 0.12));
+}
+
+.svg {
+  display: block;
+  overflow: visible;
+  width: 56px;
+  height: 72px;
+}
+
+.legs {
+  transform-origin: 32px 62px;
+}
+
+.wrap[data-anim='idle'] {
+  animation: breathe 2.6s ease-in-out infinite;
+}
+
+.wrap[data-anim='walk'] .legs {
+  animation: step 0.32s ease-in-out infinite alternate;
+}
+
+.wrap[data-anim='work'] {
+  animation: workBob 1.05s ease-in-out infinite;
+}
+
+.wrap[data-anim='review'],
+.wrap[data-anim='talk'] {
+  animation: talkNod 1.35s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+@keyframes step {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes workBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(1.5px);
+  }
+}
+
+@keyframes talkNod {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrap[data-anim='idle'],
+  .wrap[data-anim='walk'] .legs,
+  .wrap[data-anim='work'],
+  .wrap[data-anim='review'],
+  .wrap[data-anim='talk'] {
+    animation: none;
+  }
+}

@@ -1,0 +1,108 @@
+:root {
+  /* Agent Deck 2D Game Asset Pack v1.0 palette */
+  --ad-navy-950: #12162a;
+  --ad-navy-900: #171c33;
+  --ad-navy-800: #1f2540;
+  --ad-navy-700: #2a3150;
+  --ad-navy-muted: #8b93b0;
+
+  --ad-surface: #f8fafc;
+  --ad-surface-raised: #ffffff;
+  --ad-office-floor: #f4f6f9;
+  --ad-office-wall: #94a3b8;
+  --ad-border: #e2e8f0;
+  --ad-border-soft: #f1f5f9;
+
+  --ad-ink: #2d3748;
+  --ad-ink-soft: #64748b;
+  --ad-ink-faint: #94a3b8;
+
+  --ad-accent: #508def;
+  --ad-accent-hover: #3b7de0;
+  --ad-success: #34d399;
+  --ad-warning: #ffc04d;
+  --ad-danger: #f87171;
+  --ad-info: #508def;
+  --ad-secondary: #f9a79e;
+
+  --ad-control-bg: #ffffff;
+  --ad-control-hover: #f8fafc;
+  --ad-control-active: #eef2ff;
+  --ad-control-on-bg: #0f172a;
+  --ad-control-on-fg: #ffffff;
+  --ad-panel-scrim: rgba(15, 23, 42, 0.35);
+
+  --ad-mock: #b45309;
+  --ad-mock-bg: #fff7ed;
+
+  /* Department accents — Asset Pack labels */
+  --ad-product: #ffc04d;
+  --ad-gamedev: #508def;
+  --ad-design: #f9a79e;
+  --ad-research: #818cf8;
+  --ad-engineering: #64748b;
+  --ad-marketing: #34d399;
+  --ad-testing: #fb923c;
+
+  /* Layout */
+  --ad-sidebar-w: 240px;
+  --ad-chat-w: min(420px, 34vw);
+  --ad-bottom-h: 0px;
+  --ad-topbar-h: 48px;
+  --ad-radius-sm: 6px;
+  --ad-radius: 10px;
+  --ad-radius-lg: 14px;
+  --ad-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --ad-shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.06);
+
+  /* Type — Korean-first readable stack */
+  --ad-font-ui: 'Apple SD Gothic Neo', 'Noto Sans KR', Pretendard, 'Malgun Gothic', 'Segoe UI', sans-serif;
+  --ad-font-display: 'Apple SD Gothic Neo', 'Noto Sans KR', Pretendard, sans-serif;
+
+  --ad-z-sidebar: 40;
+  --ad-z-topbar: 30;
+  --ad-z-panel: 50;
+  --ad-z-bubble: 10;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --ad-navy-950: #0a0c14;
+  --ad-navy-900: #0e1220;
+  --ad-navy-800: #151a2c;
+  --ad-navy-700: #1e2540;
+  --ad-navy-muted: #8b93b0;
+
+  --ad-surface: #0f1219;
+  --ad-surface-raised: #171c27;
+  --ad-office-floor: #12161f;
+  --ad-office-wall: #3d455c;
+  --ad-border: #2a3142;
+  --ad-border-soft: #1e2433;
+
+  --ad-ink: #e8eaef;
+  --ad-ink-soft: #9aa3b5;
+  --ad-ink-faint: #6b7385;
+
+  --ad-accent: #6b9ef5;
+  --ad-accent-hover: #508def;
+  --ad-success: #34d399;
+  --ad-warning: #ffc04d;
+  --ad-danger: #f87171;
+  --ad-info: #6b9ef5;
+  --ad-secondary: #f9a79e;
+
+  --ad-control-bg: #1c2230;
+  --ad-control-hover: #242b3c;
+  --ad-control-active: #243048;
+  --ad-control-on-bg: #e8eaef;
+  --ad-control-on-fg: #0f1219;
+  --ad-panel-scrim: rgba(0, 0, 0, 0.55);
+
+  --ad-mock: #fdba74;
+  --ad-mock-bg: #3b2a14;
+
+  --ad-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --ad-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}

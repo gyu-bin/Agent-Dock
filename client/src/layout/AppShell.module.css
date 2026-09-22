@@ -1,0 +1,74 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--ad-sidebar-w) minmax(0, 1fr);
+  height: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--ad-surface);
+}
+
+.main {
+  display: grid;
+  grid-template-rows: var(--ad-topbar-h) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ad-chat-w);
+  min-height: 0;
+}
+
+.officePane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 30% 20%, color-mix(in srgb, var(--ad-surface-raised) 70%, transparent) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 70%, color-mix(in srgb, var(--ad-accent) 12%, transparent) 0%, transparent 45%),
+    var(--ad-office-floor);
+}
+
+.placeholderTab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 6px;
+  color: var(--ad-ink-soft);
+}
+
+.placeholderTab p {
+  margin: 0;
+  font-family: var(--ad-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ad-ink);
+}
+
+.pagePane {
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 960px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace > :last-child {
+    max-height: 42vh;
+    border-top: 1px solid var(--ad-border);
+  }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    grid-template-columns: 72px 1fr;
+  }
+}

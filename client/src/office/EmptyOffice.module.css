@@ -1,0 +1,53 @@
+.empty {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at 40% 30%, #eef2ff 0%, transparent 50%),
+    var(--ad-office-floor);
+}
+
+.card {
+  max-width: 420px;
+  text-align: center;
+  background: var(--ad-surface-raised);
+  border: 1px solid var(--ad-border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: var(--ad-shadow);
+}
+
+.icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 12px;
+  background: var(--ad-control-on-bg);
+  color: var(--ad-control-on-fg);
+  display: grid;
+  place-items: center;
+}
+
+.card h2 {
+  margin: 0;
+  font-family: var(--ad-font-display);
+  font-size: 20px;
+}
+
+.card p {
+  margin: 8px 0 16px;
+  font-size: 13px;
+  color: var(--ad-ink-soft);
+  line-height: 1.5;
+}
+
+.cta {
+  border: 0;
+  background: var(--ad-control-on-bg);
+  color: var(--ad-control-on-fg);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 650;
+  font-size: 13px;
+}

@@ -1,0 +1,53 @@
+{
+  "character_id": "pilot-developer",
+  "description": "Cute SD chibi office developer matching Agent Deck Asset Pack: large head, small body, brown messy hair, grey hoodie, navy pants, black sneakers, soft flat 2D, thin dark outline",
+  "style": "match the attached base/anchor reference image EXACTLY: same pixel density, same body proportions, same outline weight, same palette, same shading style. Do not restyle.",
+  "cell_width": 128,
+  "cell_height": 128,
+  "chroma_key": "#f307ce",
+  "fit_align_y": "bottom",
+  "states": {
+    "idle": {
+      "frames": 4,
+      "fps": 4,
+      "loop": true,
+      "action": "subtle breathing and one blink; feet planted; front view"
+    },
+    "walk-down": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "front-view walking toward camera; alternating legs and arms; clear gait cycle"
+    },
+    "walk-up": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "back-view walking away from camera; alternating legs and arms; clear gait cycle"
+    },
+    "walk-left": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "side-view walking left; alternating legs and arms; clear gait cycle"
+    },
+    "walk-right": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "action": "side-view walking right; alternating legs and arms; clear gait cycle"
+    },
+    "work": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "action": "sitting or standing at desk typing on a laptop; small arm and head motion; no detached UI"
+    },
+    "talk": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "action": "standing talking gesture; mouth and one hand move slightly; feet planted"
+    }
+  }
+}

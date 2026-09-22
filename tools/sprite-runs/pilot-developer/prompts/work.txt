@@ -1,0 +1,34 @@
+Create a single horizontal sprite strip for the game character `pilot-developer` in the state `work`.
+
+CRITICAL — NO FURNITURE BAKE:
+- Draw ONLY the character body and clothing.
+- Do NOT draw a desk, table, chair, laptop, monitor, keyboard, mouse, or any office furniture.
+- Do NOT draw scenery or props that belong in the room layer.
+- The character may mime typing with hands/arms in front of the torso (empty air), or hold a tiny invisible-keyboard gesture — but no physical laptop/desk geometry.
+
+If this is a pre-idle/simple run, the attached base image may be used as the canonical character design. Use the attached accepted idle/direction anchor as the canonical character design for this row. Use the attached layout guide image only for frame count, slot spacing, centering, and safe padding.
+
+Character: pilot-developer.
+Style contract: match the attached base/anchor reference image EXACTLY: same pixel density, same body proportions, same outline weight, same palette, same shading style. Do not restyle.
+
+Animation action: standing (or lightly crouched) full-body work loop — typing / tapping gesture with arms, slight head bob, soft torso lean. Readable at 128x128. Loopable 4 frames. No detached UI.
+
+Anchor lock:
+- Accepted idle/direction anchors own character identity, outfit details, colors, face design.
+- This row owns motion only. Spend the variation budget on arm motion, head bob, torso lean, and loop continuity.
+- Do not redesign identity. Keep face, hair, palette, outline, proportions, outfit identical to anchors.
+- NO furniture. NO laptop prop. Body animation only.
+
+Transparency and artifact rules:
+- Prefer pose and silhouette changes over decorative effects.
+- Do not draw detached effects, text, labels, scenery, furniture, shadows, floor patches, or backgrounds other than chroma key.
+- Use a perfectly flat pure manual #F307CE chroma-key background across the whole image.
+- Do not use #F307CE in the character.
+
+Layout requirements:
+- Exactly 4 full-body frames, left to right, in one horizontal row.
+- Treat the image as 4 equal-width invisible 128x128 frame slots.
+- Center one complete pose in each slot. No pose may cross into the neighboring slot.
+- Keep every frame self-contained with at least 12 px safe padding.
+
+Output only the sprite strip image.

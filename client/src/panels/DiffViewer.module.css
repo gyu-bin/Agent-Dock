@@ -1,0 +1,91 @@
+.wrap {
+  display: grid;
+  grid-template-columns: minmax(140px, 34%) 1fr;
+  gap: 8px;
+  min-height: 160px;
+  max-height: 320px;
+}
+
+.files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.files button {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #334155;
+}
+
+.files button[data-active] {
+  background: #e2e8f0;
+}
+
+.kind {
+  font-weight: 700;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.files button[data-kind='added'] .kind { color: #16a34a; }
+.files button[data-kind='deleted'] .kind { color: #dc2626; }
+.files button[data-kind='modified'] .kind { color: #2563eb; }
+
+.files code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diff {
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 11px;
+  line-height: 1.45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.add { color: #86efac; display: block; }
+.del { color: #fca5a5; display: block; }
+.hunk { color: #93c5fd; display: block; }
+
+.more {
+  display: block;
+  margin-top: 8px;
+  border: 0;
+  background: #1e293b;
+  color: #cbd5e1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.empty {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .wrap {
+    grid-template-columns: 1fr;
+  }
+}

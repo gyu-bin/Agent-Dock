@@ -1,0 +1,318 @@
+{
+  "characterId": "pilot-developer",
+  "engine": "component-row",
+  "game_input": "sprite-sheet-alpha.png",
+  "degraded_static_fallback": false,
+  "curation_applied": false,
+  "frame_variant": "pixel",
+  "sprite_sheet_alpha": "sprite-sheet-alpha.png",
+  "sprite_sheet_alpha_report": "sprite-sheet-alpha.report.json",
+  "base_image": "base-source.png",
+  "cell": {
+    "shape": "square",
+    "width": 128,
+    "height": 128,
+    "safe_margin_x": 12,
+    "safe_margin_y": 12,
+    "size": 128,
+    "safe_margin": 12
+  },
+  "chroma_key": {
+    "name": "manual",
+    "hex": "#F307CE",
+    "rgb": [
+      243,
+      7,
+      206
+    ],
+    "selection": "manual"
+  },
+  "animation": {
+    "cellWidth": 128,
+    "cellHeight": 128,
+    "columns": 4,
+    "rows": {
+      "idle": {
+        "row": 0,
+        "frames": 4,
+        "fps": 4,
+        "durations_ms": [
+          250,
+          250,
+          250,
+          250
+        ],
+        "loop": true,
+        "frame_variant": "pixel"
+      },
+      "walk-down": {
+        "row": 1,
+        "frames": 4,
+        "fps": 8,
+        "durations_ms": [
+          125,
+          125,
+          125,
+          125
+        ],
+        "loop": true,
+        "frame_variant": "pixel"
+      },
+      "walk-up": {
+        "row": 2,
+        "frames": 4,
+        "fps": 8,
+        "durations_ms": [
+          125,
+          125,
+          125,
+          125
+        ],
+        "loop": true,
+        "frame_variant": "pixel"
+      },
+      "walk-left": {
+        "row": 3,
+        "frames": 4,
+        "fps": 8,
+        "durations_ms": [
+          125,
+          125,
+          125,
+          125
+        ],
+        "loop": true,
+        "frame_variant": "pixel"
+      },
+      "walk-right": {
+        "row": 4,
+        "frames": 4,
+        "fps": 8,
+        "durations_ms": [
+          125,
+          125,
+          125,
+          125
+        ],
+        "loop": true,
+        "frame_variant": "pixel"
+      },
+      "work": {
+        "row": 5,
+        "frames": 4,
+        "fps": 6,
+        "durations_ms": [
+          167,
+          167,
+          167,
+          167
+        ],
+        "loop": true,
+        "frame_variant": "pixel"
+      },
+      "talk": {
+        "row": 6,
+        "frames": 4,
+        "fps": 6,
+        "durations_ms": [
+          167,
+          167,
+          167,
+          167
+        ],
+        "loop": true,
+        "frame_variant": "pixel"
+      }
+    }
+  },
+  "frame_layout": {
+    "sheetWidth": 512,
+    "sheetHeight": 896,
+    "cellWidth": 128,
+    "cellHeight": 128,
+    "rows": {
+      "idle": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 128,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 256,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 384,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        }
+      ],
+      "walk-down": [
+        {
+          "x": 0,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 128,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 256,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 384,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        }
+      ],
+      "walk-up": [
+        {
+          "x": 0,
+          "y": 256,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 128,
+          "y": 256,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 256,
+          "y": 256,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 384,
+          "y": 256,
+          "w": 128,
+          "h": 128
+        }
+      ],
+      "walk-left": [
+        {
+          "x": 0,
+          "y": 384,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 128,
+          "y": 384,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 256,
+          "y": 384,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 384,
+          "y": 384,
+          "w": 128,
+          "h": 128
+        }
+      ],
+      "walk-right": [
+        {
+          "x": 0,
+          "y": 512,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 128,
+          "y": 512,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 256,
+          "y": 512,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 384,
+          "y": 512,
+          "w": 128,
+          "h": 128
+        }
+      ],
+      "work": [
+        {
+          "x": 0,
+          "y": 640,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 128,
+          "y": 640,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 256,
+          "y": 640,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 384,
+          "y": 640,
+          "w": 128,
+          "h": 128
+        }
+      ],
+      "talk": [
+        {
+          "x": 0,
+          "y": 768,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 128,
+          "y": 768,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 256,
+          "y": 768,
+          "w": 128,
+          "h": 128
+        },
+        {
+          "x": 384,
+          "y": 768,
+          "w": 128,
+          "h": 128
+        }
+      ]
+    }
+  }
+}
