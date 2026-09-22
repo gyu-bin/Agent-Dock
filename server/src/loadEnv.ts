@@ -2,6 +2,24 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+/** True when running on Vercel (or AGENT_DECK_CLOUD=1). */
+export function isCloudRuntime(): boolean {
+  return (
+    Boolean(process.env.VERCEL) || process.env.AGENT_DECK_CLOUD === '1'
+  )
+}
+
+/** Ephemeral writable paths for serverless (Vercel /tmp). */
+export function applyCloudDataDefaults(): void {
+  if (!isCloudRuntime()) return
+  process.env.AGENT_DECK_DATA_FILE ??= '/tmp/agent-deck/projects.json'
+  process.env.AGENT_DECK_ARTIFACTS_DIR ??= '/tmp/agent-deck/artifacts'
+  process.env.AGENT_DECK_KNOWLEDGE_DIR ??= '/tmp/agent-deck/knowledge'
+  process.env.AGENT_DECK_USAGE_DIR ??= '/tmp/agent-deck/usage'
+  process.env.AGENT_DECK_SETTINGS_FILE ??= '/tmp/agent-deck/settings.json'
+  process.env.AGENT_DECK_SESSION_FILE ??= '/tmp/agent-deck/.local-session'
+}
+
 /** Load .env from repo root / server without printing values. */
 export function loadDotEnv(): void {
   const here = path.dirname(fileURLToPath(import.meta.url))
@@ -30,4 +48,5 @@ export function loadDotEnv(): void {
     }
     break
   }
+  applyCloudDataDefaults()
 }

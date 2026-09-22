@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Request, Response, NextFunction } from 'express'
+import { isCloudRuntime } from '../loadEnv.js'
 import { hardenError } from './hardenErrors.js'
 
 const SESSION_HEADER = 'x-agent-deck-session'
@@ -19,6 +20,13 @@ function defaultSessionFile(): string {
 let cachedToken: string | null = null
 
 export async function initLocalSession(): Promise<string> {
+  // Stable across serverless cold starts when set in Vercel env.
+  const fromEnv = process.env.AGENT_DECK_SESSION_TOKEN?.trim()
+  if (fromEnv && fromEnv.length >= 32) {
+    cachedToken = fromEnv
+    return fromEnv
+  }
+
   const file = defaultSessionFile()
   await mkdir(path.dirname(file), { recursive: true })
   // Prefer existing token across soft restarts in same data dir (dev)
@@ -71,7 +79,7 @@ export function isLocalhostAddress(addr: string | undefined): boolean {
   )
 }
 
-/** Safe origins for browser clients (Vite default). */
+/** Safe origins for browser clients (Vite default + optional allowlist). */
 export const ALLOWED_ORIGINS = new Set([
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -81,18 +89,37 @@ export const ALLOWED_ORIGINS = new Set([
 
 export function isAllowedOrigin(origin: string | undefined): boolean {
   if (!origin) return true // same-origin / curl / vite proxy without Origin
-  return ALLOWED_ORIGINS.has(origin)
+  if (ALLOWED_ORIGINS.has(origin)) return true
+
+  const extras = (process.env.AGENT_DECK_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (extras.includes(origin)) return true
+
+  if (isCloudRuntime()) {
+    try {
+      const host = new URL(origin).hostname
+      if (host.endsWith('.vercel.app')) return true
+      const vercelUrl = process.env.VERCEL_URL?.replace(/^https?:\/\//, '')
+      if (vercelUrl && host === vercelUrl) return true
+    } catch {
+      /* ignore */
+    }
+  }
+  return false
 }
 
 /**
  * Issue HttpOnly cookie — token value is not rendered in UI.
- * Only for localhost clients.
  */
 export function issueSessionCookie(res: Response): void {
   const token = getLocalSessionToken()
+  const secure = isCloudRuntime() ? '; Secure' : ''
+  const sameSite = isCloudRuntime() ? 'Lax' : 'Strict'
   res.setHeader(
     'Set-Cookie',
-    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`,
+    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=${sameSite}${secure}; Max-Age=86400`,
   )
 }
 

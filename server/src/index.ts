@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { loadDotEnv } from './loadEnv.js'
+import { isCloudRuntime, loadDotEnv } from './loadEnv.js'
 
 loadDotEnv()
 
@@ -1529,51 +1529,73 @@ app.put('/api/projects/:projectId/budget', async (req, res) => {
   }
 })
 
-app.listen(PORT, HOST, async () => {
-  await initLocalSession()
-  const state = aiProvider.getState()
-  const codex = await getCodexProviderState()
-  console.log(`[agent-deck] local server on http://${HOST}:${PORT}`)
-  console.log(`[agent-deck] session file: ${sessionFilePath()}`)
-  console.log(`[agent-deck] AI provider: ${state.label}`)
-  console.log(`[agent-deck] Codex: ${codex.label}`)
-  console.log(
-    `[agent-deck] Web Search: ${webSearchProvider.label} (available=${webSearchProvider.isAvailable()})`,
-  )
-  void loadAgentRegistry().then((r) => {
-    console.log(
-      `[agent-deck] registry: ${r.source} (${r.total} agents)` +
-        (r.agentsDir ? ` from ${r.agentsDir}` : ''),
-    )
-  })
-  void projects.getSnapshot().then(async (s) => {
-    console.log(
-      `[agent-deck] projects: ${s.projects.length} (active=${s.activeProjectId ?? 'none'} revision=${s.revision ?? 0})`,
-    )
-    hydrateSearchFromSnapshot(s)
-    console.log('[agent-deck] search history: hydrated from tasks')
-    // Never treat leftover running as success — mark interrupted on boot
-    const hasRunning = s.tasks.some(
-      (t) => t.status === 'running' || t.status === 'verifying',
-    )
-    if (hasRunning) {
-      const recovered = await projects.replaceWorkState({
-        tasks: s.tasks,
-        pipelineSteps: s.pipelineSteps,
-        agentRuns: s.agentRuns,
-        codexRuns: s.codexRuns,
-        expectedRevision: s.revision,
-      })
-      for (const t of recovered.tasks) {
-        cancelCodexRunsForTask(t.id)
+let readyPromise: Promise<void> | null = null
+
+/** Idempotent boot for local listen + Vercel serverless cold start. */
+export async function ensureReady(): Promise<void> {
+  if (!readyPromise) {
+    readyPromise = (async () => {
+      await initLocalSession()
+      try {
+        const s = await projects.getSnapshot()
+        hydrateSearchFromSnapshot(s)
+      } catch (err) {
+        console.warn('[agent-deck] snapshot hydrate failed', err)
       }
-      console.log('[agent-deck] boot recover: interrupted leftover running tasks')
-    }
-    try {
-      await syncUsageFromSnapshot(s)
-      console.log('[agent-deck] usage: synced from existing runs')
-    } catch (err) {
-      console.warn('[agent-deck] usage sync on boot failed', err)
-    }
+    })()
+  }
+  await readyPromise
+}
+
+export { app }
+
+if (!isCloudRuntime()) {
+  app.listen(PORT, HOST, async () => {
+    await ensureReady()
+    const state = aiProvider.getState()
+    const codex = await getCodexProviderState()
+    console.log(`[agent-deck] local server on http://${HOST}:${PORT}`)
+    console.log(`[agent-deck] session file: ${sessionFilePath()}`)
+    console.log(`[agent-deck] AI provider: ${state.label}`)
+    console.log(`[agent-deck] Codex: ${codex.label}`)
+    console.log(
+      `[agent-deck] Web Search: ${webSearchProvider.label} (available=${webSearchProvider.isAvailable()})`,
+    )
+    void loadAgentRegistry().then((r) => {
+      console.log(
+        `[agent-deck] registry: ${r.source} (${r.total} agents)` +
+          (r.agentsDir ? ` from ${r.agentsDir}` : ''),
+      )
+    })
+    void projects.getSnapshot().then(async (s) => {
+      console.log(
+        `[agent-deck] projects: ${s.projects.length} (active=${s.activeProjectId ?? 'none'} revision=${s.revision ?? 0})`,
+      )
+      // Never treat leftover running as success — mark interrupted on boot
+      const hasRunning = s.tasks.some(
+        (t) => t.status === 'running' || t.status === 'verifying',
+      )
+      if (hasRunning) {
+        const recovered = await projects.replaceWorkState({
+          tasks: s.tasks,
+          pipelineSteps: s.pipelineSteps,
+          agentRuns: s.agentRuns,
+          codexRuns: s.codexRuns,
+          expectedRevision: s.revision,
+        })
+        for (const t of recovered.tasks) {
+          cancelCodexRunsForTask(t.id)
+        }
+        console.log(
+          '[agent-deck] boot recover: interrupted leftover running tasks',
+        )
+      }
+      try {
+        await syncUsageFromSnapshot(s)
+        console.log('[agent-deck] usage: synced from existing runs')
+      } catch (err) {
+        console.warn('[agent-deck] usage sync on boot failed', err)
+      }
+    })
   })
-})
+}

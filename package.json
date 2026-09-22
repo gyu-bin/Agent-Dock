@@ -16,6 +16,7 @@
     "generate:divisions": "node scripts/generate-division-map.mjs"
   },
   "devDependencies": {
+    "@vercel/node": "^13.0.1",
     "concurrently": "^9.2.1"
   }
 }

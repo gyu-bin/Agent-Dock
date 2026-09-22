@@ -4,5 +4,13 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build -w client",
   "outputDirectory": "client/dist",
-  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
+  "functions": {
+    "api/[...path].ts": {
+      "maxDuration": 60,
+      "includeFiles": "{shared/**,server/src/**}"
+    }
+  },
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
 }
