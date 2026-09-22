@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { ArrowLeft, Users } from 'lucide-react'
 import { setProjectTeam } from '../api/client'
 import { DEPARTMENTS, getDepartment } from '../domain/departments'
+import type { Agent } from '../domain/types'
 import { displayAgentDescription, displayAgentName } from '../i18n'
 import { t } from '../i18n/ko'
 import {
@@ -49,14 +50,17 @@ export function DepartmentsPage() {
   const selected =
     stats.find((d) => d.id === selectedDepartment) ?? stats[0] ?? null
 
-  const detailAgents = useMemo(() => {
-    if (!selected) return []
-    return registry.filter((a) => a.division === selected.id)
-  }, [registry, selected])
-
-  const teamInDept = selected
-    ? team.filter((a) => a.division === selected.id)
-    : []
+  const { hired, available } = useMemo(() => {
+    if (!selected) return { hired: [] as Agent[], available: [] as Agent[] }
+    const inDept = registry.filter((a) => a.division === selected.id)
+    const hiredList: Agent[] = []
+    const availableList: Agent[] = []
+    for (const a of inDept) {
+      if (teamIds.has(a.id)) hiredList.push(a)
+      else availableList.push(a)
+    }
+    return { hired: hiredList, available: availableList }
+  }, [registry, selected, teamIds])
 
   async function hire(id: string) {
     if (!project || teamIds.has(id)) return
@@ -81,6 +85,56 @@ export function DepartmentsPage() {
     } finally {
       setBusyId(null)
     }
+  }
+
+  function renderAgentRow(a: Agent, inTeam: boolean) {
+    if (!selected) return null
+    const label = displayAgentName(a.id, a.name)
+    const koDesc = displayAgentDescription(
+      a.id,
+      a.name,
+      a.description,
+      getDepartment(selected.id).label,
+    )
+    return (
+      <li key={a.id} className={styles.agentListItem}>
+        <button
+          type="button"
+          className={styles.deptAgentRow}
+          onClick={() => selectAgent(a.id)}
+        >
+          <span className={styles.agentInfo}>
+            <strong>{label}</strong>
+            {a.name !== label ? <em>{a.name}</em> : null}
+            <span>{koDesc}</span>
+          </span>
+        </button>
+        {project ? (
+          inTeam ? (
+            <div className={styles.hireActions}>
+              <span className={styles.inTeamBadge}>팀 소속</span>
+              <button
+                type="button"
+                className={styles.releaseBtn}
+                disabled={busyId === a.id}
+                onClick={() => void release(a.id)}
+              >
+                제외
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.hireBtn}
+              disabled={busyId === a.id}
+              onClick={() => void hire(a.id)}
+            >
+              채용
+            </button>
+          )
+        ) : null}
+      </li>
+    )
   }
 
   return (
@@ -143,6 +197,7 @@ export function DepartmentsPage() {
             <h2>{getDepartment(selected.id).label}</h2>
             <div className={md.detailMeta}>
               <span className={md.chip}>팀 {selected.active}명</span>
+              <span className={md.chip}>미배정 {available.length}명</span>
               <span className={md.chip}>전체 {selected.total}명</span>
               <span className={md.chip}>
                 {t('status.working')} {selected.working}
@@ -166,102 +221,48 @@ export function DepartmentsPage() {
               </button>
             </div>
 
-            <h3 style={{ fontSize: 14, margin: '0 0 8px' }}>이 프로젝트 팀</h3>
-            {teamInDept.length === 0 ? (
-              <p className={styles.muted}>
-                아직 채용한 팀원이 없습니다. 아래에서 「채용」을 눌러 추가하세요.
-              </p>
-            ) : (
-              <ul className={styles.cardList}>
-                {teamInDept.map((a) => (
-                  <li key={a.id}>
-                    <div className={styles.hireRow}>
-                      <button
-                        type="button"
-                        className={styles.card}
-                        onClick={() => selectAgent(a.id)}
-                      >
-                        <strong>{displayAgentName(a.id, a.name)}</strong>
-                        <span className={styles.cardMeta}>팀 소속</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.releaseBtn}
-                        disabled={busyId === a.id || !project}
-                        onClick={() => void release(a.id)}
-                      >
-                        제외
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <h3 style={{ fontSize: 14, margin: '20px 0 8px' }}>
-              전체 에이전트 ({detailAgents.length})
-            </h3>
             {!project ? (
               <p className={styles.muted}>
                 채용하려면 먼저 프로젝트를 선택하세요.
               </p>
             ) : null}
-            <ul className={styles.agentTable}>
-              {detailAgents.slice(0, 60).map((a) => {
-                const label = displayAgentName(a.id, a.name)
-                const koDesc = displayAgentDescription(
-                  a.id,
-                  a.name,
-                  a.description,
-                  getDepartment(selected.id).label,
-                )
-                const inTeam = teamIds.has(a.id)
-                return (
-                  <li key={a.id} className={styles.agentListItem}>
-                    <button
-                      type="button"
-                      className={styles.deptAgentRow}
-                      onClick={() => selectAgent(a.id)}
-                    >
-                      <span className={styles.agentInfo}>
-                        <strong>{label}</strong>
-                        {a.name !== label ? <em>{a.name}</em> : null}
-                        <span>{koDesc}</span>
-                      </span>
-                    </button>
-                    {project ? (
-                      inTeam ? (
-                        <div className={styles.hireActions}>
-                          <span className={styles.inTeamBadge}>팀 소속</span>
-                          <button
-                            type="button"
-                            className={styles.releaseBtn}
-                            disabled={busyId === a.id}
-                            onClick={() => void release(a.id)}
-                          >
-                            제외
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className={styles.hireBtn}
-                          disabled={busyId === a.id}
-                          onClick={() => void hire(a.id)}
-                        >
-                          채용
-                        </button>
-                      )
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ul>
-            {detailAgents.length > 60 ? (
-              <p className={styles.moreNote}>
-                +{detailAgents.length - 60}명 더 — 고급에서 Agent Directory 열기
-              </p>
-            ) : null}
+
+            <section className={styles.deptCategory}>
+              <header className={styles.deptCategoryHead} data-kind="hired">
+                <strong>팀 소속</strong>
+                <em>{hired.length}명</em>
+              </header>
+              {hired.length === 0 ? (
+                <p className={styles.deptCategoryEmpty}>
+                  아직 이 부서에서 채용한 팀원이 없습니다.
+                </p>
+              ) : (
+                <ul className={styles.agentTable}>
+                  {hired.map((a) => renderAgentRow(a, true))}
+                </ul>
+              )}
+            </section>
+
+            <section className={styles.deptCategory}>
+              <header className={styles.deptCategoryHead} data-kind="available">
+                <strong>미배정 · 채용 가능</strong>
+                <em>{available.length}명</em>
+              </header>
+              {available.length === 0 ? (
+                <p className={styles.deptCategoryEmpty}>
+                  이 부서 에이전트는 모두 팀에 있습니다.
+                </p>
+              ) : (
+                <ul className={styles.agentTable}>
+                  {available.slice(0, 60).map((a) => renderAgentRow(a, false))}
+                </ul>
+              )}
+              {available.length > 60 ? (
+                <p className={styles.moreNote}>
+                  +{available.length - 60}명 더 — 고급에서 Agent Directory 열기
+                </p>
+              ) : null}
+            </section>
           </div>
         )}
       </div>

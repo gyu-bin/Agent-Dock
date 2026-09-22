@@ -32,9 +32,15 @@ export function AppShell() {
   const selectedAgentId = useDeckStore((s) => s.selectedAgentId)
   const selectedKnowledgeId = useDeckStore((s) => s.selectedKnowledgeId)
 
+  const isHome = activeNav === 'home'
+
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
+    // 오피스(홈)는 항상 라이트 — 다크 모드는 다른 페이지에만 적용
+    document.documentElement.setAttribute(
+      'data-theme',
+      isHome ? 'light' : theme,
+    )
+  }, [isHome, theme])
 
   useEffect(() => {
     let cancelled = false
@@ -76,8 +82,6 @@ export function AppShell() {
       cancelled = true
     }
   }, [])
-
-  const isHome = activeNav === 'home'
 
   return (
     <div className={styles.shell}>

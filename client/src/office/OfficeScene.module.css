@@ -23,12 +23,6 @@
   overflow: hidden;
 }
 
-:global([data-theme='dark']) .board {
-  background: color-mix(in srgb, var(--ad-surface) 92%, #3d342c);
-  border-color: color-mix(in srgb, var(--ad-border) 80%, #d4c4ae);
-  box-shadow: none;
-}
-
 .grid {
   position: relative;
   z-index: 1;
