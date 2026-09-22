@@ -1,0 +1,40 @@
+.office-v2-scene { height: 100%; min-width: 780px; overflow: auto; padding: 20px 22px 14px; color: #172744; background: linear-gradient(135deg, #f8faff 0%, #edf1f8 100%); }
+.office-v2-toolbar { display:flex; justify-content:space-between; align-items:end; margin:0 auto 14px; max-width:1100px; }
+.office-v2-kicker { font-size:10px; letter-spacing:.18em; font-weight:800; color:#55729b; }
+.office-v2-toolbar h1 { margin:4px 0 0; font-size:25px; }
+.office-v2-count { background:#fff; border:1px solid #dce5f1; border-radius:99px; padding:10px 14px; font-size:12px; color:#6e7e99; box-shadow:0 4px 14px #283d5a12; }
+.office-v2-count b { color:#1d375f; font-size:16px; margin-right:4px; }
+.office-v2-board { width:min(100%,1100px); margin:0 auto; background:#2e4054; padding:10px; border-radius:14px; box-shadow:0 14px 32px #26354a25; }
+.office-v2-map { position:relative; width:100%; aspect-ratio:16/10; overflow:hidden; border:7px solid #213248; border-radius:7px; background-color:#f2d9b6; background-image:url('/assets/office-v2/environment/floor-office.png'); background-size:112px 118px; }
+.office-v2-room { position:absolute; top:3%; height:27%; background-color:#f2e6d5; background-image:url('/assets/office-v2/environment/floor-office.png'); background-size:96px 101px; border:5px solid #33485a; box-shadow: inset 0 0 0 1px #d1c1aa; }
+.office-v2-room.room-product {left:1%;width:23%;}.office-v2-room.room-design{left:25%;width:23%;}.office-v2-room.room-development{left:49%;width:26%;}.office-v2-room.room-research{right:1%;width:23%;}
+.office-v2-room.room-marketing{left:1%;top:70%;width:21%;height:27%;}.office-v2-room.room-meeting{left:24%;top:70%;width:24%;height:27%;}.office-v2-room.room-testing{left:50%;top:70%;width:24%;height:27%;}
+.office-v2-hall { position:absolute; left:0; right:0; height:6%; background:#d4b48e; border-top:3px solid #49596a; border-bottom:3px solid #49596a; z-index:1; }.office-v2-hall.north{top:31%;}.office-v2-hall.south{top:63%;}
+.office-v2-lounge { position:absolute; left:1%; right:1%; top:37%; height:23%; border-radius:10px; background-color:#d8dcb9; background-image:linear-gradient(#d8dcb9e8,#d8dcb9e8),url('/assets/office-v2/environment/floor-lounge.png'); background-size:100% 100%,112px 118px; box-shadow:inset 0 0 0 8px #c2c99e; z-index:0; }
+.office-v2-lounge-label, .office-v2-room-label { position:absolute; z-index:4; padding:5px 12px; border-radius:7px; background:#fff; color:#203454; font-size:11px; font-weight:800; box-shadow:0 2px 6px #36445c20; }
+.office-v2-lounge-label {left:46%;top:39%;}.office-v2-room-label{top:5%;}.office-v2-room-label.room-product{left:5%;}.office-v2-room-label.room-design{left:29%;}.office-v2-room-label.room-development{left:57%;}.office-v2-room-label.room-research{right:5%;}.office-v2-room-label.room-marketing{left:5%;top:72%;}.office-v2-room-label.room-meeting{left:33%;top:72%;}.office-v2-room-label.room-testing{left:57%;top:72%;}
+.office-v2-furniture { position:absolute; transform:translate(-50%,-100%); object-fit:contain; max-height:15%; z-index:2; pointer-events:none; }
+.office-v2-furniture.desk { max-width:9%; }
+.office-v2-furniture.desk-dual { max-width:11%; }
+.office-v2-furniture.sofa { max-width:15%; }
+.office-v2-furniture.armchair { max-width:6%; }
+.office-v2-furniture.coffee-table { max-width:9%; z-index:7; }
+.office-v2-furniture.coffee-machine { max-width:5%; }
+.office-v2-furniture.bookshelf { max-width:6%; }
+.office-v2-furniture.meeting-table { max-width:17%; z-index:7; }
+.office-v2-furniture.whiteboard { max-width:14%; z-index:2; }
+.office-v2-furniture.chair,.office-v2-furniture.plant{max-width:5%;}
+.office-v2-furniture.plant-large { max-width:6%; }
+.office-v2-furniture.plant-room { max-width:4%; }
+.office-v2-character-layer { position:absolute; inset:0; z-index:8; pointer-events:none; }.office-v2-character-layer > span { pointer-events:auto; }
+.office-v2-character { position:absolute; transform:translate(-50%,-100%); width:96px; height:96px; padding:0; border:0; overflow:visible; background:transparent; cursor:pointer; }
+.office-v2-character-clip { position:absolute; inset:0; overflow:hidden; }
+.office-v2-character-role { position:absolute; left:0; bottom:0; width:100%; height:92%; object-fit:contain; object-position:center bottom; transform-origin:center bottom; pointer-events:none; }
+.office-v2-character[data-animation="idle"] .office-v2-character-role { animation: office-v2-idle-bob 1.25s ease-in-out infinite alternate; }
+.office-v2-character[data-animation="talk"] .office-v2-character-role { animation: office-v2-talk-bob .85s ease-in-out infinite alternate; }
+.office-v2-character-atlas { position:absolute; left:0; bottom:0; display:block; background-repeat:no-repeat; }
+.office-v2-name { position:absolute; left:50%; top:2px; transform:translate(-50%,-100%); opacity:0; white-space:nowrap; padding:3px 5px; border-radius:4px; background:#173054e8; color:#fff; font-size:8px; transition:opacity .15s; }.office-v2-character:hover .office-v2-name{opacity:1;}
+.office-v2-blocked { position:absolute; right:0; top:-3px; display:grid; place-items:center; width:15px; height:15px; border-radius:99px; background:#e24f5e; color:#fff; font-size:11px; font-style:normal; }
+.office-v2-footer { display:flex; justify-content:space-between; max-width:1100px; margin:10px auto 0; color:#627694; font-size:11px; }.office-v2-footer i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.office-v2-footer .green{background:#22ab76}
+@keyframes office-v2-idle-bob { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
+@keyframes office-v2-talk-bob { from { transform: translateY(0); } to { transform: translateY(-1px); } }

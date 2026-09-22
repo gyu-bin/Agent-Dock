@@ -11,7 +11,7 @@
     {
       "id": "floor-office",
       "src": "environment/floor-office.png",
-      "status": "missing",
+      "status": "ready",
       "category": "floor",
       "logicalWidth": 64,
       "logicalHeight": 64,
@@ -21,12 +21,13 @@
       "tileHeight": 64,
       "collision": null,
       "depthMode": "floor",
-      "usage": ["product", "design", "development", "research", "marketing", "testing", "hallway"]
+      "usage": ["product", "design", "development", "research", "marketing", "testing", "hallway"],
+      "notes": "Promoted tile from the existing transparent office environment pack."
     },
     {
       "id": "floor-lounge",
       "src": "environment/floor-lounge.png",
-      "status": "missing",
+      "status": "ready",
       "category": "floor",
       "logicalWidth": 64,
       "logicalHeight": 64,
@@ -36,12 +37,13 @@
       "tileHeight": 64,
       "collision": null,
       "depthMode": "floor",
-      "usage": ["lounge"]
+      "usage": ["lounge"],
+      "notes": "Promoted tile from the existing transparent office environment pack."
     },
     {
       "id": "floor-meeting",
       "src": "environment/floor-meeting.png",
-      "status": "missing",
+      "status": "ready",
       "category": "floor",
       "logicalWidth": 64,
       "logicalHeight": 64,
@@ -51,7 +53,8 @@
       "tileHeight": 64,
       "collision": null,
       "depthMode": "floor",
-      "usage": ["meeting"]
+      "usage": ["meeting"],
+      "notes": "Promoted tile from the existing transparent office environment pack."
     },
     {
       "id": "floor-reception",
@@ -70,8 +73,8 @@
     },
     {
       "id": "wall-horizontal",
-      "src": "environment/wall-horizontal.png",
-      "status": "missing",
+      "src": "environment/wall.png",
+      "status": "ready",
       "category": "wall",
       "logicalWidth": 64,
       "logicalHeight": 24,
@@ -80,7 +83,8 @@
       "tileWidth": 64,
       "tileHeight": 24,
       "collision": { "x": -32, "y": -16, "width": 64, "height": 16 },
-      "depthMode": "wall-foreground"
+      "depthMode": "wall-foreground",
+      "notes": "Promoted wall segment from the existing transparent office environment pack."
     },
     {
       "id": "wall-vertical",
@@ -126,19 +130,20 @@
     {
       "id": "doorway",
       "src": "environment/doorway.png",
-      "status": "missing",
+      "status": "ready",
       "category": "wall",
       "logicalWidth": 60,
       "logicalHeight": 48,
       "anchor": { "x": 0.5, "y": 1.0 },
       "tileable": false,
       "collision": null,
-      "depthMode": "wall-foreground"
+      "depthMode": "wall-foreground",
+      "notes": "Promoted doorway asset from the existing transparent office environment pack."
     },
     {
       "id": "rug",
       "src": "environment/rug.png",
-      "status": "missing",
+      "status": "ready",
       "category": "floor-decor",
       "logicalWidth": 180,
       "logicalHeight": 120,
@@ -147,7 +152,7 @@
       "collision": null,
       "depthMode": "floor-decoration",
       "optional": true,
-      "notes": "Lounge optional overlay."
+      "notes": "Lounge optional overlay promoted from the existing transparent office environment pack."
     },
     {
       "id": "rug-pink",

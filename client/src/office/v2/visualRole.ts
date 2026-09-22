@@ -5,7 +5,7 @@ import type { OfficeV2VisualRole } from './manifestTypes'
  * Deterministic Agent → Office V2 Visual Role mapper.
  * 279 registry agents share 8 role bases — never 1:1 sprites.
  *
- * Not wired into OfficeScene yet.
+ * Consumed by OfficeV2Scene for deterministic role pose selection.
  */
 
 const DIVISION_ROLE: Partial<Record<DivisionId, OfficeV2VisualRole>> = {

@@ -19,7 +19,7 @@
     {
       "id": "desk",
       "src": "furniture/desk.png",
-      "status": "missing",
+      "status": "ready",
       "category": "desk",
       "logicalWidth": 90,
       "logicalHeight": 55,
@@ -28,12 +28,12 @@
       "depthMode": "y-sort",
       "blocksWalk": true,
       "pilot": true,
-      "notes": "Single-monitor desk. Do not bake character."
+      "notes": "Pilot reuse from existing transparent art pack; replacement single-monitor desk should be promoted after the image quota resets."
     },
     {
       "id": "desk-dual-monitor",
-      "src": "furniture/desk-dual-monitor.png",
-      "status": "missing",
+      "src": "furniture/dual-monitor-desk.png",
+      "status": "ready",
       "category": "desk",
       "logicalWidth": 110,
       "logicalHeight": 55,
@@ -41,12 +41,12 @@
       "collision": { "x": -55, "y": -50, "width": 110, "height": 45 },
       "depthMode": "y-sort",
       "blocksWalk": true,
-      "notes": "Design / Dev / GameDev."
+      "notes": "Promoted from the existing transparent office pack for the Office V2 reference layout. The pilot art includes a chair silhouette; replace with split desk/chair layers at final art sign-off."
     },
     {
       "id": "chair",
       "src": "furniture/chair.png",
-      "status": "missing",
+      "status": "ready",
       "category": "seat",
       "logicalWidth": 36,
       "logicalHeight": 40,
@@ -55,7 +55,7 @@
       "depthMode": "y-sort",
       "blocksWalk": false,
       "pilot": true,
-      "notes": "Empty chair. Sit animation must NOT bake this chair."
+      "notes": "Pilot reuse from existing transparent art pack. Sit animation must NOT bake this chair."
     },
     {
       "id": "monitor",
@@ -85,7 +85,7 @@
     {
       "id": "sofa",
       "src": "furniture/sofa.png",
-      "status": "missing",
+      "status": "ready",
       "category": "seat",
       "logicalWidth": 160,
       "logicalHeight": 50,
@@ -94,79 +94,85 @@
       "depthMode": "y-sort",
       "blocksWalk": true,
       "pilot": true,
-      "notes": "Two sit slots via waypoints, not baked characters."
+      "notes": "Pilot reuse from existing art pack; replacement sofa without the decorative cat should be promoted after the image quota resets. Two sit slots via waypoints."
     },
     {
       "id": "armchair",
       "src": "furniture/armchair.png",
-      "status": "missing",
+      "status": "ready",
       "category": "seat",
       "logicalWidth": 60,
       "logicalHeight": 50,
       "anchor": { "x": 0.5, "y": 1.0 },
       "collision": { "x": -28, "y": -40, "width": 56, "height": 40 },
       "depthMode": "y-sort",
-      "blocksWalk": true
+      "blocksWalk": true,
+      "notes": "Promoted from the existing transparent office pack for the lounge reference layout."
     },
     {
       "id": "coffee-table",
       "src": "furniture/coffee-table.png",
-      "status": "missing",
+      "status": "ready",
       "category": "table",
       "logicalWidth": 100,
       "logicalHeight": 45,
       "anchor": { "x": 0.5, "y": 1.0 },
       "collision": { "x": -50, "y": -35, "width": 100, "height": 35 },
       "depthMode": "y-sort",
-      "blocksWalk": true
+      "blocksWalk": true,
+      "notes": "Promoted from the existing transparent office pack for the lounge reference layout."
     },
     {
       "id": "coffee-machine",
       "src": "furniture/coffee-machine.png",
-      "status": "missing",
+      "status": "ready",
       "category": "appliance",
       "logicalWidth": 60,
       "logicalHeight": 45,
       "anchor": { "x": 0.5, "y": 1.0 },
       "collision": { "x": -28, "y": -40, "width": 56, "height": 40 },
       "depthMode": "y-sort",
-      "blocksWalk": true
+      "blocksWalk": true,
+      "notes": "Promoted from the existing transparent office pack for the lounge reference layout."
     },
     {
       "id": "bookshelf",
       "src": "furniture/bookshelf.png",
-      "status": "missing",
+      "status": "ready",
       "category": "storage",
       "logicalWidth": 60,
       "logicalHeight": 55,
       "anchor": { "x": 0.5, "y": 1.0 },
       "collision": { "x": -28, "y": -48, "width": 56, "height": 48 },
       "depthMode": "furniture-back",
-      "blocksWalk": true
+      "blocksWalk": true,
+      "notes": "Promoted from the existing transparent office pack for the lounge reference layout."
     },
     {
       "id": "whiteboard",
       "src": "furniture/whiteboard.png",
-      "status": "missing",
+      "status": "ready",
       "category": "display",
       "logicalWidth": 160,
       "logicalHeight": 40,
       "anchor": { "x": 0.5, "y": 1.0 },
       "collision": { "x": -80, "y": -30, "width": 160, "height": 30 },
       "depthMode": "furniture-back",
-      "blocksWalk": true
+      "blocksWalk": true,
+      "notes": "Promoted from the existing transparent office pack for meeting and research rooms."
     },
     {
       "id": "meeting-table",
       "src": "furniture/meeting-table.png",
-      "status": "missing",
+      "status": "ready",
       "category": "table",
       "logicalWidth": 200,
       "logicalHeight": 90,
       "anchor": { "x": 0.5, "y": 1.0 },
       "collision": { "x": -100, "y": -70, "width": 200, "height": 70 },
       "depthMode": "y-sort",
-      "blocksWalk": true
+      "blocksWalk": true,
+      "notes": "Promoted from the existing transparent office pack for the meeting reference layout."
     },
     {
       "id": "reception-desk",
@@ -183,7 +189,7 @@
     {
       "id": "plant-small",
       "src": "furniture/plant-small.png",
-      "status": "missing",
+      "status": "ready",
       "category": "decor",
       "logicalWidth": 28,
       "logicalHeight": 32,
@@ -196,26 +202,28 @@
     {
       "id": "plant-medium",
       "src": "furniture/plant-medium.png",
-      "status": "missing",
+      "status": "ready",
       "category": "decor",
       "logicalWidth": 40,
       "logicalHeight": 40,
       "anchor": { "x": 0.5, "y": 1.0 },
       "collision": { "x": -16, "y": -24, "width": 32, "height": 24 },
       "depthMode": "y-sort",
-      "blocksWalk": true
+      "blocksWalk": true,
+      "notes": "Promoted from the existing transparent plant pack."
     },
     {
       "id": "plant-large",
       "src": "furniture/plant-large.png",
-      "status": "missing",
+      "status": "ready",
       "category": "decor",
       "logicalWidth": 55,
       "logicalHeight": 55,
       "anchor": { "x": 0.5, "y": 1.0 },
       "collision": { "x": -22, "y": -36, "width": 44, "height": 36 },
       "depthMode": "y-sort",
-      "blocksWalk": true
+      "blocksWalk": true,
+      "notes": "Promoted from the existing transparent plant pack."
     },
     {
       "id": "server-rack",

@@ -6,7 +6,7 @@ import { resolveOfficeV2VisualRole } from './visualRole'
  * Workstation assignment policy for Office V2 (30 fixed slots).
  * Does not mutate map furniture — overflow is visual-only.
  *
- * Not wired into OfficeScene yet.
+ * Consumed by OfficeV2Scene through officeAssignmentPolicy.
  */
 
 export type WorkstationGroup =

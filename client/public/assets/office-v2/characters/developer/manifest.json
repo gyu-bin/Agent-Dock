@@ -1,23 +1,25 @@
 {
   "roleId": "developer",
-  "status": "missing",
-  "frameWidth": 96,
-  "frameHeight": 96,
+  "status": "ready",
+  "frameWidth": 128,
+  "frameHeight": 128,
   "anchor": { "x": 0.5, "y": 1.0 },
   "atlas": "atlas.png",
   "columns": 4,
+  "sheetWidth": 512,
+  "sheetHeight": 896,
   "animations": {
-    "idle": { "row": 0, "frames": 4, "fps": 6, "loop": true, "rects": [] },
-    "walk-down": { "row": 1, "frames": 4, "fps": 10, "loop": true, "rects": [] },
-    "walk-up": { "row": 2, "frames": 4, "fps": 10, "loop": true, "rects": [] },
-    "walk-left": { "row": 3, "frames": 4, "fps": 10, "loop": true, "rects": [] },
-    "walk-right": { "row": 4, "frames": 4, "fps": 10, "loop": true, "rects": [] },
+    "idle": { "row": 0, "frames": 4, "fps": 6, "loop": true, "rects": [{"x":0,"y":0,"w":128,"h":128},{"x":128,"y":0,"w":128,"h":128},{"x":256,"y":0,"w":128,"h":128},{"x":384,"y":0,"w":128,"h":128}] },
+    "walk-down": { "row": 1, "frames": 4, "fps": 10, "loop": true, "rects": [{"x":0,"y":128,"w":128,"h":128},{"x":128,"y":128,"w":128,"h":128},{"x":256,"y":128,"w":128,"h":128},{"x":384,"y":128,"w":128,"h":128}] },
+    "walk-up": { "row": 2, "frames": 4, "fps": 10, "loop": true, "rects": [{"x":0,"y":256,"w":128,"h":128},{"x":128,"y":256,"w":128,"h":128},{"x":256,"y":256,"w":128,"h":128},{"x":384,"y":256,"w":128,"h":128}] },
+    "walk-left": { "row": 3, "frames": 4, "fps": 10, "loop": true, "rects": [{"x":0,"y":384,"w":128,"h":128},{"x":128,"y":384,"w":128,"h":128},{"x":256,"y":384,"w":128,"h":128},{"x":384,"y":384,"w":128,"h":128}] },
+    "walk-right": { "row": 4, "frames": 4, "fps": 10, "loop": true, "rects": [{"x":0,"y":512,"w":128,"h":128},{"x":128,"y":512,"w":128,"h":128},{"x":256,"y":512,"w":128,"h":128},{"x":384,"y":512,"w":128,"h":128}] },
     "work": {
       "row": 5,
       "frames": 4,
       "fps": 8,
       "loop": true,
-      "rects": [],
+      "rects": [{"x":0,"y":640,"w":128,"h":128},{"x":128,"y":640,"w":128,"h":128},{"x":256,"y":640,"w":128,"h":128},{"x":384,"y":640,"w":128,"h":128}],
       "bake": "body-only"
     },
     "sit": {
@@ -25,7 +27,7 @@
       "frames": 4,
       "fps": 4,
       "loop": true,
-      "rects": [],
+      "rects": [{"x":0,"y":0,"w":128,"h":128},{"x":128,"y":0,"w":128,"h":128},{"x":256,"y":0,"w":128,"h":128},{"x":384,"y":0,"w":128,"h":128}],
       "bake": "body-only"
     },
     "talk": {
@@ -33,7 +35,7 @@
       "frames": 4,
       "fps": 8,
       "loop": true,
-      "rects": [],
+      "rects": [{"x":0,"y":768,"w":128,"h":128},{"x":128,"y":768,"w":128,"h":128},{"x":256,"y":768,"w":128,"h":128},{"x":384,"y":768,"w":128,"h":128}],
       "bake": "body-only"
     }
   },
@@ -44,5 +46,5 @@
     "skin": ["1", "2", "3"],
     "accessory": ["none", "glasses", "headset", "badge"]
   },
-  "notes": "Fill rects from sprite-gen output. Do not hardcode atlas layout in renderer."
+  "notes": "Pilot reuse of the existing sprite-gen developer atlas; sit aliases idle until the dedicated 96px generator run is available. Renderer reads rects from this manifest."
 }

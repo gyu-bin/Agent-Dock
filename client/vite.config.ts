@@ -19,6 +19,14 @@ function readSessionToken(): string | null {
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.join(root, 'client/index.html'),
+        pilot: path.join(root, 'client/pilot.html'),
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

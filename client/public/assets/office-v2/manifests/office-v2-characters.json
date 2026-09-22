@@ -45,7 +45,7 @@
     {
       "id": "developer",
       "label": "Developer",
-      "status": "missing",
+      "status": "ready",
       "atlas": "characters/developer/atlas.png",
       "manifest": "characters/developer/manifest.json",
       "pilot": true

@@ -11,7 +11,7 @@ import {
  * Canonical Office V2 destination policy.
  * Status → destination kind + deterministic slot / waypoint.
  *
- * Not wired into OfficeScene yet.
+ * Consumed by OfficeV2Scene; keep this policy pure so it can be verified separately.
  */
 
 export type OfficeDestinationType =
