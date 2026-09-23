@@ -27,8 +27,11 @@ export {
 
 export {
   clampTtlSeconds,
+  getDefaultMediaTtlSeconds,
   getMediaDeliveryProviderId,
   getS3CompatibleConfig,
+  getS3CompatibleProviderConfig,
+  type S3CompatibleProviderConfig,
 } from './mediaConfig.js'
 
 export {
@@ -40,6 +43,9 @@ export {
   UnconfiguredMediaDeliveryProvider,
   FakeMediaDeliveryProvider,
   S3CompatibleMediaDeliveryProvider,
+  buildRemoteObjectKey,
+  createAwsS3MediaOps,
+  type S3MediaObjectOps,
 } from './providers.js'
 
 export {

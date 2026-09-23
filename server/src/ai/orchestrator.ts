@@ -327,6 +327,10 @@ export async function runAgentStep(
     /** Resolved from Settings model profiles — never hardcode per agent. */
     model?: string
     modelProfileId?: string
+    attachmentsBlock?: string
+    attachmentImageDataUrls?: Array<{ mimeType: string; dataUrl: string }>
+    includedAttachmentIds?: string[]
+    visionCapable?: boolean
   },
 ): Promise<{
   output: string
@@ -338,6 +342,7 @@ export async function runAgentStep(
     omittedArtifactCount: number
     includedKnowledgeIds?: string[]
     omittedKnowledgeCount?: number
+    includedAttachmentIds?: string[]
   }
   webSearchSources?: typeof input.webSearchSources
 }> {
@@ -370,6 +375,8 @@ export async function runAgentStep(
     webSearchBlock: input.webSearchBlock,
     knowledgeItems: input.knowledgeItems,
     agentId: input.agentId,
+    attachmentsBlock: input.attachmentsBlock,
+    includedAttachmentIds: input.includedAttachmentIds,
   })
 
   const inputSummary = [
@@ -381,6 +388,9 @@ export async function runAgentStep(
       : null,
     built.includedKnowledgeIds.length
       ? `Knowledge: ${built.includedKnowledgeIds.length}`
+      : null,
+    built.includedAttachmentIds.length
+      ? `Attachments: ${built.includedAttachmentIds.length}`
       : null,
     input.webSearchSources?.length
       ? `Sources: ${input.webSearchSources.length}`
@@ -409,13 +419,25 @@ Prefer concrete deliverables (markdown sections, decisions, open questions).
 ${searchRules}
 `
 
-  const user = assembleUserPrompt(built)
+  const userText = assembleUserPrompt(built)
+  const images = input.attachmentImageDataUrls ?? []
+  const visionCapable = input.visionCapable !== false
+  const userContent =
+    images.length > 0 && visionCapable
+      ? ([
+          { type: 'text' as const, text: userText },
+          ...images.map((img) => ({
+            type: 'image_url' as const,
+            image_url: { url: img.dataUrl, detail: 'auto' as const },
+          })),
+        ] as import('../providers/aiProvider.js').ChatContentPart[])
+      : userText
 
   try {
     const result = await provider.chat({
       messages: [
         { role: 'system', content: system },
-        { role: 'user', content: user },
+        { role: 'user', content: userContent },
       ],
       temperature: 0.5,
       model: input.model,
@@ -431,6 +453,7 @@ ${searchRules}
       omittedArtifactCount: built.omittedArtifactCount,
       includedKnowledgeIds: built.includedKnowledgeIds,
       omittedKnowledgeCount: built.omittedKnowledgeCount,
+      includedAttachmentIds: built.includedAttachmentIds,
     },
     webSearchSources: input.webSearchSources,
   }

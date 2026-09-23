@@ -100,6 +100,7 @@ export function buildHandoffFromOutput(input: {
   toStepId?: string
   output: string
   artifactIds: string[]
+  relevantAttachmentIds?: string[]
 }): Omit<AgentHandoff, 'id' | 'createdAt'> {
   const text = input.output.trim()
   const firstPara =
@@ -132,5 +133,6 @@ export function buildHandoffFromOutput(input: {
     openQuestions,
     risks,
     artifactIds: input.artifactIds,
+    relevantAttachmentIds: input.relevantAttachmentIds,
   }
 }

@@ -13,7 +13,15 @@ function defaultDir(): string {
 }
 
 function empty(projectId: string): SocialStoreSnapshot {
-  return { version: 1, projectId, posts: [], attempts: [], analytics: [] }
+  return {
+    version: 1,
+    projectId,
+    posts: [],
+    attempts: [],
+    analytics: [],
+    distribution: { provider: 'manual', bufferChannels: {} },
+    bufferPosts: [],
+  }
 }
 
 function migrate(projectId: string, raw: unknown): SocialStoreSnapshot {
@@ -25,6 +33,13 @@ function migrate(projectId: string, raw: unknown): SocialStoreSnapshot {
     posts: Array.isArray(obj.posts) ? (obj.posts as never) : [],
     attempts: Array.isArray(obj.attempts) ? (obj.attempts as never) : [],
     analytics: Array.isArray(obj.analytics) ? (obj.analytics as never) : [],
+    distribution:
+      obj.distribution && typeof obj.distribution === 'object'
+        ? (obj.distribution as SocialStoreSnapshot['distribution'])
+        : { provider: 'manual', bufferChannels: {} },
+    bufferPosts: Array.isArray(obj.bufferPosts)
+      ? (obj.bufferPosts as never)
+      : [],
   }
 }
 
@@ -79,6 +94,11 @@ export class JsonSocialRepository {
         posts: snapshot.posts,
         attempts: snapshot.attempts,
         analytics: snapshot.analytics,
+        distribution: snapshot.distribution ?? {
+          provider: 'manual',
+          bufferChannels: {},
+        },
+        bufferPosts: snapshot.bufferPosts ?? [],
       })
     })
   }

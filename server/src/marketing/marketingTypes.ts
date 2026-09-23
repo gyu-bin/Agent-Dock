@@ -62,6 +62,10 @@ export interface ContentApprovalToken {
   contentHash: string
   approvedAt: string
   channel: MarketingChannel
+  /** Distribution binding — default queue; change requires re-approval */
+  publishMode?: 'queue' | 'now' | 'scheduled' | 'draft'
+  dueAt?: string | null
+  bufferChannelId?: string
 }
 
 export interface MarketingCreativeBrief {

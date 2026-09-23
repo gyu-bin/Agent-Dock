@@ -119,4 +119,13 @@ export interface MediaDeliveryProvider {
   revoke?(deliveryId: string, record: MediaDeliveryRecord): Promise<void>
 
   deleteRemoteObject?(remoteKey: string): Promise<void>
+
+  /**
+   * Re-sign an existing remote object without re-upload.
+   * Used for publishAttempt reuse when the object is still valid.
+   */
+  resign?(
+    record: MediaDeliveryRecord,
+    ttlSeconds?: number,
+  ): Promise<{ url: string; expiresAt: string }>
 }

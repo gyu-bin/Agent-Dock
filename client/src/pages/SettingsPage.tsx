@@ -8,6 +8,8 @@ import {
   startThreadsOAuth,
   disconnectThreads,
   fetchMediaDeliveryStatus,
+  fetchBufferStatus,
+  refreshBufferStatus,
 } from '../api/client'
 import type {
   DeckSettings,
@@ -89,6 +91,18 @@ export function SettingsPage() {
     label: string
     defaultTtlSeconds: number
   } | null>(null)
+  const [bufferStatus, setBufferStatus] = useState<{
+    configured: boolean
+    available: boolean
+    label: string
+    channelCount: number
+    channels: Array<{
+      id: string
+      name: string
+      service: string
+      displayName?: string
+    }>
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -126,6 +140,9 @@ export function SettingsPage() {
       void fetchMediaDeliveryStatus()
         .then(setMediaDeliveryStatus)
         .catch(() => setMediaDeliveryStatus(null))
+      void fetchBufferStatus()
+        .then(setBufferStatus)
+        .catch(() => setBufferStatus(null))
       setDraft(b.settings)
       setAiProvider({
         mode: b.runtime.openai.configured ? 'openai' : 'not-configured',
@@ -744,11 +761,71 @@ export function SettingsPage() {
               THREADS_APP_ID / THREADS_APP_SECRET / THREADS_REDIRECT_URI 환경변수
               필요. 토큰은 서버에만 저장됩니다.
             </p>
+
+            <h3 style={{ marginTop: 20 }}>Buffer</h3>
+            <p className={styles.hint}>
+              승인된 마케팅 패키지를 Queue/예약으로 배포합니다. API Key는 서버
+              환경변수(BUFFER_API_KEY)만 사용하며 화면에 표시되지 않습니다.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.label}>상태</span>
+              <span
+                className={bufferStatus?.available ? styles.ok : styles.off}
+              >
+                {bufferStatus?.available
+                  ? '● 연결됨'
+                  : bufferStatus?.configured
+                    ? '○ 연결 실패'
+                    : '○ 설정 필요'}
+              </span>
+              <button
+                type="button"
+                className={styles.mode}
+                disabled={snsBusy}
+                onClick={() => {
+                  setSnsBusy(true)
+                  void refreshBufferStatus()
+                    .then(setBufferStatus)
+                    .catch((err) =>
+                      setError(
+                        err instanceof Error ? err.message : String(err),
+                      ),
+                    )
+                    .finally(() => setSnsBusy(false))
+                }}
+              >
+                새로고침
+              </button>
+            </div>
+            {(bufferStatus?.channels.length ?? 0) > 0 ? (
+              <div style={{ marginTop: 8 }}>
+                <span className={styles.label}>연결된 채널</span>
+                <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                  {bufferStatus!.channels.map((ch) => (
+                    <li key={ch.id}>
+                      {ch.service}{' '}
+                      {ch.displayName || ch.name
+                        ? `@${ch.displayName || ch.name}`
+                        : ch.id}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className={styles.hintInline}>
+                {bufferStatus?.configured
+                  ? '연결된 채널 없음 — API Key와 조직 채널을 확인하세요.'
+                  : 'BUFFER_API_KEY를 서버 .env에 설정하세요.'}
+              </p>
+            )}
+
             <h3 style={{ marginTop: 20 }}>미디어 전달</h3>
             <div className={styles.row}>
               <span className={styles.label}>Provider</span>
               <span className={styles.hintInline}>
-                {mediaDeliveryStatus?.provider ?? 'unconfigured'}
+                {mediaDeliveryStatus?.label ??
+                  mediaDeliveryStatus?.provider ??
+                  'unconfigured'}
               </span>
             </div>
             <div className={styles.row}>
@@ -772,8 +849,9 @@ export function SettingsPage() {
               </span>
             </div>
             <p className={styles.hint}>
-              로컬 서버를 공개하지 않습니다. Production은 private object + signed
-              URL (MEDIA_DELIVERY_PROVIDER).
+              로컬 서버를 공개하지 않습니다. Production은 private R2/S3 object +
+              signed URL (MEDIA_DELIVERY_PROVIDER=s3-compatible). credential은
+              서버 .env에만 둡니다.
             </p>
           </section>
         ) : null}

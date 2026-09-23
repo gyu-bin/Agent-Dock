@@ -477,6 +477,206 @@ try {
     console.log('TEST K PASS')
   }
 
+  // ——— L–R: Production S3-compatible adapter (mocked ops, no live R2) ———
+  {
+    const {
+      S3CompatibleMediaDeliveryProvider,
+      createDefaultMediaProvider,
+      isMediaError,
+    } = await import('../server/src/mediaDelivery/index.ts')
+
+    // L — config missing → unavailable
+    {
+      const prev = { ...process.env }
+      process.env.MEDIA_DELIVERY_PROVIDER = 's3-compatible'
+      delete process.env.MEDIA_S3_ENDPOINT
+      delete process.env.MEDIA_S3_BUCKET
+      delete process.env.MEDIA_S3_ACCESS_KEY_ID
+      delete process.env.MEDIA_S3_SECRET_ACCESS_KEY
+      const p = createDefaultMediaProvider(process.env)
+      const st = p.getState()
+      eq(st.provider, 's3-compatible', 'L provider id')
+      assert(!st.configured, 'L not configured')
+      assert(!st.available, 'L not available')
+      Object.assign(process.env, prev)
+      console.log('TEST L PASS')
+    }
+
+    const objects = new Map<string, { body: Buffer; contentType: string }>()
+    let putCalls = 0
+    let signCalls = 0
+    let deleteCalls = 0
+    let forcePutFail = false
+    let forceSignFail = false
+
+    const mockOps = {
+      async putObject(input: {
+        key: string
+        body: Buffer
+        contentType: string
+        metadata: Record<string, string>
+      }) {
+        putCalls += 1
+        if (forcePutFail) throw new Error('mock PutObject failed')
+        assert(!('prompt' in input.metadata), 'M no prompt metadata')
+        objects.set(input.key, {
+          body: input.body,
+          contentType: input.contentType,
+        })
+      },
+      async getSignedGetUrl(key: string, expiresInSeconds: number) {
+        signCalls += 1
+        if (forceSignFail) throw new Error('mock sign failed')
+        assert(expiresInSeconds >= 900 && expiresInSeconds <= 3600, 'N ttl')
+        return `https://mock-r2.example/${encodeURIComponent(key)}?exp=${expiresInSeconds}`
+      },
+      async deleteObject(key: string) {
+        deleteCalls += 1
+        objects.delete(key)
+      },
+    }
+
+    const s3Provider = new S3CompatibleMediaDeliveryProvider(
+      {
+        endpoint: 'https://example.r2.cloudflarestorage.com',
+        region: 'auto',
+        bucket: 'agent-deck-media',
+        accessKeyId: 'test-access',
+        secretAccessKey: 'test-secret',
+      },
+      mockOps,
+    )
+    const s3Delivery = createMediaDeliveryService({
+      artifacts,
+      repo: deliveryRepo,
+      provider: s3Provider,
+    })
+
+    // M — mocked PutObject
+    {
+      putCalls = 0
+      const art = await createPngArtifact(PROJECT_A, 'M png')
+      const d = await s3Delivery.prepare({
+        projectId: PROJECT_A,
+        artifactId: art.id,
+        purpose: 'social-publish',
+      })
+      assert(putCalls === 1, 'M put once')
+      assert(d.provider === 's3-compatible', 'M provider')
+      assert(d.remoteKey?.startsWith('agent-deck/'), 'M key prefix')
+      assert(objects.has(d.remoteKey!), 'M object stored')
+      assert(d.url.includes('mock-r2.example'), 'M signed url')
+      // persisted record must not keep signed URL
+      const snap = await deliveryRepo.load(PROJECT_A)
+      const rec = snap.deliveries.find((x) => x.id === d.id)!
+      assert(!rec.urlHint, 'M no urlHint in repo')
+      console.log('TEST M PASS', { key: d.remoteKey })
+    }
+
+    // N — presigned URL generation
+    {
+      signCalls = 0
+      const art = await createPngArtifact(PROJECT_A, 'N png')
+      const d = await s3Delivery.prepare({
+        projectId: PROJECT_A,
+        artifactId: art.id,
+        purpose: 'preview',
+        requestedTtlSeconds: 1800,
+      })
+      assert(signCalls >= 1, 'N signed')
+      assert(d.url.includes('exp=1800'), 'N ttl in url')
+      const re = await s3Delivery.signExisting(PROJECT_A, d.id, 900)
+      assert(re.url.includes('exp=900'), 'N resign ttl')
+      assert(re.id === d.id, 'N same delivery')
+      console.log('TEST N PASS')
+    }
+
+    // O — upload failure
+    {
+      forcePutFail = true
+      const art = await createPngArtifact(PROJECT_A, 'O png')
+      let cat = ''
+      try {
+        await s3Delivery.prepare({
+          projectId: PROJECT_A,
+          artifactId: art.id,
+          purpose: 'social-publish',
+        })
+      } catch (err) {
+        assert(isMediaError(err), 'O media error')
+        cat = err.category
+      }
+      forcePutFail = false
+      eq(cat, 'MEDIA_UPLOAD_FAILED', 'O upload fail')
+      console.log('TEST O PASS')
+    }
+
+    // P — sign failure
+    {
+      forceSignFail = true
+      const art = await createPngArtifact(PROJECT_A, 'P png')
+      let cat = ''
+      try {
+        await s3Delivery.prepare({
+          projectId: PROJECT_A,
+          artifactId: art.id,
+          purpose: 'social-publish',
+        })
+      } catch (err) {
+        assert(isMediaError(err), 'P media error')
+        cat = err.category
+      }
+      forceSignFail = false
+      eq(cat, 'MEDIA_SIGN_FAILED', 'P sign fail')
+      console.log('TEST P PASS')
+    }
+
+    // Q — reuse / re-sign (no second PutObject)
+    {
+      putCalls = 0
+      signCalls = 0
+      const art = await createPngArtifact(PROJECT_A, 'Q png')
+      const attempt = 'pub_attempt_q'
+      const d1 = await s3Delivery.prepare({
+        projectId: PROJECT_A,
+        artifactId: art.id,
+        purpose: 'social-publish',
+        publishAttemptId: attempt,
+      })
+      const putsAfterFirst = putCalls
+      const d2 = await s3Delivery.prepare({
+        projectId: PROJECT_A,
+        artifactId: art.id,
+        purpose: 'social-publish',
+        publishAttemptId: attempt,
+      })
+      eq(d1.id, d2.id, 'Q same delivery')
+      eq(d1.remoteKey, d2.remoteKey, 'Q same remote key')
+      assert(putCalls === putsAfterFirst, 'Q no re-upload')
+      assert(signCalls >= 2, 'Q re-signed')
+      console.log('TEST Q PASS')
+    }
+
+    // R — delete / revoke
+    {
+      const art = await createPngArtifact(PROJECT_A, 'R png')
+      const d = await s3Delivery.prepare({
+        projectId: PROJECT_A,
+        artifactId: art.id,
+        purpose: 'social-publish',
+      })
+      assert(objects.has(d.remoteKey!), 'R object before')
+      const deletesBefore = deleteCalls
+      await s3Delivery.revoke(PROJECT_A, d.id)
+      assert(deleteCalls > deletesBefore, 'R delete called')
+      assert(!objects.has(d.remoteKey!), 'R object gone')
+      const snap = await deliveryRepo.load(PROJECT_A)
+      const rec = snap.deliveries.find((x) => x.id === d.id)!
+      eq(rec.status, 'revoked', 'R revoked')
+      console.log('TEST R PASS')
+    }
+  }
+
   console.log('mediaDelivery fixtures: ALL PASS')
 } finally {
   setSocialPublishAvailable(false)

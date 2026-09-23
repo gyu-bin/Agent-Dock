@@ -72,11 +72,16 @@ import {
   socialRepository,
   SocialPublishService,
   SocialAnalyticsService,
+  createBufferConnector,
+  BufferPublishService,
+  isBufferError,
 } from './social/index.js'
 import {
   createMediaDeliveryService,
   mediaDeliveryRepository,
 } from './mediaDelivery/index.js'
+import { createAttachmentService } from './attachments/index.js'
+import { isAttachmentError } from './attachments/index.js'
 import { credentialStore } from './credentials/index.js'
 import { assertNoTokenLeak } from './credentials/redact.js'
 import {
@@ -151,6 +156,8 @@ const mediaDelivery = createMediaDeliveryService({
   repo: mediaDeliveryRepository,
 })
 
+const attachmentService = createAttachmentService()
+
 const socialPublish = new SocialPublishService(
   socialRegistry,
   socialRepository,
@@ -158,6 +165,18 @@ const socialPublish = new SocialPublishService(
   artifacts,
   mediaDelivery,
 )
+
+const bufferConnector = createBufferConnector()
+void bufferConnector.refreshState().catch(() => undefined)
+const bufferPublish = new BufferPublishService(
+  bufferConnector,
+  socialRepository,
+  marketingRepository,
+  artifacts,
+  mediaDelivery,
+  usage,
+)
+
 const socialAnalytics = new SocialAnalyticsService(
   socialRegistry,
   socialRepository,
@@ -217,7 +236,7 @@ app.use(
     credentials: true,
   }),
 )
-app.use(express.json({ limit: '4mb' }))
+app.use(express.json({ limit: '12mb' }))
 
 app.use((req, res, next) => {
   const origin = req.headers.origin
@@ -1585,9 +1604,27 @@ app.get('/api/marketing/campaigns/:id/content', async (req, res) => {
 app.post('/api/marketing/campaigns/:id/approve', async (req, res) => {
   try {
     const body = req.body ?? {}
+    const modeRaw = body.publishMode ? String(body.publishMode) : undefined
+    const publishMode =
+      modeRaw === 'queue' ||
+      modeRaw === 'now' ||
+      modeRaw === 'scheduled' ||
+      modeRaw === 'draft'
+        ? modeRaw
+        : undefined
     const campaign = await marketing.approveCampaign(req.params.id, {
       projectId: body.projectId ? String(body.projectId) : undefined,
       note: body.note != null ? String(body.note) : undefined,
+      publishMode,
+      dueAt:
+        body.dueAt === null
+          ? null
+          : body.dueAt != null
+            ? String(body.dueAt)
+            : undefined,
+      bufferChannelId: body.bufferChannelId
+        ? String(body.bufferChannelId)
+        : undefined,
     })
     res.json({ campaign })
   } catch (err) {
@@ -1819,6 +1856,132 @@ app.get('/api/social/connectors', async (_req, res) => {
   }
 })
 
+// ——— Buffer Distribution Provider ———
+app.get('/api/social/buffer/status', async (_req, res) => {
+  try {
+    const state = await bufferConnector.refreshState()
+    const payload = bufferConnector.toPublicStatus()
+    assertNoTokenLeak(payload)
+    assertNoTokenLeak({ ...payload, BUFFER_API_KEY: undefined })
+    res.json({
+      ...payload,
+      // force availability from refresh
+      configured: state.configured,
+      available: state.available,
+      label: state.label,
+    })
+  } catch (err) {
+    if (isBufferError(err)) {
+      res.status(err.status).json({
+        error: err.userMessage,
+        code: err.category,
+        technicalSummary: err.technicalSummary,
+      })
+      return
+    }
+    sendError(res, err)
+  }
+})
+
+app.post('/api/social/buffer/refresh', async (_req, res) => {
+  try {
+    const state = await bufferConnector.refreshState()
+    const payload = bufferConnector.toPublicStatus()
+    assertNoTokenLeak(payload)
+    res.json({ ...payload, configured: state.configured, available: state.available })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.get('/api/projects/:projectId/distribution', async (req, res) => {
+  try {
+    const prefs = await bufferPublish.getDistributionPrefs(req.params.projectId)
+    assertNoTokenLeak(prefs)
+    res.json({ distribution: prefs })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.put('/api/projects/:projectId/distribution', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const prefs = await bufferPublish.setDistributionPrefs(req.params.projectId, {
+      provider: body.provider === 'buffer' ? 'buffer' : 'manual',
+      bufferChannels: {
+        threadsChannelId: body.bufferChannels?.threadsChannelId
+          ? String(body.bufferChannels.threadsChannelId)
+          : undefined,
+        instagramChannelId: body.bufferChannels?.instagramChannelId
+          ? String(body.bufferChannels.instagramChannelId)
+          : undefined,
+        youtubeChannelId: body.bufferChannels?.youtubeChannelId
+          ? String(body.bufferChannels.youtubeChannelId)
+          : undefined,
+        byService:
+          body.bufferChannels?.byService &&
+          typeof body.bufferChannels.byService === 'object'
+            ? body.bufferChannels.byService
+            : undefined,
+      },
+    })
+    assertNoTokenLeak(prefs)
+    res.json({ distribution: prefs })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/social/buffer/publish', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const projectId = String(body.projectId ?? '')
+    const contentId = String(body.contentId ?? '')
+    const mode = String(body.mode ?? 'queue') as
+      | 'queue'
+      | 'now'
+      | 'scheduled'
+      | 'draft'
+    if (!projectId || !contentId) {
+      res.status(400).json({ error: 'projectId and contentId required' })
+      return
+    }
+    const result = await bufferPublish.publishToBuffer({
+      projectId,
+      contentId,
+      campaignId: body.campaignId ? String(body.campaignId) : undefined,
+      mode,
+      dueAt: body.dueAt ? String(body.dueAt) : undefined,
+      bufferChannelId: body.bufferChannelId
+        ? String(body.bufferChannelId)
+        : undefined,
+    })
+    const payload = {
+      duplicate: result.duplicate,
+      bufferPostId: result.record.bufferPostId,
+      mode: result.record.mode,
+      status: result.record.status,
+      dueAt: result.record.dueAt ?? null,
+      publishedPostStatus: result.post.status,
+      publishedPostId: result.post.id,
+      attemptId: result.attempt.id,
+    }
+    assertNoTokenLeak(payload)
+    res.status(result.duplicate ? 200 : 201).json(payload)
+  } catch (err) {
+    if (isBufferError(err)) {
+      res.status(err.status).json({
+        error: err.userMessage,
+        code: err.category,
+        technicalSummary: err.technicalSummary,
+      })
+      return
+    }
+    sendError(res, err)
+  }
+})
+
 app.post('/api/social/threads/oauth/start', async (_req, res) => {
   try {
     const tc = socialRegistry.getThreadsConnector()
@@ -1958,6 +2121,206 @@ app.post('/api/media-delivery/:id/revoke', async (req, res) => {
     sendError(res, err)
   }
 })
+
+// ——— Work Attachments (staging / resolve) ———
+app.get('/api/projects/:projectId/attachments', async (req, res) => {
+  try {
+    const list = await attachmentService.list(req.params.projectId, {
+      taskId: req.query.taskId ? String(req.query.taskId) : undefined,
+      stagingId: req.query.stagingId
+        ? String(req.query.stagingId)
+        : undefined,
+    })
+    assertNoTokenLeak(list)
+    res.json({ attachments: list })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/projects/:projectId/attachments/stage', async (req, res) => {
+  try {
+    const body = req.body ?? {}
+    const name = String(body.name ?? '')
+    const b64 = String(body.bytesBase64 ?? '')
+    if (!name || !b64) {
+      res.status(400).json({ error: 'name and bytesBase64 required' })
+      return
+    }
+    const bytes = Buffer.from(b64, 'base64')
+    const attachment = await attachmentService.stageFile({
+      projectId: req.params.projectId,
+      stagingId: body.stagingId ? String(body.stagingId) : undefined,
+      name,
+      mimeType: body.mimeType ? String(body.mimeType) : undefined,
+      bytes,
+      source: body.source ?? 'upload',
+    })
+    assertNoTokenLeak(attachment)
+    res.status(201).json({ attachment })
+  } catch (err) {
+    if (isAttachmentError(err)) {
+      res.status(err.status).json({
+        error: err.userMessage,
+        code: err.category,
+        technicalSummary: err.technicalSummary,
+      })
+      return
+    }
+    sendError(res, err)
+  }
+})
+
+app.post(
+  '/api/projects/:projectId/attachments/stage-folder',
+  async (req, res) => {
+    try {
+      const folderPath = String(req.body?.path ?? '')
+      if (!folderPath) {
+        res.status(400).json({ error: 'path required' })
+        return
+      }
+      const attachment = await attachmentService.stageFolder({
+        projectId: req.params.projectId,
+        stagingId: req.body?.stagingId
+          ? String(req.body.stagingId)
+          : undefined,
+        path: folderPath,
+        displayName: req.body?.displayName
+          ? String(req.body.displayName)
+          : undefined,
+        source: 'path',
+      })
+      assertNoTokenLeak(attachment)
+      res.status(201).json({ attachment })
+    } catch (err) {
+      if (isAttachmentError(err)) {
+        res.status(err.status).json({
+          error: err.userMessage,
+          code: err.category,
+          technicalSummary: err.technicalSummary,
+        })
+        return
+      }
+      sendError(res, err)
+    }
+  },
+)
+
+app.post(
+  '/api/projects/:projectId/attachments/stage-url',
+  async (req, res) => {
+    try {
+      const url = String(req.body?.url ?? '')
+      if (!url) {
+        res.status(400).json({ error: 'url required' })
+        return
+      }
+      const attachment = await attachmentService.stageUrl({
+        projectId: req.params.projectId,
+        stagingId: req.body?.stagingId
+          ? String(req.body.stagingId)
+          : undefined,
+        url,
+        title: req.body?.title ? String(req.body.title) : undefined,
+        source: 'url',
+      })
+      assertNoTokenLeak(attachment)
+      res.status(201).json({ attachment })
+    } catch (err) {
+      if (isAttachmentError(err)) {
+        res.status(err.status).json({
+          error: err.userMessage,
+          code: err.category,
+          technicalSummary: err.technicalSummary,
+        })
+        return
+      }
+      sendError(res, err)
+    }
+  },
+)
+
+app.post('/api/projects/:projectId/attachments/bind', async (req, res) => {
+  try {
+    const taskId = String(req.body?.taskId ?? '')
+    const ids = Array.isArray(req.body?.attachmentIds)
+      ? (req.body.attachmentIds as unknown[]).map(String)
+      : []
+    if (!taskId || ids.length === 0) {
+      res.status(400).json({ error: 'taskId and attachmentIds required' })
+      return
+    }
+    const attachments = await attachmentService.bindToTask({
+      projectId: req.params.projectId,
+      taskId,
+      attachmentIds: ids,
+    })
+    assertNoTokenLeak(attachments)
+    res.json({ attachments })
+  } catch (err) {
+    if (isAttachmentError(err)) {
+      res.status(err.status).json({
+        error: err.userMessage,
+        code: err.category,
+        technicalSummary: err.technicalSummary,
+      })
+      return
+    }
+    sendError(res, err)
+  }
+})
+
+app.delete(
+  '/api/projects/:projectId/attachments/:attachmentId',
+  async (req, res) => {
+    try {
+      await attachmentService.deleteAttachment(
+        req.params.projectId,
+        req.params.attachmentId,
+        { hard: req.query.hard === '1' },
+      )
+      res.json({ ok: true })
+    } catch (err) {
+      if (isAttachmentError(err)) {
+        res.status(err.status).json({
+          error: err.userMessage,
+          code: err.category,
+          technicalSummary: err.technicalSummary,
+        })
+        return
+      }
+      sendError(res, err)
+    }
+  },
+)
+
+app.post(
+  '/api/projects/:projectId/attachments/:attachmentId/resolve',
+  async (req, res) => {
+    try {
+      const resolved = await attachmentService.resolve(
+        req.params.projectId,
+        req.params.attachmentId,
+        {
+          visionCapable: req.body?.visionCapable !== false,
+        },
+      )
+      assertNoTokenLeak(resolved)
+      res.json({ resolved })
+    } catch (err) {
+      if (isAttachmentError(err)) {
+        res.status(err.status).json({
+          error: err.userMessage,
+          code: err.category,
+          technicalSummary: err.technicalSummary,
+        })
+        return
+      }
+      sendError(res, err)
+    }
+  },
+)
 
 app.get('/api/marketing/content/:id/publish-preview', async (req, res) => {
   try {

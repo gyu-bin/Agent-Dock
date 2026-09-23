@@ -80,6 +80,12 @@ export type PublishedPostStatus =
   | 'failed'
   | 'cancelled'
   | 'unknown'
+  /** Buffer distribution — not SNS live publish */
+  | 'buffer_draft'
+  | 'buffer_queued'
+  | 'buffer_scheduled'
+  | 'buffer_sent'
+  | 'buffer_failed'
 
 export interface PublishedPost {
   id: string
@@ -152,6 +158,10 @@ export interface ContentApprovalToken {
   contentHash: string
   approvedAt: string
   channel: SocialChannel
+  /** Distribution binding — default queue; change requires re-approval */
+  publishMode?: 'queue' | 'now' | 'scheduled' | 'draft'
+  dueAt?: string | null
+  bufferChannelId?: string
 }
 
 export interface SocialCredentialHandle {
@@ -201,6 +211,9 @@ export interface SocialStoreSnapshot {
   posts: PublishedPost[]
   attempts: PublishAttempt[]
   analytics: AnalyticsSnapshot[]
+  /** Buffer distribution prefs + accepted posts (no API keys) */
+  distribution?: import('./buffer/bufferTypes.js').ProjectDistributionPrefs
+  bufferPosts?: import('./buffer/bufferTypes.js').BufferPublishedRecord[]
 }
 
 export type SocialErrorCategory =

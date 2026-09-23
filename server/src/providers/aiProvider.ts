@@ -1,8 +1,16 @@
 import type { AiProviderState } from '../types.js'
 
+export type ChatContentPart =
+  | { type: 'text'; text: string }
+  | {
+      type: 'image_url'
+      image_url: { url: string; detail?: 'auto' | 'low' | 'high' }
+    }
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
-  content: string
+  /** Plain text, or multimodal parts for vision-capable models */
+  content: string | ChatContentPart[]
 }
 
 export interface ChatUsage {

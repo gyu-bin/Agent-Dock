@@ -11,6 +11,9 @@ import {
   approveMarketingCampaign,
   fetchPublishPreview,
   publishMarketingContent,
+  publishToBuffer,
+  fetchProjectDistribution,
+  updateProjectDistribution,
   patchProjectRoutine,
   runProjectRoutine,
   setActiveProject,
@@ -107,6 +110,9 @@ export function ProjectsPage() {
   const [operations, setOperations] = useState<OperationsSnapshot | null>(null)
   const [opsBusy, setOpsBusy] = useState(false)
   const [campaigns, setCampaigns] = useState<MarketingCampaign[]>([])
+  const [distributionProvider, setDistributionProvider] = useState<
+    'manual' | 'buffer'
+  >('manual')
 
   const teamAgents = useMemo(() => {
     if (!selected) return []
@@ -138,6 +144,7 @@ export function ProjectsPage() {
       setArtifacts([])
       setOperations(null)
       setCampaigns([])
+      setDistributionProvider('manual')
       return
     }
     let cancelled = false
@@ -179,6 +186,13 @@ export function ProjectsPage() {
       })
       .catch(() => {
         if (!cancelled) setCampaigns([])
+      })
+    void fetchProjectDistribution(selected.id)
+      .then((r) => {
+        if (!cancelled) setDistributionProvider(r.distribution.provider)
+      })
+      .catch(() => {
+        if (!cancelled) setDistributionProvider('manual')
       })
     return () => {
       cancelled = true
@@ -685,6 +699,53 @@ export function ProjectsPage() {
                     Phase.
                   </p>
                   <h4 style={{ marginTop: 16 }}>Marketing Campaigns</h4>
+                  <div
+                    style={{
+                      marginBottom: 8,
+                      display: 'flex',
+                      gap: 8,
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span className={styles.muted}>게시 방식</span>
+                    <button
+                      type="button"
+                      className={proj.teamBtn}
+                      disabled={opsBusy || !selected || distributionProvider === 'manual'}
+                      onClick={() => {
+                        if (!selected) return
+                        setOpsBusy(true)
+                        void updateProjectDistribution(selected.id, {
+                          provider: 'manual',
+                        })
+                          .then((r) =>
+                            setDistributionProvider(r.distribution.provider),
+                          )
+                          .finally(() => setOpsBusy(false))
+                      }}
+                    >
+                      Manual{distributionProvider === 'manual' ? ' ✓' : ''}
+                    </button>
+                    <button
+                      type="button"
+                      className={proj.teamBtn}
+                      disabled={opsBusy || !selected || distributionProvider === 'buffer'}
+                      onClick={() => {
+                        if (!selected) return
+                        setOpsBusy(true)
+                        void updateProjectDistribution(selected.id, {
+                          provider: 'buffer',
+                        })
+                          .then((r) =>
+                            setDistributionProvider(r.distribution.provider),
+                          )
+                          .finally(() => setOpsBusy(false))
+                      }}
+                    >
+                      Buffer{distributionProvider === 'buffer' ? ' ✓' : ''}
+                    </button>
+                  </div>
                   <div style={{ marginBottom: 8 }}>
                     <button
                       type="button"
@@ -824,6 +885,165 @@ export function ProjectsPage() {
                             >
                               Threads 게시
                             </button>
+                          ) : null}
+                          {c.status === 'approved' ||
+                          c.status === 'partially_published' ? (
+                            <>
+                              <button
+                                type="button"
+                                className={proj.teamBtn}
+                                disabled={opsBusy}
+                                onClick={() => {
+                                  const contentId = c.contentIds[0]
+                                  if (!contentId || !selected) return
+                                  const ok = window.confirm(
+                                    'Buffer 초안으로 보낼까요?\n승인된 콘텐츠만 전송됩니다.',
+                                  )
+                                  if (!ok) return
+                                  setOpsBusy(true)
+                                  void approveMarketingCampaign(c.id, {
+                                    projectId: selected.id,
+                                    publishMode: 'draft',
+                                  })
+                                    .then(() =>
+                                      publishToBuffer({
+                                        projectId: selected.id,
+                                        contentId,
+                                        campaignId: c.id,
+                                        mode: 'draft',
+                                      }),
+                                    )
+                                    .then((r) => {
+                                      window.alert(
+                                        `Buffer 초안 저장됨 · ${r.publishedPostStatus} · ${r.bufferPostId}`,
+                                      )
+                                      return fetchMarketingCampaigns(
+                                        selected.id,
+                                      )
+                                    })
+                                    .then(setCampaigns)
+                                    .catch((err) => {
+                                      window.alert(
+                                        err instanceof Error
+                                          ? err.message
+                                          : String(err),
+                                      )
+                                    })
+                                    .finally(() => setOpsBusy(false))
+                                }}
+                              >
+                                Buffer 초안
+                              </button>
+                              <button
+                                type="button"
+                                className={proj.teamBtn}
+                                disabled={opsBusy}
+                                onClick={() => {
+                                  const contentId = c.contentIds[0]
+                                  if (!contentId || !selected) return
+                                  const ok = window.confirm(
+                                    'Buffer Queue에 넣을까요?\n즉시 SNS에 올라가지 않습니다.',
+                                  )
+                                  if (!ok) return
+                                  setOpsBusy(true)
+                                  void approveMarketingCampaign(c.id, {
+                                    projectId: selected.id,
+                                    publishMode: 'queue',
+                                  })
+                                    .then(() =>
+                                      publishToBuffer({
+                                        projectId: selected.id,
+                                        contentId,
+                                        campaignId: c.id,
+                                        mode: 'queue',
+                                      }),
+                                    )
+                                    .then((r) => {
+                                      window.alert(
+                                        `Buffer Queue · ${r.publishedPostStatus} · ${r.bufferPostId}`,
+                                      )
+                                      return fetchMarketingCampaigns(
+                                        selected.id,
+                                      )
+                                    })
+                                    .then(setCampaigns)
+                                    .catch((err) => {
+                                      window.alert(
+                                        err instanceof Error
+                                          ? err.message
+                                          : String(err),
+                                      )
+                                    })
+                                    .finally(() => setOpsBusy(false))
+                                }}
+                              >
+                                Buffer Queue
+                              </button>
+                              <button
+                                type="button"
+                                className={proj.teamBtn}
+                                disabled={opsBusy}
+                                onClick={() => {
+                                  const contentId = c.contentIds[0]
+                                  if (!contentId || !selected) return
+                                  const dueLocal = window.prompt(
+                                    '예약 시각 (Asia/Seoul, YYYY-MM-DD HH:mm)',
+                                  )
+                                  if (!dueLocal) return
+                                  const m = dueLocal
+                                    .trim()
+                                    .match(
+                                      /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/,
+                                    )
+                                  if (!m) {
+                                    window.alert('형식이 올바르지 않습니다.')
+                                    return
+                                  }
+                                  // Convert via server ISO — client builds UTC approx then re-approve
+                                  const dueAt = new Date(
+                                    `${m[1]}T${m[2]}:00+09:00`,
+                                  ).toISOString()
+                                  const ok = window.confirm(
+                                    `Buffer에 예약할까요?\n${dueLocal} (Seoul) → ${dueAt}`,
+                                  )
+                                  if (!ok) return
+                                  setOpsBusy(true)
+                                  void approveMarketingCampaign(c.id, {
+                                    projectId: selected.id,
+                                    publishMode: 'scheduled',
+                                    dueAt,
+                                  })
+                                    .then(() =>
+                                      publishToBuffer({
+                                        projectId: selected.id,
+                                        contentId,
+                                        campaignId: c.id,
+                                        mode: 'scheduled',
+                                        dueAt,
+                                      }),
+                                    )
+                                    .then((r) => {
+                                      window.alert(
+                                        `Buffer 예약 · ${r.publishedPostStatus} · due ${r.dueAt ?? dueAt}`,
+                                      )
+                                      return fetchMarketingCampaigns(
+                                        selected.id,
+                                      )
+                                    })
+                                    .then(setCampaigns)
+                                    .catch((err) => {
+                                      window.alert(
+                                        err instanceof Error
+                                          ? err.message
+                                          : String(err),
+                                      )
+                                    })
+                                    .finally(() => setOpsBusy(false))
+                                }}
+                              >
+                                Buffer 예약
+                              </button>
+                            </>
                           ) : null}
                         </li>
                       ))}

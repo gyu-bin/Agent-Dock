@@ -19,12 +19,14 @@ export const CONTEXT_BUDGET = {
   previousResultChars: 1200,
   knowledgeChars: 2400,
   maxKnowledge: 5,
+  attachmentsChars: 16_000,
 } as const
 
 export interface BuiltAgentContext {
   projectBlock: string
   knowledgeBlock: string
   userRequest: string
+  attachmentsBlock: string
   stepTask: string
   handoffBlock: string
   artifactsBlock: string
@@ -36,6 +38,7 @@ export interface BuiltAgentContext {
   omittedArtifactCount: number
   includedKnowledgeIds: string[]
   omittedKnowledgeCount: number
+  includedAttachmentIds: string[]
 }
 
 function clip(text: string, max: number): string {
@@ -68,6 +71,10 @@ export function formatHandoff(h?: AgentHandoff | null): string {
     lines.push(`Relevant artifacts: ${h.relevantArtifactIds.join(', ')}`)
   if (h.relevantSourceIds?.length)
     lines.push(`Relevant source ids: ${h.relevantSourceIds.join(', ')}`)
+  if (h.relevantAttachmentIds?.length)
+    lines.push(
+      `Relevant attachments: ${h.relevantAttachmentIds.join(', ')}`,
+    )
   return clip(lines.join('\n'), CONTEXT_BUDGET.handoffChars)
 }
 
@@ -114,7 +121,7 @@ export function formatArtifactExcerpts(artifacts: Artifact[]): string {
 
 /**
  * Build bounded context for one agent step.
- * Order: Project → Confirmed Knowledge → Request → Handoff → Artifacts.
+ * Order: Project → Confirmed Knowledge → Request → Work Attachments → Handoff → Artifacts.
  * Prefer handoff + artifacts over raw previousResult.
  */
 export function buildAgentContext(input: {
@@ -132,6 +139,9 @@ export function buildAgentContext(input: {
   /** Project-scoped knowledge only */
   knowledgeItems?: KnowledgeItem[]
   agentId?: string
+  /** Preformatted work attachments block (from AttachmentResolver) */
+  attachmentsBlock?: string
+  includedAttachmentIds?: string[]
 }): BuiltAgentContext {
   const projectParts = [
     `Type: ${input.projectType ?? 'custom'}`,
@@ -172,6 +182,10 @@ export function buildAgentContext(input: {
 
   const handoffBlock = formatHandoff(input.handoff)
   const artifactsBlock = formatArtifactExcerpts(selected)
+  const attachmentsBlock = clip(
+    input.attachmentsBlock ?? '',
+    CONTEXT_BUDGET.attachmentsChars,
+  )
 
   // If we have structured handoff or artifacts, shrink raw previous output
   const hasStructured = Boolean(handoffBlock) || selected.length > 0
@@ -186,6 +200,7 @@ export function buildAgentContext(input: {
     projectBlock.length +
     knowledgeBlock.length +
     userRequest.length +
+    attachmentsBlock.length +
     input.stepTask.length +
     handoffBlock.length +
     artifactsBlock.length +
@@ -196,6 +211,7 @@ export function buildAgentContext(input: {
     projectBlock,
     knowledgeBlock,
     userRequest,
+    attachmentsBlock,
     stepTask: input.stepTask,
     handoffBlock: handoffBlock || '(none)',
     artifactsBlock,
@@ -206,6 +222,7 @@ export function buildAgentContext(input: {
     omittedArtifactCount: omitted,
     includedKnowledgeIds: knowledgePick.selected.map((k) => k.id),
     omittedKnowledgeCount: knowledgePick.omitted,
+    includedAttachmentIds: input.includedAttachmentIds ?? [],
   }
 }
 
@@ -213,6 +230,10 @@ export function assembleUserPrompt(ctx: BuiltAgentContext): string {
   const searchSection = ctx.webSearchBlock
     ? `\n${ctx.webSearchBlock}\n`
     : '\n(No web search for this step — do not claim you searched the live web.)\n'
+
+  const attachmentsSection = ctx.attachmentsBlock
+    ? `\nWORK ATTACHMENTS\n${ctx.attachmentsBlock}\n`
+    : ''
 
   return `PROJECT CONTEXT
 ${ctx.projectBlock}
@@ -222,7 +243,7 @@ ${ctx.knowledgeBlock || '(none)'}
 
 USER REQUEST
 ${ctx.userRequest}
-
+${attachmentsSection}
 CURRENT STEP
 ${ctx.stepTask}
 

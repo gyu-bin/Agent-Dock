@@ -1,5 +1,5 @@
 /**
- * MediaDeliveryService — prepare / revoke / cleanup / reuse.
+ * MediaDeliveryService — prepare / revoke / cleanup / reuse / resign.
  * Production never auto-falls back to Fake.
  */
 
@@ -9,7 +9,7 @@ import { resolveArtifactMediaFile } from './artifactFileResolver.js'
 import {
   clampTtlSeconds,
   getMediaDeliveryProviderId,
-  getS3CompatibleConfig,
+  getS3CompatibleProviderConfig,
 } from './mediaConfig.js'
 import { createMediaError, isMediaError } from './mediaErrors.js'
 import {
@@ -70,12 +70,13 @@ export class MediaDeliveryService {
       })
     }
 
-    // Reuse active delivery for same publishAttempt + artifact
+    // Reuse active delivery for same publishAttempt + artifact (re-sign, no re-upload)
     if (request.publishAttemptId) {
       const existing = await this.findReusable(
         request.projectId,
         request.artifactId,
         request.publishAttemptId,
+        request.requestedTtlSeconds,
       )
       if (existing) return existing
     }
@@ -110,8 +111,8 @@ export class MediaDeliveryService {
         expiresAt: delivered.expiresAt,
         status: 'active',
         publishAttemptId: request.publishAttemptId,
-        urlHint:
-          delivered.provider === 'fake' ? delivered.url : undefined,
+        // Production signed URLs are transient — never persist
+        urlHint: delivered.provider === 'fake' ? delivered.url : undefined,
       }
       snap.deliveries.unshift(record)
       await this.repo.save(snap)
@@ -170,6 +171,34 @@ export class MediaDeliveryService {
     }
   }
 
+  /**
+   * Re-sign an existing delivery's remote object (no re-upload).
+   */
+  async signExisting(
+    projectId: string,
+    deliveryId: string,
+    ttlSeconds?: number,
+  ): Promise<DeliveredMedia> {
+    const snap = await this.repo.load(projectId)
+    const rec = snap.deliveries.find((d) => d.id === deliveryId)
+    if (!rec || rec.projectId !== projectId) {
+      throw createMediaError({
+        category: 'MEDIA_ARTIFACT_NOT_FOUND',
+        userMessage: 'Delivery를 찾을 수 없습니다.',
+        technicalSummary: 'delivery not found',
+        status: 404,
+      })
+    }
+    if (rec.status === 'revoked') {
+      throw createMediaError({
+        category: 'MEDIA_SIGN_FAILED',
+        userMessage: '해제된 Delivery는 재서명할 수 없습니다.',
+        technicalSummary: 'delivery revoked',
+      })
+    }
+    return this.resignRecord(snap, rec, ttlSeconds)
+  }
+
   async revoke(projectId: string, deliveryId: string): Promise<void> {
     const snap = await this.repo.load(projectId)
     const rec = snap.deliveries.find((d) => d.id === deliveryId)
@@ -184,11 +213,11 @@ export class MediaDeliveryService {
     try {
       if (this.provider.revoke) {
         await this.provider.revoke(deliveryId, rec)
-      }
-      if (rec.remoteKey && this.provider.deleteRemoteObject) {
+      } else if (rec.remoteKey && this.provider.deleteRemoteObject) {
         await this.provider.deleteRemoteObject(rec.remoteKey)
       }
     } catch (err) {
+      if (isMediaError(err)) throw err
       throw createMediaError({
         category: 'MEDIA_REVOKE_FAILED',
         userMessage: '미디어 전달 해제에 실패했습니다.',
@@ -223,7 +252,7 @@ export class MediaDeliveryService {
               revoked += 1
             }
           } catch {
-            // must not damage other projects
+            // must not damage other projects — continue
           }
         }
       }
@@ -237,8 +266,11 @@ export class MediaDeliveryService {
     return snap.deliveries
   }
 
-  /** Rebuild DeliveredMedia view; expired must not be treated as active */
-  toDeliveredMedia(record: MediaDeliveryRecord, now = new Date()): DeliveredMedia | null {
+  /** Rebuild DeliveredMedia view; expired/revoked must not be treated as active */
+  toDeliveredMedia(
+    record: MediaDeliveryRecord,
+    now = new Date(),
+  ): DeliveredMedia | null {
     const expired = Date.parse(record.expiresAt) <= now.getTime()
     const status =
       record.status === 'revoked'
@@ -273,20 +305,69 @@ export class MediaDeliveryService {
     projectId: string,
     artifactId: string,
     publishAttemptId: string,
+    requestedTtlSeconds?: number,
   ): Promise<DeliveredMedia | null> {
     const snap = await this.repo.load(projectId)
     const now = new Date()
     for (const d of snap.deliveries) {
       if (
-        d.artifactId === artifactId &&
-        d.publishAttemptId === publishAttemptId &&
-        d.status === 'active'
+        d.artifactId !== artifactId ||
+        d.publishAttemptId !== publishAttemptId ||
+        d.status !== 'active'
       ) {
-        const live = this.toDeliveredMedia(d, now)
-        if (live) return live
+        continue
+      }
+      // Still within TTL window — return (re-sign for production without urlHint)
+      if (Date.parse(d.expiresAt) > now.getTime()) {
+        const cached = this.toDeliveredMedia(d, now)
+        if (cached) return cached
+        if (d.remoteKey && this.provider.resign) {
+          return this.resignRecord(snap, d, requestedTtlSeconds)
+        }
+      }
+      // Object may still exist but URL/TTL expired → re-sign same remoteKey
+      // (do not re-upload). Extend expiresAt.
+      if (d.remoteKey && this.provider.resign) {
+        return this.resignRecord(snap, d, requestedTtlSeconds)
       }
     }
     return null
+  }
+
+  private async resignRecord(
+    snap: Awaited<ReturnType<JsonMediaDeliveryRepository['load']>>,
+    rec: MediaDeliveryRecord,
+    ttlSeconds?: number,
+  ): Promise<DeliveredMedia> {
+    if (!this.provider.resign) {
+      throw createMediaError({
+        category: 'MEDIA_SIGN_FAILED',
+        userMessage: '이 Provider는 URL 재서명을 지원하지 않습니다.',
+        technicalSummary: 'resign not supported',
+      })
+    }
+    const ttl = clampTtlSeconds(ttlSeconds)
+    const signed = await this.provider.resign(rec, ttl)
+    rec.expiresAt = signed.expiresAt
+    rec.status = 'active'
+    if (rec.provider === 'fake') {
+      rec.urlHint = signed.url
+    }
+    await this.repo.save(snap)
+    return {
+      id: rec.id,
+      projectId: rec.projectId,
+      artifactId: rec.artifactId,
+      provider: rec.provider,
+      url: signed.url,
+      mimeType: rec.mimeType,
+      bytes: rec.bytes,
+      createdAt: rec.createdAt,
+      expiresAt: signed.expiresAt,
+      status: 'active',
+      remoteKey: rec.remoteKey,
+      publishAttemptId: rec.publishAttemptId,
+    }
   }
 }
 
@@ -313,14 +394,19 @@ export function createDefaultMediaProvider(
     return new FakeMediaDeliveryProvider()
   }
   if (id === 's3-compatible') {
-    const cfg = getS3CompatibleConfig(env)
-    if (cfg.configured) {
-      return new S3CompatibleMediaDeliveryProvider({
-        endpoint: cfg.endpoint,
-        region: cfg.region,
-        bucket: cfg.bucket,
-      })
+    const full = getS3CompatibleProviderConfig(env)
+    if (full) {
+      return new S3CompatibleMediaDeliveryProvider(full)
     }
+    // Selected but incomplete — no Fake fallback; report s3-compatible unavailable
+    return new S3CompatibleMediaDeliveryProvider({
+      endpoint: env.MEDIA_S3_ENDPOINT?.trim() || '',
+      region: env.MEDIA_S3_REGION?.trim() || 'auto',
+      bucket: env.MEDIA_S3_BUCKET?.trim() || '',
+      accessKeyId: '',
+      secretAccessKey: '',
+      defaultTtlSeconds: undefined,
+    })
   }
   return new UnconfiguredMediaDeliveryProvider()
 }

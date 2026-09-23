@@ -229,3 +229,32 @@ export async function assertChangedFilesInsideProject(
     await assertPathInsideProject(projectRoot, rel)
   }
 }
+
+/**
+ * Work attachment local-folder paths are READ ONLY references.
+ * Never treat them as Codex writable Project.path.
+ */
+export function isReferenceOnlyFolder(
+  candidate: string,
+  projectPath: string | undefined,
+  referencePaths: string[],
+): boolean {
+  const c = path.resolve(candidate)
+  if (projectPath && path.resolve(projectPath) === c) return false
+  return referencePaths.some((r) => path.resolve(r) === c)
+}
+
+export function assertReferenceFoldersNotWritableTarget(
+  writableProjectPath: string,
+  referencePaths: string[],
+): void {
+  const proj = path.resolve(writableProjectPath)
+  for (const ref of referencePaths) {
+    if (path.resolve(ref) === proj) {
+      throw hardenError(
+        'PATH_VIOLATION',
+        'Reference attachment folder cannot be the Codex writable project path.',
+      )
+    }
+  }
+}

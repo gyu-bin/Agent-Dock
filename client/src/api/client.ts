@@ -641,7 +641,13 @@ export async function createMarketingCampaign(
 
 export async function approveMarketingCampaign(
   campaignId: string,
-  input: { projectId?: string; note?: string } = {},
+  input: {
+    projectId?: string
+    note?: string
+    publishMode?: 'queue' | 'now' | 'scheduled' | 'draft'
+    dueAt?: string | null
+    bufferChannelId?: string
+  } = {},
 ): Promise<{ campaign: import('../domain/marketing').MarketingCampaign }> {
   const res = await apiFetch(
     `${API_BASE}/api/marketing/campaigns/${encodeURIComponent(campaignId)}/approve`,
@@ -652,6 +658,121 @@ export async function approveMarketingCampaign(
     },
   )
   if (!res.ok) throw new Error(`Approve marketing campaign failed: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchBufferStatus(): Promise<{
+  configured: boolean
+  available: boolean
+  label: string
+  channelCount: number
+  channels: Array<{
+    id: string
+    name: string
+    service: string
+    displayName?: string
+  }>
+  organizations: Array<{ id: string; name?: string }>
+  lastCheckedAt?: string
+}> {
+  const res = await apiFetch(`${API_BASE}/api/social/buffer/status`)
+  if (!res.ok) throw new Error(`Buffer status failed: ${res.status}`)
+  return res.json()
+}
+
+export async function refreshBufferStatus(): Promise<{
+  configured: boolean
+  available: boolean
+  label: string
+  channelCount: number
+  channels: Array<{
+    id: string
+    name: string
+    service: string
+    displayName?: string
+  }>
+}> {
+  const res = await apiFetch(`${API_BASE}/api/social/buffer/refresh`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error(`Buffer refresh failed: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchProjectDistribution(
+  projectId: string,
+): Promise<{
+  distribution: {
+    provider: 'manual' | 'buffer'
+    bufferChannels: {
+      threadsChannelId?: string
+      instagramChannelId?: string
+      youtubeChannelId?: string
+    }
+  }
+}> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/distribution`,
+  )
+  if (!res.ok) throw new Error(`Distribution prefs failed: ${res.status}`)
+  return res.json()
+}
+
+export async function updateProjectDistribution(
+  projectId: string,
+  body: {
+    provider: 'manual' | 'buffer'
+    bufferChannels?: {
+      threadsChannelId?: string
+      instagramChannelId?: string
+      youtubeChannelId?: string
+    }
+  },
+): Promise<{
+  distribution: {
+    provider: 'manual' | 'buffer'
+    bufferChannels: Record<string, string | undefined>
+  }
+}> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/distribution`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+  if (!res.ok) throw new Error(`Update distribution failed: ${res.status}`)
+  return res.json()
+}
+
+export async function publishToBuffer(body: {
+  projectId: string
+  contentId: string
+  campaignId?: string
+  mode: 'queue' | 'now' | 'scheduled' | 'draft'
+  dueAt?: string
+  bufferChannelId?: string
+}): Promise<{
+  duplicate: boolean
+  bufferPostId: string
+  mode: string
+  status: string
+  dueAt: string | null
+  publishedPostStatus: string
+  publishedPostId: string
+}> {
+  const res = await apiFetch(`${API_BASE}/api/social/buffer/publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(
+      (err as { error?: string }).error ?? `Buffer publish failed: ${res.status}`,
+    )
+  }
   return res.json()
 }
 
@@ -747,6 +868,147 @@ export async function fetchMediaDeliveryStatus(): Promise<{
   const res = await apiFetch(`${API_BASE}/api/media-delivery/status`)
   if (!res.ok) throw new Error(`Media delivery status failed: ${res.status}`)
   return res.json()
+}
+
+export type WorkAttachmentDto = {
+  id: string
+  kind: string
+  name: string
+  source: string
+  createdAt: string
+  projectId: string
+  stagingId?: string
+  taskId?: string
+  lifecycle: string
+  mimeType?: string
+  bytes?: number
+  extension?: string
+  localRef?: string
+  path?: string
+  displayName?: string
+  url?: string
+  githubKind?: string
+  owner?: string
+  repo?: string
+  number?: number
+  title?: string
+}
+
+export async function stageAttachmentFile(
+  projectId: string,
+  input: {
+    name: string
+    mimeType?: string
+    bytesBase64: string
+    stagingId?: string
+    source?: string
+  },
+): Promise<WorkAttachmentDto> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/attachments/stage`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw Object.assign(
+      new Error((err as { error?: string }).error ?? `stage failed ${res.status}`),
+      { code: (err as { code?: string }).code },
+    )
+  }
+  const data = (await res.json()) as { attachment: WorkAttachmentDto }
+  return data.attachment
+}
+
+export async function stageAttachmentFolder(
+  projectId: string,
+  input: { path: string; displayName?: string; stagingId?: string },
+): Promise<WorkAttachmentDto> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/attachments/stage-folder`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw Object.assign(
+      new Error((err as { error?: string }).error ?? `folder stage failed`),
+      { code: (err as { code?: string }).code },
+    )
+  }
+  const data = (await res.json()) as { attachment: WorkAttachmentDto }
+  return data.attachment
+}
+
+export async function stageAttachmentUrl(
+  projectId: string,
+  input: { url: string; title?: string; stagingId?: string },
+): Promise<WorkAttachmentDto> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/attachments/stage-url`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw Object.assign(
+      new Error((err as { error?: string }).error ?? `url stage failed`),
+      { code: (err as { code?: string }).code },
+    )
+  }
+  const data = (await res.json()) as { attachment: WorkAttachmentDto }
+  return data.attachment
+}
+
+export async function bindAttachmentsToTask(
+  projectId: string,
+  taskId: string,
+  attachmentIds: string[],
+): Promise<WorkAttachmentDto[]> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/attachments/bind`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId, attachmentIds }),
+    },
+  )
+  if (!res.ok) throw new Error(`bind attachments failed: ${res.status}`)
+  const data = (await res.json()) as { attachments: WorkAttachmentDto[] }
+  return data.attachments
+}
+
+export async function fetchTaskAttachments(
+  projectId: string,
+  taskId: string,
+): Promise<WorkAttachmentDto[]> {
+  const q = new URLSearchParams({ taskId })
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/attachments?${q}`,
+  )
+  if (!res.ok) throw new Error(`list attachments failed: ${res.status}`)
+  const data = (await res.json()) as { attachments: WorkAttachmentDto[] }
+  return data.attachments
+}
+
+export async function deleteAttachment(
+  projectId: string,
+  attachmentId: string,
+): Promise<void> {
+  const res = await apiFetch(
+    `${API_BASE}/api/projects/${encodeURIComponent(projectId)}/attachments/${encodeURIComponent(attachmentId)}`,
+    { method: 'DELETE' },
+  )
+  if (!res.ok) throw new Error(`delete attachment failed: ${res.status}`)
 }
 
 export async function fetchPublishPreview(

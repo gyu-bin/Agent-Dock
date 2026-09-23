@@ -61,6 +61,16 @@ export interface TaskPlanningRequest {
   team: Agent[]
   registry: Agent[]
   executionMode?: ExecutionMode
+  /** Attachment presence — informational; does not force a complex workflow */
+  attachmentHints?: {
+    hasImages?: boolean
+    hasDocuments?: boolean
+    hasCodeFiles?: boolean
+    hasGithub?: boolean
+    hasLocalFolder?: boolean
+    hasWebUrl?: boolean
+    summary?: string
+  }
 }
 
 export interface TaskPlanProviderConflict {
@@ -164,7 +174,8 @@ function toStepDef(s: ResolvedTemplateStep): StepDefLike & {
  * Request → Template → Caps → Agents → Tools → Safety → TaskPlan
  */
 export function planTask(input: TaskPlanningRequest): TaskPlan {
-  const requestText = input.request.trim()
+  const hintLine = input.attachmentHints?.summary?.trim()
+  const requestText = [input.request.trim(), hintLine].filter(Boolean).join('\n')
   const preferred =
     (input.preferredTemplateId
       ? getTemplateById(input.preferredTemplateId)

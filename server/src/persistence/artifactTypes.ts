@@ -38,6 +38,8 @@ export interface Artifact {
   /** Optional web sources for research citations (W1) */
   sources?: WebSource[]
   searchedAt?: string
+  /** Work attachments that informed this artifact */
+  sourceAttachmentIds?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -68,6 +70,8 @@ export interface AgentHandoff {
   /** Prefer research artifacts over raw search dumps (W1) */
   relevantArtifactIds?: string[]
   relevantSourceIds?: string[]
+  /** Work attachments carried across agent handoff */
+  relevantAttachmentIds?: string[]
   createdAt: string
 }
 

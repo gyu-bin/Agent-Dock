@@ -79,6 +79,7 @@ export class ArtifactService {
     metadata?: Record<string, unknown>
     sources?: Artifact['sources']
     searchedAt?: string
+    sourceAttachmentIds?: string[]
   }): Promise<Artifact> {
     return this.enqueue(async () => {
       const store = await this.repo.load(input.projectId)
@@ -107,6 +108,7 @@ export class ArtifactService {
         metadata: input.metadata,
         sources: input.sources,
         searchedAt: input.searchedAt,
+        sourceAttachmentIds: input.sourceAttachmentIds,
         createdAt: now,
         updatedAt: now,
       }

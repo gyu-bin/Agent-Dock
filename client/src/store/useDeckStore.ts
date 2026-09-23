@@ -31,6 +31,7 @@ import {
   acquireExecutionLock,
   releaseExecutionLock,
   setWorkStateRevision,
+  bindAttachmentsToTask,
 } from '../api/client'
 import { persistCodexArtifact } from '../domain/artifactActions'
 import { deckEvents } from '../domain/events'
@@ -144,7 +145,10 @@ interface DeckState {
   upsertAgentRun: (run: AgentRun) => void
   upsertCodexRun: (run: CodexRun) => void
 
-  proposeWorkFromChat: (text: string) => void
+  proposeWorkFromChat: (
+    text: string,
+    opts?: { attachmentIds?: string[]; attachmentStagingId?: string },
+  ) => void
   appendChat: (msg: Omit<ChatMessage, 'id' | 'createdAt'> & { id?: string }) => void
   createAndStartTask: (input: {
     title: string
@@ -157,6 +161,8 @@ interface DeckState {
     executionMode?: ExecutionMode
     workflowTemplateId?: string
     source?: import('../domain/operations').TaskSource
+    attachmentIds?: string[]
+    attachmentStagingId?: string
   }) => string | null
   startTask: (taskId: string) => void
   pauseTask: (taskId: string) => void
@@ -562,12 +568,17 @@ function createDeckStore() {
           ],
         })),
 
-      proposeWorkFromChat: (text) => {
+      proposeWorkFromChat: (text, opts) => {
         const trimmed = text.trim()
-        if (!trimmed) return
+        if (!trimmed && !(opts?.attachmentIds?.length)) return
         const state = get()
         const project = selectActiveProject(state)
-        get().appendChat({ role: 'user', content: trimmed })
+        const userLine =
+          trimmed ||
+          (opts?.attachmentIds?.length
+            ? `(첨부 ${opts.attachmentIds.length}개)`
+            : '')
+        get().appendChat({ role: 'user', content: userLine })
 
         if (!project) {
           get().appendChat({
@@ -589,12 +600,12 @@ function createDeckStore() {
 
         const team = selectTeamAgents(state)
         const selection = selectWorkflowTemplate({
-          request: trimmed,
+          request: trimmed || userLine,
           projectType: project.type,
         })
         const resolved = resolveTemplateToSteps({
           template: selection.template,
-          request: trimmed,
+          request: trimmed || userLine,
           team,
           registry: state.registry,
         })
@@ -603,8 +614,8 @@ function createDeckStore() {
           role: 'assistant',
           content: `${selection.template.nameKo}\n${selection.rationale}\n\n${preview.join('\n')}`,
           workProposal: {
-            title: trimmed,
-            description: trimmed,
+            title: trimmed || userLine,
+            description: trimmed || userLine,
             workflow: selection.template.workflowKind,
             assignedAgentIds: [
               ...new Set(resolved.steps.map((s) => s.agentId)),
@@ -615,6 +626,8 @@ function createDeckStore() {
             workflowTemplateId: selection.template.id,
             workflowTemplateName: selection.template.nameKo,
             workflowPreview: preview,
+            attachmentIds: opts?.attachmentIds,
+            attachmentStagingId: opts?.attachmentStagingId,
           },
         })
       },
@@ -652,6 +665,11 @@ function createDeckStore() {
           team,
           registry: state.registry,
           executionMode: mode,
+          attachmentHints: input.attachmentIds?.length
+            ? {
+                summary: `Attachments present: ${input.attachmentIds.length} item(s).`,
+              }
+            : undefined,
         })
         if (plan.steps.length === 0) return null
 
@@ -673,6 +691,8 @@ function createDeckStore() {
           ...planned,
           simulateFailure: input.simulateFailure === true,
           source: planned.source,
+          attachmentIds: input.attachmentIds,
+          attachmentStagingId: input.attachmentStagingId,
         }
         const steps: PipelineStep[] = plannedSteps.map((s) => ({
           ...s,
@@ -699,6 +719,14 @@ function createDeckStore() {
           projectId: project.id,
         })
         persist()
+
+        if (input.attachmentIds?.length) {
+          void bindAttachmentsToTask(
+            project.id,
+            taskId,
+            input.attachmentIds,
+          ).catch(() => undefined)
+        }
 
         if (input.autoStart !== false) {
           get().startTask(taskId)

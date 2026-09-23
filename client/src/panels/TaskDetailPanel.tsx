@@ -12,7 +12,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
-import { fetchProjectArtifacts, fetchTaskUsage } from '../api/client'
+import { fetchProjectArtifacts, fetchTaskUsage, fetchTaskAttachments, type WorkAttachmentDto } from '../api/client'
 import type { Artifact, UsageAggregation } from '../domain/types'
 import { artifactIcon } from '../domain/artifactUi'
 import { formatCost, formatTokens } from '../domain/usageUi'
@@ -55,6 +55,7 @@ export function TaskDetailPanel({
   const selectArtifact = useDeckStore((s) => s.selectArtifact)
   const setNav = useDeckStore((s) => s.setNav)
   const [taskArtifacts, setTaskArtifacts] = useState<Artifact[]>([])
+  const [taskAttachments, setTaskAttachments] = useState<WorkAttachmentDto[]>([])
   const [usageAgg, setUsageAgg] = useState<UsageAggregation | null>(null)
   const pauseTask = useDeckStore((s) => s.pauseTask)
   const resumeTask = useDeckStore((s) => s.resumeTask)
@@ -123,6 +124,7 @@ export function TaskDetailPanel({
   useEffect(() => {
     if (!task) {
       setTaskArtifacts([])
+      setTaskAttachments([])
       setUsageAgg(null)
       return
     }
@@ -133,6 +135,13 @@ export function TaskDetailPanel({
       })
       .catch(() => {
         if (!cancelled) setTaskArtifacts([])
+      })
+    void fetchTaskAttachments(task.projectId, task.id)
+      .then((list) => {
+        if (!cancelled) setTaskAttachments(list)
+      })
+      .catch(() => {
+        if (!cancelled) setTaskAttachments([])
       })
     void fetchTaskUsage(task.projectId, task.id)
       .then((res) => {
@@ -225,6 +234,40 @@ export function TaskDetailPanel({
               <strong>요청</strong>{' '}
               {(task.description ?? '').trim() || '—'}
             </li>
+            {(taskAttachments.length > 0 ||
+              (task.attachmentIds?.length ?? 0) > 0) && (
+              <li>
+                <strong>첨부 자료</strong>
+                <ul className={styles.fileList}>
+                  {(taskAttachments.length
+                    ? taskAttachments
+                    : (task.attachmentIds ?? []).map((id) => ({
+                        id,
+                        kind: 'file' as const,
+                        name: id,
+                        displayName: undefined as string | undefined,
+                        url: undefined as string | undefined,
+                      }))
+                  ).map((a) => (
+                    <li key={a.id}>
+                      {a.kind === 'image'
+                        ? '이미지'
+                        : a.kind === 'github'
+                          ? 'GitHub'
+                          : a.kind === 'web-url'
+                            ? '웹'
+                            : a.kind === 'local-folder'
+                              ? '폴더'
+                              : '파일'}{' '}
+                      · {'displayName' in a && a.displayName
+                        ? a.displayName
+                        : a.name}
+                      {'url' in a && a.url ? ` · ${a.url}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            )}
             <li>
               <strong>작업자</strong> {worker}
             </li>

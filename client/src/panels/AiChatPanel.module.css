@@ -357,3 +357,104 @@
   opacity: 0.65;
 }
 
+.attachChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 0;
+}
+
+.attachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--ad-control-hover);
+  font-size: 11px;
+  color: var(--ad-ink-soft);
+}
+
+.attachKind {
+  font-weight: 700;
+  color: var(--ad-ink-faint);
+}
+
+.attachName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+  color: var(--ad-ink);
+}
+
+.attachMeta {
+  color: var(--ad-ink-faint);
+}
+
+.attachRemove {
+  border: 0;
+  background: transparent;
+  color: var(--ad-ink-faint);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.attachError {
+  margin: 4px 12px 0;
+  font-size: 11px;
+  color: var(--ad-danger, #c44);
+}
+
+.attachMenuWrap {
+  position: relative;
+}
+
+.attachPlus {
+  display: grid;
+  place-items: center;
+  width: var(--ad-icon-btn);
+  height: var(--ad-icon-btn);
+  border: 0;
+  background: transparent;
+  color: var(--ad-ink-faint);
+  border-radius: var(--ad-radius);
+}
+
+.attachMenu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 140px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--ad-border);
+  background: var(--ad-surface-raised);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.attachMenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--ad-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.attachMenu button:hover {
+  background: var(--ad-control-hover);
+}
+

@@ -27,14 +27,16 @@ export function estimateExecutionCost(input: {
       input.provider === 'web-search' ||
       input.provider === 'openai-image' ||
       input.provider === 'threads' ||
-      input.provider === 'media-delivery'
+      input.provider === 'media-delivery' ||
+      input.provider === 'buffer'
     ) {
       if (input.provider === 'openai-image') {
         return input.model ? { kind: 'unknown' } : { kind: 'na' }
       }
       if (
         input.provider === 'threads' ||
-        input.provider === 'media-delivery'
+        input.provider === 'media-delivery' ||
+        input.provider === 'buffer'
       ) {
         return { kind: 'unknown' }
       }

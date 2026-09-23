@@ -659,7 +659,14 @@ export class MarketingService {
 
   async approveCampaign(
     campaignId: string,
-    input: { projectId?: string; note?: string } = {},
+    input: {
+      projectId?: string
+      note?: string
+      /** Buffer / distribution binding — default queue */
+      publishMode?: 'queue' | 'now' | 'scheduled' | 'draft'
+      dueAt?: string | null
+      bufferChannelId?: string
+    } = {},
   ): Promise<MarketingCampaign> {
     const hit = await this.getCampaign(campaignId, input.projectId)
     if (!hit) {
@@ -667,7 +674,11 @@ export class MarketingService {
     }
     const snap = await this.repo.load(hit.campaign.projectId)
     const c = snap.campaigns.find((x) => x.id === campaignId)!
-    if (c.status !== 'awaiting_approval' && c.status !== 'rejected') {
+    if (
+      c.status !== 'awaiting_approval' &&
+      c.status !== 'rejected' &&
+      c.status !== 'approved'
+    ) {
       throw Object.assign(new Error('Campaign not awaiting approval'), {
         status: 400,
       })
@@ -675,6 +686,8 @@ export class MarketingService {
     // Still cannot publish without connector + approval token binding
     c.status = 'approved'
     const contents = snap.contents.filter((x) => x.campaignId === campaignId)
+    const publishMode = input.publishMode ?? 'queue'
+    const dueAt = input.dueAt ?? null
     const approvalTokens: ContentApprovalToken[] = []
     for (const content of contents) {
       approvalTokens.push({
@@ -686,6 +699,9 @@ export class MarketingService {
         ),
         approvedAt: nowIso(),
         channel: content.channel,
+        publishMode,
+        dueAt,
+        bufferChannelId: input.bufferChannelId,
       })
     }
     if (c.publishPackage) {

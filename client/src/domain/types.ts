@@ -142,6 +142,7 @@ export interface Artifact {
   metadata?: Record<string, unknown>
   sources?: WebSource[]
   searchedAt?: string
+  sourceAttachmentIds?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -190,6 +191,7 @@ export type ExecutionProvider =
   | 'openai-image'
   | 'threads'
   | 'media-delivery'
+  | 'buffer'
   | 'codex'
   | 'web-search'
   | 'mock'
@@ -297,6 +299,7 @@ export interface AgentHandoff {
   artifactIds: string[]
   relevantArtifactIds?: string[]
   relevantSourceIds?: string[]
+  relevantAttachmentIds?: string[]
   createdAt: string
 }
 
@@ -365,6 +368,10 @@ export interface Task {
   source?: import('./operations').TaskSource
   /** Canonical planner version when task was planned */
   planningVersion?: number
+  /** Work attachments bound to this task (ids only — no binary) */
+  attachmentIds?: string[]
+  /** Staging session used when composing this task */
+  attachmentStagingId?: string
 }
 
 export interface WebSearchSession {
@@ -531,6 +538,8 @@ export interface ChatMessage {
     workflowTemplateId?: string
     workflowTemplateName?: string
     workflowPreview?: string[]
+    attachmentIds?: string[]
+    attachmentStagingId?: string
     preflight?: {
       projectPath?: string
       readOnly?: boolean
