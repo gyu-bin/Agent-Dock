@@ -19,7 +19,15 @@ import {
   setActiveProject,
   setProjectTeam,
   updateProjectContext,
+  createProjectGoal,
+  patchProjectGoal,
+  fetchBufferStatus,
+  fetchImageToolStatus,
+  fetchProvider,
+  fetchSettingsBoard,
 } from '../api/client'
+import { AiChatPanel } from '../panels/AiChatPanel'
+import { resolveProjectToolPolicy } from '../domain/projectToolPolicy'
 import { ARTIFACT_TYPE_LABEL } from '../domain/artifactUi'
 import { groupAgentsByDepartment } from '../domain/groupAgents'
 import {
@@ -42,6 +50,7 @@ import { t } from '../i18n/ko'
 import { AgentDetailPanel } from '../panels/AgentDetailPanel'
 import { KnowledgeDetailPanel } from '../panels/KnowledgeDetailPanel'
 import {
+  selectPendingApprovalCount,
   selectVisibleProjects,
   useDeckStore,
 } from '../store/useDeckStore'
@@ -61,11 +70,13 @@ const TYPE_LABEL: Record<string, string> = {
 
 type DetailTab =
   | 'overview'
+  | 'work'
   | 'team'
   | 'tasks'
   | 'artifacts'
   | 'knowledge'
   | 'operations'
+  | 'tools'
   | 'settings'
 
 export function ProjectsPage() {
@@ -113,6 +124,21 @@ export function ProjectsPage() {
   const [distributionProvider, setDistributionProvider] = useState<
     'manual' | 'buffer'
   >('manual')
+  const pendingApprovals = useDeckStore(selectPendingApprovalCount)
+  const aiProvider = useDeckStore((s) => s.aiProvider)
+  const [toolRuntime, setToolRuntime] = useState<{
+    openai: boolean
+    codex: boolean
+    webSearch: boolean
+    image: boolean
+    buffer: boolean
+  }>({
+    openai: false,
+    codex: false,
+    webSearch: false,
+    image: false,
+    buffer: false,
+  })
 
   const teamAgents = useMemo(() => {
     if (!selected) return []
@@ -194,10 +220,25 @@ export function ProjectsPage() {
       .catch(() => {
         if (!cancelled) setDistributionProvider('manual')
       })
+    void Promise.all([
+      fetchProvider().catch(() => null),
+      fetchImageToolStatus().catch(() => null),
+      fetchBufferStatus().catch(() => null),
+      fetchSettingsBoard().catch(() => null),
+    ]).then(([prov, img, buf, board]) => {
+      if (cancelled) return
+      setToolRuntime({
+        openai: Boolean(prov?.configured ?? aiProvider.configured),
+        codex: Boolean(prov?.codex?.available ?? aiProvider.codex?.available),
+        webSearch: Boolean(board?.runtime?.webSearch?.configured),
+        image: Boolean(img?.available && img?.configured),
+        buffer: Boolean(buf?.available),
+      })
+    })
     return () => {
       cancelled = true
     }
-  }, [selected?.id, tasks.length])
+  }, [selected?.id, tasks.length, aiProvider.configured, aiProvider.codex?.available])
 
   async function activate(id: string) {
     const snap = await setActiveProject(id)
@@ -265,8 +306,8 @@ export function ProjectsPage() {
     <div className={md.split}>
       <div className={md.listPane}>
         <header className={md.head}>
-          <h1>{t('nav.projects')}</h1>
-          <p>팀·지식·컨텍스트를 프로젝트 단위로 관리합니다.</p>
+          <h1>Project Control Center</h1>
+          <p>프로젝트를 열고 일을 시킵니다. 팀·목표·자동화·마케팅·도구를 한곳에서 관리합니다.</p>
           <button
             type="button"
             className={md.emptyBtn}
@@ -332,11 +373,27 @@ export function ProjectsPage() {
                 <div>
                   <p className={proj.kicker}>
                     {TYPE_LABEL[selected.type] ?? selected.type}
-                    {isActive ? ' · 활성 프로젝트' : ''}
+                    {' · '}
+                    {selected.status === 'active'
+                      ? '진행 중'
+                      : selected.status === 'planning'
+                        ? '기획'
+                        : selected.status === 'paused'
+                          ? '일시정지'
+                          : selected.status === 'completed'
+                            ? '완료'
+                            : selected.status}
+                    {isActive ? ' · 활성' : ''}
                   </p>
                   <h2>{selected.name}</h2>
                   <p className={proj.path}>
-                    {selected.path || '경로 미설정'}
+                    Path: {selected.path || '미설정'}
+                  </p>
+                  <p className={proj.path}>
+                    GitHub:{' '}
+                    {selected.context?.githubUrl?.trim()
+                      ? selected.context.githubUrl
+                      : '미연결'}
                   </p>
                 </div>
                 <button
@@ -383,18 +440,20 @@ export function ProjectsPage() {
               </div>
             </header>
 
-            <nav className={proj.tabs} aria-label="프로젝트 섹션">
+              <nav className={proj.tabs} aria-label="프로젝트 섹션">
               {(
                 [
                   ['overview', '개요'],
+                  ['work', '작업 요청'],
                   ['team', `팀 · ${selected.agentIds.length}`],
                   ['tasks', `작업 · ${projectTasks.length}`],
                   ['artifacts', `결과물 · ${artifacts.length}`],
-                  ['knowledge', `프로젝트 지식 · ${knowledge.length}`],
+                  ['knowledge', `지식 · ${knowledge.length}`],
                   [
                     'operations',
                     `운영 · ${(operations?.routines.length ?? 0) + (operations?.goals.length ?? 0)}`,
                   ],
+                  ['tools', '도구'],
                   ['settings', '설정'],
                 ] as const
               ).map(([id, label]) => (
@@ -413,11 +472,81 @@ export function ProjectsPage() {
               {tab === 'overview' ? (
                 <>
                   <section className={proj.section}>
+                    <h3>무엇을 시킬까요?</h3>
+                    <p className={proj.sectionHint}>
+                      자연어로 요청하면 Agent Deck이 Agent·Tool·Workflow를
+                      자동 결정합니다. 첨부는 작업 요청 탭에서도 가능합니다.
+                    </p>
+                    {isActive ? (
+                      <AiChatPanel embedded />
+                    ) : (
+                      <p className={styles.muted}>
+                        활성 프로젝트로 전환하면 Work Composer를 사용할 수
+                        있습니다.{' '}
+                        <button
+                          type="button"
+                          className={proj.teamBtn}
+                          onClick={() => void activate(selected.id)}
+                        >
+                          이 프로젝트 활성화
+                        </button>
+                      </p>
+                    )}
+                  </section>
+                  <section className={proj.section}>
+                    <h3>상태 요약</h3>
+                    <ul className={proj.taskList}>
+                      <li>
+                        <strong>Task</strong>
+                        <span>{projectTasks.length}건</span>
+                      </li>
+                      <li>
+                        <strong>Approval</strong>
+                        <span>
+                          {pendingApprovals > 0
+                            ? `${pendingApprovals}건 대기`
+                            : '없음'}
+                        </span>
+                      </li>
+                      <li>
+                        <strong>Team</strong>
+                        <span>
+                          Core {selected.agentIds.length} · 부서{' '}
+                          {teamGroups.length}
+                        </span>
+                      </li>
+                      <li>
+                        <strong>Artifact</strong>
+                        <span>{artifacts.length}건</span>
+                      </li>
+                      <li>
+                        <strong>Routine</strong>
+                        <span>
+                          {(operations?.routines ?? []).filter(
+                            (r) => r.status === 'active',
+                          ).length}
+                          개 활성 / {(operations?.routines ?? []).length}개
+                        </span>
+                      </li>
+                      <li>
+                        <strong>Knowledge</strong>
+                        <span>{knowledge.length}건</span>
+                      </li>
+                      <li>
+                        <strong>Distribution</strong>
+                        <span>
+                          {distributionProvider === 'buffer'
+                            ? 'Buffer'
+                            : 'Manual'}
+                        </span>
+                      </li>
+                    </ul>
+                  </section>
+                  <section className={proj.section}>
                     <h3>최근 작업</h3>
                     {recentTasks.length === 0 ? (
                       <p className={styles.muted}>
-                        아직 진행한 작업이 없습니다. 상단에서 할 일을 요청해
-                        보세요.
+                        아직 진행한 작업이 없습니다.
                       </p>
                     ) : (
                       <ul className={proj.taskList}>
@@ -427,7 +556,7 @@ export function ProjectsPage() {
                               type="button"
                               onClick={() => {
                                 selectTask(task.id)
-                                setNav('tasks')
+                                setTab('tasks')
                               }}
                             >
                               <strong>{task.title}</strong>
@@ -441,9 +570,36 @@ export function ProjectsPage() {
                     )}
                   </section>
                   <section className={proj.section}>
+                    <h3>최근 결과물</h3>
+                    {artifacts.length === 0 ? (
+                      <p className={styles.muted}>아직 결과물이 없습니다.</p>
+                    ) : (
+                      <ul className={proj.taskList}>
+                        {artifacts.slice(0, 5).map((a) => (
+                          <li key={a.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                selectArtifact(a.id)
+                                setTab('artifacts')
+                              }}
+                            >
+                              <strong>{a.title}</strong>
+                              <span>
+                                {ARTIFACT_TYPE_LABEL[a.type] ?? a.type} · v
+                                {a.version}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                  <section className={proj.section}>
                     <h3>팀 요약</h3>
                     <p className={proj.sectionHint}>
-                      {selected.agentIds.length}명 · 부서 {teamGroups.length}개
+                      Core Team {selected.agentIds.length}명 · Specialist는
+                      작업 계획 시 자동 투입됩니다.
                     </p>
                     <button
                       type="button"
@@ -454,6 +610,23 @@ export function ProjectsPage() {
                     </button>
                   </section>
                 </>
+              ) : null}
+
+              {tab === 'work' ? (
+                <section className={proj.section}>
+                  <h3>Work Composer</h3>
+                  <p className={proj.sectionHint}>
+                    Text / Image / File / Folder / GitHub / Web URL 첨부 지원.
+                    활성 프로젝트에 자동 연결됩니다.
+                  </p>
+                  {isActive ? (
+                    <AiChatPanel embedded />
+                  ) : (
+                    <p className={styles.muted}>
+                      이 프로젝트를 활성화한 뒤 요청하세요.
+                    </p>
+                  )}
+                </section>
               ) : null}
 
               {tab === 'team' ? (
@@ -1049,7 +1222,52 @@ export function ProjectsPage() {
                       ))}
                     </ul>
                   )}
+                  <h4 style={{ marginTop: 16 }}>Marketing Package</h4>
+                  <p className={proj.sectionHint}>
+                    채널별 콘텐츠 · Copy / Artifact / Image / Buffer. 승인 후에만
+                    외부 배포.
+                  </p>
+                  {campaigns.length === 0 ? (
+                    <p className={styles.muted}>최근 캠페인이 없습니다.</p>
+                  ) : (
+                    <ul className={proj.taskList}>
+                      {campaigns.slice(0, 3).map((c) => (
+                        <li key={`pkg_${c.id}`}>
+                          <strong>{c.title}</strong>
+                          <span>
+                            {(c.channels ?? [])
+                              .filter((ch) => ch.enabled)
+                              .map((ch) => ch.channel)
+                              .join(', ') || 'channels n/a'}{' '}
+                            · {c.status} · dist {distributionProvider}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <h4 style={{ marginTop: 16 }}>Goals</h4>
+                  <div style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      className={proj.teamBtn}
+                      disabled={opsBusy || !selected}
+                      onClick={() => {
+                        if (!selected) return
+                        const title = window.prompt('Goal 제목')
+                        if (!title?.trim()) return
+                        setOpsBusy(true)
+                        void createProjectGoal(selected.id, {
+                          type: 'development',
+                          title: title.trim(),
+                        })
+                          .then(() => fetchProjectOperations(selected.id))
+                          .then(setOperations)
+                          .finally(() => setOpsBusy(false))
+                      }}
+                    >
+                      Goal 추가
+                    </button>
+                  </div>
                   {(operations?.goals.length ?? 0) === 0 ? (
                     <p className={styles.muted}>아직 Goal이 없습니다.</p>
                   ) : (
@@ -1060,6 +1278,43 @@ export function ProjectsPage() {
                           <span>
                             {g.type} · {g.status}
                           </span>
+                          <button
+                            type="button"
+                            className={proj.teamBtn}
+                            disabled={opsBusy}
+                            onClick={() => {
+                              setOpsBusy(true)
+                              void patchProjectGoal(g.id, {
+                                status:
+                                  g.status === 'paused' ? 'active' : 'paused',
+                              })
+                                .then(() =>
+                                  fetchProjectOperations(selected!.id),
+                                )
+                                .then(setOperations)
+                                .finally(() => setOpsBusy(false))
+                            }}
+                          >
+                            {g.status === 'paused' ? '재개' : '일시정지'}
+                          </button>
+                          <button
+                            type="button"
+                            className={proj.teamBtn}
+                            disabled={opsBusy || g.status === 'completed'}
+                            onClick={() => {
+                              setOpsBusy(true)
+                              void patchProjectGoal(g.id, {
+                                status: 'completed',
+                              })
+                                .then(() =>
+                                  fetchProjectOperations(selected!.id),
+                                )
+                                .then(setOperations)
+                                .finally(() => setOpsBusy(false))
+                            }}
+                          >
+                            완료
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -1201,10 +1456,74 @@ export function ProjectsPage() {
                 </section>
               ) : null}
 
+              {tab === 'tools' ? (
+                <section className={proj.section}>
+                  <h3>프로젝트 도구</h3>
+                  <p className={proj.sectionHint}>
+                    Global Default ← Project Override. 실제 runtime
+                    availability를 반영합니다. API Key는 표시하지 않습니다.
+                  </p>
+                  {(() => {
+                    const resolved = resolveProjectToolPolicy({
+                      global: toolRuntime,
+                      project: selected.context?.toolPolicy,
+                    })
+                    const rows: Array<{
+                      key: keyof typeof resolved
+                      label: string
+                    }> = [
+                      { key: 'openai', label: 'OpenAI' },
+                      { key: 'codex', label: 'Codex' },
+                      { key: 'webSearch', label: 'Web Search' },
+                      { key: 'image', label: 'Image' },
+                      { key: 'buffer', label: 'Buffer' },
+                    ]
+                    return (
+                      <ul className={proj.taskList}>
+                        {rows.map((r) => (
+                          <li key={r.key}>
+                            <strong>{r.label}</strong>
+                            <span>
+                              {resolved[r.key].effective === 'enabled'
+                                ? '● 사용 가능'
+                                : '○ 사용 불가'}{' '}
+                              · {resolved[r.key].source}
+                              {!toolRuntime[r.key]
+                                ? ' · Global unavailable'
+                                : ''}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )
+                  })()}
+                  {!toolRuntime.buffer ? (
+                    <p className={styles.muted} style={{ marginTop: 8 }}>
+                      Buffer unavailable — Settings → SNS에서 BUFFER_API_KEY
+                      연결을 확인하세요.
+                    </p>
+                  ) : null}
+                  {!toolRuntime.image ? (
+                    <p className={styles.muted}>
+                      Image unavailable — OpenAI Image 설정을 확인하세요.
+                    </p>
+                  ) : null}
+                  {!toolRuntime.openai ? (
+                    <p className={styles.muted}>
+                      Provider unavailable — OPENAI_API_KEY가 필요합니다.
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+
               {tab === 'settings' ? (
                 <>
                   <section className={proj.section}>
                     <h3>프로젝트 설정</h3>
+                    <p className={proj.sectionHint}>
+                      Path / GitHub / Tool Policy는 프로젝트 단위입니다. AI
+                      Key·테마·Safety 기본값은 Global Settings에 있습니다.
+                    </p>
                     <p className={proj.sectionHint}>
                       경로: {selected.path || '미설정'}
                     </p>
@@ -1224,6 +1543,20 @@ export function ProjectsPage() {
                             }))
                           }
                           rows={3}
+                        />
+                      </label>
+                      <label>
+                        GitHub URL
+                        <textarea
+                          value={ctx.githubUrl ?? ''}
+                          onChange={(e) =>
+                            setCtx((c) => ({
+                              ...c,
+                              githubUrl: e.target.value,
+                            }))
+                          }
+                          rows={1}
+                          placeholder="https://github.com/org/repo"
                         />
                       </label>
                       <label>
@@ -1262,6 +1595,53 @@ export function ProjectsPage() {
                           rows={2}
                         />
                       </label>
+                    </div>
+                    <h4 style={{ marginTop: 16 }}>Tool Policy Override</h4>
+                    <p className={proj.sectionHint}>
+                      inherit = Global Default. Task Requirement가 가장
+                      우선하지만 availability를 발명하지는 않습니다.
+                    </p>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                        marginBottom: 12,
+                      }}
+                    >
+                      {(
+                        [
+                          'openai',
+                          'codex',
+                          'webSearch',
+                          'image',
+                          'buffer',
+                        ] as const
+                      ).map((key) => (
+                        <label key={key} style={{ fontSize: 12 }}>
+                          {key}{' '}
+                          <select
+                            value={ctx.toolPolicy?.[key] ?? 'inherit'}
+                            onChange={(e) => {
+                              const v = e.target.value as
+                                | 'inherit'
+                                | 'enabled'
+                                | 'disabled'
+                              setCtx((c) => ({
+                                ...c,
+                                toolPolicy: {
+                                  ...c.toolPolicy,
+                                  [key]: v,
+                                },
+                              }))
+                            }}
+                          >
+                            <option value="inherit">inherit</option>
+                            <option value="enabled">enabled</option>
+                            <option value="disabled">disabled</option>
+                          </select>
+                        </label>
+                      ))}
                     </div>
                     <div className={proj.ctxActions}>
                       <button

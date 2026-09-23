@@ -36,14 +36,11 @@ import {
 import { persistCodexArtifact } from '../domain/artifactActions'
 import { deckEvents } from '../domain/events'
 import {
-  resolveTemplateToSteps,
-  selectWorkflowTemplate,
-  previewLabels,
-} from '../domain/templateSelector'
-import {
   planTask,
   materializeTaskFromPlan,
+  planFingerprint,
 } from '../domain/taskPlanning'
+import { getTemplateById } from '../domain/workflowTemplates'
 import { createMockExecutionEngine } from '../engine/mockExecutionEngine'
 import { createRealAIExecutionEngine } from '../engine/realAiExecutionEngine'
 import { taskProgress, type ExecutionEngine } from '../engine/types'
@@ -160,6 +157,8 @@ interface DeckState {
     routePlan?: RoutePlan
     executionMode?: ExecutionMode
     workflowTemplateId?: string
+    /** Must match proposeWorkFromChat plan when provided */
+    planFingerprint?: string
     source?: import('../domain/operations').TaskSource
     attachmentIds?: string[]
     attachmentStagingId?: string
@@ -599,33 +598,44 @@ function createDeckStore() {
         }
 
         const team = selectTeamAgents(state)
-        const selection = selectWorkflowTemplate({
-          request: trimmed || userLine,
-          projectType: project.type,
-        })
-        const resolved = resolveTemplateToSteps({
-          template: selection.template,
-          request: trimmed || userLine,
+        const requestText = trimmed || userLine
+        const plan = planTask({
+          project: {
+            id: project.id,
+            type: project.type,
+            name: project.name,
+          },
+          request: requestText,
+          source: { type: 'user' },
           team,
           registry: state.registry,
+          executionMode: state.executionMode,
+          attachmentHints: opts?.attachmentIds?.length
+            ? {
+                summary: `Attachments present: ${opts.attachmentIds.length} item(s).`,
+              }
+            : undefined,
         })
-        const preview = previewLabels(resolved.steps)
+        const preview = plan.preview
+        const templateMeta = getTemplateById(plan.workflowTemplateId)
         get().appendChat({
           role: 'assistant',
-          content: `${selection.template.nameKo}\n${selection.rationale}\n\n${preview.join('\n')}`,
+          content: `${plan.rationale}\n\n${preview.join('\n')}`,
           workProposal: {
-            title: trimmed || userLine,
-            description: trimmed || userLine,
-            workflow: selection.template.workflowKind,
+            title: requestText,
+            description: requestText,
+            workflow: plan.workflowKind,
             assignedAgentIds: [
-              ...new Set(resolved.steps.map((s) => s.agentId)),
+              ...new Set(plan.steps.map((s) => s.agentId)),
             ],
             recommendedExtraAgentIds: [],
-            stepLabels: resolved.steps.map((s) => s.label),
+            stepLabels: plan.steps.map((s) => s.label),
             executionMode: state.executionMode,
-            workflowTemplateId: selection.template.id,
-            workflowTemplateName: selection.template.nameKo,
+            workflowTemplateId: plan.workflowTemplateId,
+            workflowTemplateName:
+              templateMeta?.nameKo ?? plan.workflowTemplateId,
             workflowPreview: preview,
+            planFingerprint: planFingerprint(plan),
             attachmentIds: opts?.attachmentIds,
             attachmentStagingId: opts?.attachmentStagingId,
           },
@@ -673,6 +683,18 @@ function createDeckStore() {
         })
         if (plan.steps.length === 0) return null
 
+        if (
+          input.planFingerprint &&
+          input.planFingerprint !== planFingerprint(plan)
+        ) {
+          get().appendChat({
+            role: 'assistant',
+            content:
+              '미리보기와 실행 계획이 일치하지 않습니다. 다시 「무엇을 시킬까요?」로 요청해 주세요.',
+          })
+          return null
+        }
+
         const now = new Date().toISOString()
         const taskId = `task_${Date.now().toString(36)}`
         const { task: planned, steps: plannedSteps } = materializeTaskFromPlan({
@@ -711,7 +733,7 @@ function createDeckStore() {
           selectedTaskId: taskId,
 
           workRequestOpen: false,
-          activeNav: 'home',
+          activeNav: 'projects',
         }))
         deckEvents.emit({
           type: 'task.created',

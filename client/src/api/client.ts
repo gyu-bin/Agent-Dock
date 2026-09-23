@@ -546,6 +546,31 @@ export async function createProjectGoal(
   return body.goal
 }
 
+export async function patchProjectGoal(
+  goalId: string,
+  patch: {
+    projectId?: string
+    title?: string
+    description?: string
+    status?: ProjectGoal['status']
+    priority?: ProjectGoal['priority']
+    type?: ProjectGoal['type']
+    successCriteria?: string[]
+  },
+): Promise<ProjectGoal> {
+  const res = await apiFetch(
+    `${API_BASE}/api/goals/${encodeURIComponent(goalId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    },
+  )
+  if (!res.ok) throw new Error(`Patch goal failed: ${res.status}`)
+  const body = (await res.json()) as { goal: ProjectGoal }
+  return body.goal
+}
+
 export async function createProjectRoutine(
   projectId: string,
   input: Record<string, unknown>,

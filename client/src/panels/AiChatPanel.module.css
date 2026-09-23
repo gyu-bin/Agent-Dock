@@ -6,6 +6,14 @@
   min-height: 0;
 }
 
+.embedded {
+  border-left: 0;
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+  min-height: 420px;
+  max-height: 560px;
+}
+
 .tabs {
   display: flex;
   gap: 0;

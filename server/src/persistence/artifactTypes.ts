@@ -80,6 +80,14 @@ export interface ProjectContext {
   goals?: string
   constraints?: string
   techStack?: string
+  githubUrl?: string
+  toolPolicy?: {
+    openai?: 'inherit' | 'enabled' | 'disabled'
+    codex?: 'inherit' | 'enabled' | 'disabled'
+    webSearch?: 'inherit' | 'enabled' | 'disabled'
+    image?: 'inherit' | 'enabled' | 'disabled'
+    buffer?: 'inherit' | 'enabled' | 'disabled'
+  }
 }
 
 export interface ArtifactStoreSnapshot {

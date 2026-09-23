@@ -1,17 +1,28 @@
 # Agent Deck
 
-로컬에서 돌아가는 **AI 개발 스튜디오**입니다. AI 직원을 회사처럼 조직하고, 2D 오피스에서 상태를 보며, 작업·승인·결과물·지식을 한 흐름으로 관리합니다.
+로컬에서 돌아가는 **AI 개발 스튜디오**입니다. 프로젝트를 열고 자연어로 일을 시키면, Agent Deck이 Agent·Tool·Workflow를 자동으로 구성합니다.
+
+## 제품 사용 흐름 (Project-first)
+
+1. **홈** — 오피스 시각화 + 활성 프로젝트 상태  
+2. **프로젝트** — **Project Control Center** (작업의 중심)  
+3. 「무엇을 시킬까요?」에 요청 (+ Image / File / Folder / GitHub / URL 첨부)  
+4. Preview → 시작 → 필요한 승인만  
+5. 결과물 · 지식 · Goal · Routine · Marketing · Usage가 **같은 Project**에 축적
+
+Provider · Model · Workflow ID · Agent ID는 **설정 → 고급** 또는 Advanced에서만 다룹니다.
+
+상세 상태: [`docs/product-status.md`](docs/product-status.md)
 
 ## 주요 기능
 
-- **프로젝트 / 팀** — 프로젝트별 에이전트 채용·부서 분류
-- **홈 오피스** — 팀 상태 시각화 + 「무엇을 시킬까요?」작업 요청
-- **작업 흐름** — WorkflowTemplate 기반 자동 매칭·파이프라인
-- **AI 서비스** — OpenAI Provider, Codex 실행, 웹 검색
-- **승인** — 계획 승인 · 코드 변경 승인 (Diff / Rollback)
-- **결과물 · 프로젝트 지식** — Artifact / Handoff / Knowledge
-- **사용량 · 설정** — 비용·토큰, 안전·고급 옵션
-- **로컬 보안** — Local Session, Execution Lock, Path Sandbox, Persistence
+- **Project Control Center** — Header / Work Composer / Overview / Team / Goals / Automation / Tools / Marketing / Safety / Usage / Knowledge
+- **Canonical Task Planner** — Preview와 실행이 동일 `planTask` SoT
+- **첨부 (Work Attachment)** — writable target vs read-only reference 경계 유지
+- **Marketing** — Campaign → Approval → Buffer Queue/Draft/Schedule (또는 Manual)
+- **Media Delivery** — SNS용 임시 URL (R2/S3)
+- **Scheduler / Routine** — 마케팅·리서치 자동화 (승인 정책 유지)
+- **로컬 보안** — Session · Path Sandbox · Execution Lock
 
 ## 아키텍처
 
@@ -19,13 +30,11 @@
 |------|------|
 | Client | React · Vite · TypeScript · Zustand |
 | Server | Express · Agent Registry (TOML) · Persistence |
-| Office | DOM / CSS / SVG (독립 viewport, 교체 가능) |
+| Office | DOM / CSS (시각화; Core 작업 경로 아님) |
 
-기본 Happy Path:
+Happy Path:
 
-프로젝트 선택 → 무엇을 시킬까요? → 작업 흐름 자동 구성 → (필요 시) 계획 승인 → AI 작업 → (필요 시) 코드 변경 승인 → 검증/리뷰 → 결과 확인
-
-Provider · Model · Workflow ID · Agent ID 등은 **설정 → 고급**에서만 다룹니다.
+프로젝트 선택 → Project Control Center → 무엇을 시킬까요? → (Preview) → 실행 → (필요 시 승인) → 결과 확인
 
 ## 실행
 
@@ -43,6 +52,7 @@ npm run dev
 # 예
 OPENAI_API_KEY=sk-...
 # CODEX_BIN=/path/to/codex
+# BUFFER_API_KEY=
 ```
 
 ## AI 실행 모드
@@ -53,15 +63,13 @@ OPENAI_API_KEY=sk-...
 | **NOT_CONFIGURED** | AI 설정 필요 |
 | **MOCK** | Settings → **고급** → **Developer Mode**에서만 명시 활성화 |
 
-Provider 실패 시 **자동 Mock 전환은 하지 않습니다.**  
-테스트 fixture의 Mock 사용은 유지됩니다.
+Provider 실패 시 **자동 Mock 전환은 하지 않습니다.**
 
-## 보안 · 로컬 정책
+## 네비게이션
 
-- 기본은 **로컬 전용** 실행
-- 프로젝트 path sandbox
-- Execution lock으로 동시 실행 충돌 방지
-- 세션·프로젝트 데이터는 서버 로컬 persistence
+**사이드바:** 홈 · 프로젝트(Control Center) · 승인 대기 · (하단) 설정  
+
+작업 / 결과물 / 지식 / Usage는 Project 탭(또는 Settings 고급)에서 접근합니다.
 
 ## 스크립트
 
@@ -70,19 +78,11 @@ Provider 실패 시 **자동 Mock 전환은 하지 않습니다.**
 | `npm run dev` | Client + server |
 | `npm run build` | Production build |
 | `npm run typecheck` | TypeScript check |
-| `npm run generate:divisions` | agency-agents → division map 갱신 |
+| `node --import tsx tools/project-first-fixture.mts` | Project-first A–N |
+| `node --import tsx tools/buffer-connector-fixture.mts` | Buffer A–L |
+| `npm run generate:divisions` | agency-agents → division map |
 
-## Agent Registry
+## Architecture Freeze
 
-Division은 agency-agents 디렉터리 레이아웃을 따릅니다.
-
-1. `AGENT_DECK_AGENCY_DIR` 또는 기본 agency-agents 경로 스캔
-2. 없으면 `shared/agencyDivisionMap.json`
-
-외부 `agency-agents` 저장소는 수정하지 않습니다.
-
-## 네비게이션
-
-**사이드바:** 홈 · 프로젝트 · 작업 · 결과물 · 승인 대기 · (하단) 설정  
-
-전체 Agent Directory · Usage · Departments는 핵심 메뉴가 아니며, 팀 관리 / 설정 고급에서 접근합니다.
+Core Architecture는 Freeze 상태입니다. 다음 단계는 **REAL PROJECT DOGFOOD**입니다.  
+새 Foundation / Orchestrator / Memory / Social rewrite를 추가하지 않습니다.

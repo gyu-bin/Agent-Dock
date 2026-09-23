@@ -39,7 +39,12 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)}MB`
 }
 
-export function AiChatPanel() {
+export function AiChatPanel({
+  embedded = false,
+}: {
+  /** When true, render inside Project Control Center (no outer chrome). */
+  embedded?: boolean
+}) {
   const chat = useDeckStore((s) => s.chat)
   const chatTab = useDeckStore((s) => s.chatTab)
   const setChatTab = useDeckStore((s) => s.setChatTab)
@@ -171,8 +176,10 @@ export function AiChatPanel() {
   }
 
   return (
-    <aside className={styles.panel} aria-label="작업 요청">
-      <div className={styles.tabs}>
+    <aside
+      className={embedded ? `${styles.panel} ${styles.embedded}` : styles.panel}
+      aria-label="작업 요청"
+    >      <div className={styles.tabs}>
         <button
           type="button"
           className={chatTab === 'chat' ? styles.tabActive : styles.tab}
@@ -247,6 +254,7 @@ export function AiChatPanel() {
                             executionMode: msg.workProposal!.executionMode,
                             workflowTemplateId:
                               msg.workProposal!.workflowTemplateId,
+                            planFingerprint: msg.workProposal!.planFingerprint,
                             attachmentIds: msg.workProposal!.attachmentIds,
                             attachmentStagingId:
                               msg.workProposal!.attachmentStagingId,
@@ -288,7 +296,7 @@ export function AiChatPanel() {
                         className={styles.startWork}
                         onClick={() => {
                           selectTask(msg.taskResult!.taskId)
-                          setNav('tasks')
+                          setNav('projects')
                         }}
                       >
                         {t('task.viewResult')}
@@ -296,7 +304,7 @@ export function AiChatPanel() {
                       <button
                         type="button"
                         className={styles.secondaryLink}
-                        onClick={() => setNav('documents')}
+                        onClick={() => setNav('projects')}
                       >
                         {t('task.viewArtifacts')}
                       </button>
@@ -331,7 +339,7 @@ export function AiChatPanel() {
                         type="button"
                         onClick={() => {
                           selectTask(task.id)
-                          setNav('tasks')
+                          setNav('projects')
                         }}
                       >
                         <strong>{task.title}</strong>

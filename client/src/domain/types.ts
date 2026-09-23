@@ -107,6 +107,19 @@ export interface ProjectContext {
   goals?: string
   constraints?: string
   techStack?: string
+  /** Optional GitHub repo URL (display / reference) */
+  githubUrl?: string
+  /** Project-level tool enable overrides — Global default unless set */
+  toolPolicy?: ProjectToolPolicy
+}
+
+/** Project override for tool availability. Unset = inherit Global Default. */
+export interface ProjectToolPolicy {
+  openai?: 'inherit' | 'enabled' | 'disabled'
+  codex?: 'inherit' | 'enabled' | 'disabled'
+  webSearch?: 'inherit' | 'enabled' | 'disabled'
+  image?: 'inherit' | 'enabled' | 'disabled'
+  buffer?: 'inherit' | 'enabled' | 'disabled'
 }
 
 export type ArtifactType =
@@ -538,6 +551,8 @@ export interface ChatMessage {
     workflowTemplateId?: string
     workflowTemplateName?: string
     workflowPreview?: string[]
+    /** Canonical planner fingerprint — must match createAndStartTask plan */
+    planFingerprint?: string
     attachmentIds?: string[]
     attachmentStagingId?: string
     preflight?: {

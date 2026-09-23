@@ -1,8 +1,6 @@
 import {
   Home,
   FolderKanban,
-  ListTodo,
-  FileStack,
   Bell,
   Settings,
 } from 'lucide-react'
@@ -22,8 +20,6 @@ const MAIN: Array<{
 }> = [
   { id: 'home', labelKey: 'nav.home', icon: Home },
   { id: 'projects', labelKey: 'nav.projects', icon: FolderKanban },
-  { id: 'tasks', labelKey: 'nav.tasks', icon: ListTodo },
-  { id: 'documents', labelKey: 'nav.documents', icon: FileStack },
   { id: 'approvals', labelKey: 'nav.approvals', icon: Bell, countKey: 'approvals' },
 ]
 
@@ -83,7 +79,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className={styles.footer}>
+          <div className={styles.footer}>
         <button
           type="button"
           className={
@@ -93,6 +89,22 @@ export function Sidebar() {
         >
           <Settings size={16} strokeWidth={2} />
           <span>{t('nav.settings')}</span>
+        </button>
+        <button
+          type="button"
+          className={styles.navItem}
+          onClick={() => setNav('tasks')}
+          title="Legacy · Project 탭에서도 가능"
+        >
+          <span style={{ fontSize: 11, opacity: 0.7 }}>작업(고급)</span>
+        </button>
+        <button
+          type="button"
+          className={styles.navItem}
+          onClick={() => setNav('usage')}
+          title="Usage"
+        >
+          <span style={{ fontSize: 11, opacity: 0.7 }}>Usage</span>
         </button>
         <button
           type="button"
