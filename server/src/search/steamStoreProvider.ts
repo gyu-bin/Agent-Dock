@@ -36,7 +36,7 @@ export class SteamStoreWebSearchProvider implements WebSearchProvider {
       const searchUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&l=english&cc=US`
       const res = await fetch(searchUrl, {
         headers: { Accept: 'application/json' },
-        signal: request.signal,
+        signal: request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000),
       })
       if (res.ok) {
         const data = (await res.json()) as {
@@ -73,7 +73,7 @@ export class SteamStoreWebSearchProvider implements WebSearchProvider {
           'https://store.steampowered.com/api/featuredcategories/?l=english&cc=US'
         const res = await fetch(featUrl, {
           headers: { Accept: 'application/json' },
-        signal: request.signal,
+        signal: request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000),
         })
         if (res.ok) {
           const data = (await res.json()) as Record<

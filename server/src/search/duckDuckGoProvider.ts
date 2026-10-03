@@ -36,7 +36,7 @@ export class DuckDuckGoHtmlWebSearchProvider implements WebSearchProvider {
           Accept: 'text/html',
         },
       redirect: 'follow',
-      signal: request.signal,
+      signal: request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000),
     })
     if (!res.ok) {
       throw Object.assign(

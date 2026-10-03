@@ -16,6 +16,10 @@ export class ChatGPTPlanSearchProvider implements WebSearchProvider {
         const sources = extractSourcesFromResponses(response, request.maxSources ?? 8)
         if (sources.length) return { query: request.query, sources, searchedAt: new Date().toISOString(), providerNote: 'ChatGPT Plan Web Search' }
         reason = 'ChatGPT Plan web search returned no sources'
+        // Diagnostic only (item types/counts, no content): tells "model did not search" from "search without sources".
+        const items = ((response as { output?: Array<{ type?: string; action?: { sources?: unknown[] } }> }).output ?? [])
+          .map((o) => `${o.type}${o.action?.sources ? `(${o.action.sources.length})` : ''}`)
+        console.warn(`[web-search] plan response items: ${items.join(',') || 'none'}`)
       } catch (error) {
         const code = (error as { code?: string }).code
         const timedOut = (error as { name?: string }).name === 'TimeoutError' && !request.signal?.aborted
