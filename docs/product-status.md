@@ -25,7 +25,7 @@ Last updated: 2026-10-03 (Cloud Runtime Phase 1 implementation; live deployment 
 | Cloud Codex | **NOT CONFIGURED / NEXT PHASE** — local CLI credentials are not transferred |
 | Cloud ChatGPT Plan | **UNAVAILABLE / NEXT PHASE** — local OAuth remains local-only |
 | Local Runtime | **SUPPORTED** |
-| Cloud Runtime Phase 1 | **NOT READY** — private repository evidence and deployed cold-start reconnect pending |
+| Cloud Runtime Phase 1 | **NOT READY** — private repository live evidence pending; public Production workflow and cold-start reconnect passed |
 
 ## READY
 

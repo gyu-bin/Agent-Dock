@@ -41,11 +41,11 @@ Project/settings data already used `dataFs.ts` and Supabase `public.fs_files` in
 | 16 | Workspace UI | Existing Project Control Center panel: source, branch, revision, status, explicit prepare/verify/terminate; busy status polling. Cloud wizard hides Local source. |
 | 17 | Fixtures A–J | Registry A/B pass. Workspace C–J fixture/live results must be recorded below; mocks do not replace real deployment verification. |
 | 18 | Typecheck/build | Registry/server/client checks passed during implementation; final integrated checks must be repeated after all changes. |
-| 19 | Real Vercel smoke | Authenticated Production create → provision → clone → HEAD → npm ci/typecheck/build passed; test skipped because no script. Supabase persisted ready/passed verified. Deployed cold-start reconnect pending. Actual SDK public smoke passed: gyu-bin/Agent-Dock, HEAD fad326257e38aa1e69801596cb094fde91a7c3ab; npm ci/typecheck/build passed, test skipped (no script); new service object reconnected; Sandbox cleaned. |
+| 19 | Real Vercel smoke | Authenticated Production create → provision → clone → HEAD → npm ci/typecheck/build passed; test skipped because no script. Supabase persisted ready/passed verified. Deployed cold-start reconnect passed after a fresh Production deployment. Actual SDK public smoke passed: gyu-bin/Agent-Dock, HEAD fad326257e38aa1e69801596cb094fde91a7c3ab; npm ci/typecheck/build passed, test skipped (no script); new service object reconnected; Sandbox cleaned. |
 | 20 | Local regression | Existing instruction hardening fixtures pass; Local registry remains filesystem. Client build has no bundled persona/TOML leakage. |
 | 21 | Cloud Codex | NOT CONFIGURED. Local Codex path/login are not usable or copied to Cloud. |
 | 22 | Cloud ChatGPT Plan | UNAVAILABLE / REQUIRES CLOUD AUTH. Existing local OAuth is unchanged; no API-key fallback introduced. |
-| 23 | Remaining blockers | Private GITHUB_TOKEN/repository missing; deployed cold-start reconnect pending. Existing single-account legacy project ownership migration succeeded. |
+| 23 | Remaining blockers | Private GITHUB_TOKEN/repository missing. Existing single-account legacy project ownership migration succeeded. |
 | 24 | Phase 1 readiness | NOT READY. Phase 2 cannot start until required live evidence passes. |
 
 ## Configuration
@@ -108,3 +108,9 @@ Real SDK testing exposed and fixed two integration errors: native Git clone root
 Production UI smoke: authenticated existing Supabase account created `Cloud Phase 1 검증` (`proj_b5d4253a`), GitHub `gyu-bin/Agent-Dock`, main, named Sandbox `agent-deck-ff15438a4090f792-b2fa62a1`, HEAD `fad326257e38aa1e69801596cb094fde91a7c3ab`. API detached verification completed install/typecheck/build passed, test skipped. Supabase row `workspaces/proj_b5d4253a.json` persisted ready/passed. Screenshot: `/tmp/agent-deck-cloud-workspace-pass.png`. Protected unauthenticated provision request returned HTTP 401.
 
 Authentication runtime fix: successful Supabase bootstrap previously did not carry usable cookie authentication to subsequent API requests. Client API now reads the current SDK-managed Supabase session for each Bearer request; actual Production registry, legacy project loading, project creation and workspace workflow passed. This uses standard Supabase authentication, not ChatGPT cookies or local Codex credentials.
+
+Cold-start deployment evidence: new deployment `dpl_7NdK5Zr9mSpUg1qn8eoMAXuFeU1B` loaded the same named Sandbox and ready/passed results through the authenticated Workspace UI. Supabase lastUsedAt updated to `2026-10-03T11:47:05.001Z`; Sandbox ID remained `agent-deck-ff15438a4090f792-b2fa62a1`. Main implementation commit: `121d512`.
+
+Security advisor: workspace/fs_files RLS without user policies is intentional server-only access; all four RPCs have anon/authenticated execute=false and service_role=true, verified in actual DB. Existing Auth leaked-password protection warning is unrelated to this migration; [Supabase password protection documentation](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+Remaining acceptance blocker: no GITHUB_TOKEN is configured in Vercel, and no private fixture repository has been supplied. D is mocked credential-boundary evidence only; a private live clone and real credential leak scan are not claimed passed. Phase 2 remains stopped.
