@@ -93,7 +93,19 @@ export interface Agent {
   speech?: string
 }
 
+export interface GitHubRepository {
+  owner: string
+  name: string
+  fullName: string
+  cloneUrl: string
+  defaultBranch: string
+}
+
 export interface Project {
+  sourceType?: 'local' | 'github'
+  repository?: GitHubRepository
+  ownerId?: string
+  workspace?: { provider: 'vercel-sandbox'; sandboxId: string; status: string; revision?: string }
   id: string
   name: string
   type: ProjectType

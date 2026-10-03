@@ -9,7 +9,7 @@
 import type { Request } from 'express'
 
 const CACHE_MS = 60_000
-const cache = new Map<string, { email: string; until: number }>()
+const cache = new Map<string, { email: string; userId: string; until: number }>()
 
 export interface CloudAuthConfig {
   supabaseUrl: string
@@ -37,7 +37,7 @@ export function bearerFrom(req: Request): string | null {
 }
 
 export type VerifyResult =
-  | { ok: true; email: string }
+  | { ok: true; email: string; userId: string }
   | { ok: false; reason: 'not_configured' | 'invalid' | 'not_allowed'; email?: string }
 
 export async function verifyAccessToken(token: string | null): Promise<VerifyResult> {
@@ -49,19 +49,21 @@ export async function verifyAccessToken(token: string | null): Promise<VerifyRes
   const now = Date.now()
   const hit = cache.get(token)
   let email: string | null = hit && hit.until > now ? hit.email : null
-  if (!email) {
+  let userId: string | null = hit && hit.until > now ? hit.userId : null
+  if (!email || !userId) {
     const res = await fetch(`${cfg.supabaseUrl}/auth/v1/user`, {
       headers: { apikey: cfg.anonKey, Authorization: `Bearer ${token}` },
     }).catch(() => null)
     if (!res || !res.ok) return { ok: false, reason: 'invalid' }
-    const user = (await res.json().catch(() => null)) as { email?: string } | null
+    const user = (await res.json().catch(() => null)) as { email?: string; id?: string } | null
     email = user?.email?.toLowerCase() ?? null
-    if (!email) return { ok: false, reason: 'invalid' }
-    cache.set(token, { email, until: now + CACHE_MS })
+    userId = user?.id ?? null
+    if (!email || !userId) return { ok: false, reason: 'invalid' }
+    cache.set(token, { email, userId, until: now + CACHE_MS })
     if (cache.size > 200) {
       for (const [k, v] of cache) if (v.until <= now) cache.delete(k)
     }
   }
   if (!allow.includes(email)) return { ok: false, reason: 'not_allowed', email }
-  return { ok: true, email }
+  return { ok: true, email, userId: userId! }
 }

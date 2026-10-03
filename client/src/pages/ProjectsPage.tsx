@@ -27,6 +27,7 @@ import {
   fetchSettingsBoard,
 } from '../api/client'
 import { AiChatPanel } from '../panels/AiChatPanel'
+import { ProjectWorkspaceStatus } from '../components/ProjectWorkspaceStatus'
 import { resolveProjectToolPolicy } from '../domain/projectToolPolicy'
 import { ARTIFACT_TYPE_LABEL } from '../domain/artifactUi'
 import { groupAgentsByDepartment } from '../domain/groupAgents'
@@ -387,13 +388,13 @@ export function ProjectsPage() {
                   </p>
                   <h2>{selected.name}</h2>
                   <p className={proj.path}>
-                    Path: {selected.path || '미설정'}
+                    {selected.sourceType === 'github' ? 'Source: GitHub' : `Path: ${selected.path || '미설정'}`}
                   </p>
                   <p className={proj.path}>
                     GitHub:{' '}
-                    {selected.context?.githubUrl?.trim()
+                    {selected.repository?.fullName ?? (selected.context?.githubUrl?.trim()
                       ? selected.context.githubUrl
-                      : '미연결'}
+                      : '미연결')}
                   </p>
                 </div>
                 <button
@@ -471,6 +472,7 @@ export function ProjectsPage() {
             <div className={proj.body}>
               {tab === 'overview' ? (
                 <>
+                  <ProjectWorkspaceStatus key={selected.id} project={selected} />
                   <section className={proj.section}>
                     <h3>무엇을 시킬까요?</h3>
                     <p className={proj.sectionHint}>

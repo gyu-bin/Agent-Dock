@@ -3,6 +3,7 @@ import path from 'node:path'
 import TOML from '@iarna/toml'
 import { resolveAgentSource, type AgentSource } from './agentSource.js'
 import { AgentInstructionError } from './agentInstructionError.js'
+import { verifyBundledInstruction } from './bundleManifest.js'
 
 export interface AgentInstructions {
   id: string
@@ -41,6 +42,10 @@ export async function loadAgentInstructions(
     throw new AgentInstructionError(missing ? 'AGENT_INSTRUCTION_FILE_NOT_FOUND' : 'AGENT_INSTRUCTION_READ_FAILED', id, source, filePath, error)
   }
   let parsed: TomlAgent
+  if (source.type === 'bundled') {
+    try { await verifyBundledInstruction(source.directory, id, raw) }
+    catch (error) { throw new AgentInstructionError('AGENT_BUNDLE_INVALID', id, source, filePath, error) }
+  }
   try { parsed = TOML.parse(raw) as TomlAgent }
   catch (error) { throw new AgentInstructionError('AGENT_INSTRUCTION_PARSE_FAILED', id, source, filePath, error) }
   const developerInstructions = typeof parsed.developer_instructions === 'string' ? parsed.developer_instructions.trim() : ''

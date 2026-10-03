@@ -1,0 +1,29 @@
+.panel { margin: 0 0 20px; padding: 16px; border: 1px solid var(--ad-border); background: var(--ad-surface-raised); border-radius: 12px; }
+.head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.head h3 { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--ad-ink); font-size: 14px; }
+.status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ad-ink-soft); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ad-ink-faint); }
+.status[data-status='ready'] .dot { background: #22a579; }
+.status[data-status='failed'] .dot { background: #d65252; }
+.metadata { margin: 14px 0; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+.metadata dt { font-size: 10px; color: var(--ad-ink-faint); margin-bottom: 4px; }
+.metadata dd { margin: 0; font-size: 12px; color: var(--ad-ink); overflow-wrap: anywhere; }
+.actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.actions button,.confirm button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--ad-border); border-radius: 7px; padding: 7px 10px; color: var(--ad-ink); background: var(--ad-control-bg); font-size: 11px; font-weight: 600; cursor: pointer; }
+.actions button:first-child { background: var(--ad-control-on-bg); color: var(--ad-control-on-fg); }
+.actions button:disabled,.confirm button:disabled { opacity: .45; cursor: default; }
+.actions .destroy { margin-left: auto; color: #bd5555; }
+.results { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; margin-bottom: 12px; }
+.results div { display: grid; gap: 4px; padding: 9px; border: 1px solid var(--ad-border-soft); border-radius: 7px; font-size: 10px; color: var(--ad-ink-soft); }
+.results strong { color: var(--ad-ink); font-weight: 600; }
+.results [data-status='passed'] strong { color: #22a579; }
+.results [data-status='failed'] strong { color: #d65252; }
+.error { color: #bd5555; font-size: 12px; line-height: 1.6; }
+.note { margin: 12px 0 0; font-size: 10px; line-height: 1.6; color: var(--ad-ink-faint); }
+.confirm { margin-top: 10px; padding: 10px; border: 1px solid var(--ad-border); border-radius: 8px; }
+.confirm p { font-size: 11px; line-height: 1.6; margin: 0 0 8px; color: var(--ad-ink-soft); }
+.confirm button + button { margin-left: 6px; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) { .metadata { grid-template-columns: 1fr; } .results { grid-template-columns: repeat(2,1fr); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }

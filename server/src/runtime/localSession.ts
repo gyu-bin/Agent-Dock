@@ -141,6 +141,7 @@ export async function requireCloudSession(req: Request, res: Response, next: Nex
   const token = bearerFrom(req) ?? extractToken(req)
   const result = await verifyAccessToken(token)
   if (result.ok) {
+    res.locals.authUser = { id: result.userId, email: result.email }
     next()
     return
   }

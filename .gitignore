@@ -37,3 +37,5 @@ tools/sprite-runs/**/frames/
 
 # Nested tool repo (own .git) — sources live under tools/sprite-gen locally
 tools/sprite-gen/
+.vercel
+.env*

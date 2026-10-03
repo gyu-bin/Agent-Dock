@@ -90,7 +90,7 @@ interface DeckState {
   chat: ChatMessage[]
   registry: Agent[]
   registryTotal: number
-  registrySource: 'mock' | 'filesystem'
+  registrySource: 'mock' | 'filesystem' | 'bundled'
   agentRuntime: Record<string, AgentRuntime>
   aiProvider: AiProviderState
   executionMode: ExecutionMode
@@ -136,7 +136,7 @@ interface DeckState {
 
   hydrateRegistry: (payload: {
     agents: Agent[]
-    source: 'mock' | 'filesystem'
+    source: 'mock' | 'filesystem' | 'bundled'
     total: number
   }) => void
   applyProjectsSnapshot: (snap: ProjectsSnapshot) => void

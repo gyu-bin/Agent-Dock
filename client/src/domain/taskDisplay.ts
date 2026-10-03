@@ -107,7 +107,7 @@ export function formatWaitingDuration(iso?: string): string {
 
 /** Friendly Korean for technical errors (default surface). */
 export function isAgentInstructionError(code?: string, raw?: string | null): boolean {
-  return Boolean(code?.startsWith('AGENT_INSTRUCTION_') || code === 'AGENT_SOURCE_UNAVAILABLE' ||
+  return Boolean(code?.startsWith('AGENT_INSTRUCTION_') || code === 'AGENT_SOURCE_UNAVAILABLE' || code === 'AGENT_BUNDLE_INVALID' ||
     (!code && /agent instructions? (?:not found|file|loading)|developer_instructions/i.test(raw ?? '')))
 }
 

@@ -39,6 +39,17 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 let supabase: SupabaseClient | null = null
 
+/** Read the current SDK-managed session for API authentication; never cache a token separately. */
+export async function getCloudAccessToken(): Promise<string | undefined> {
+  if (useAuthStore.getState().status !== 'ready' || !supabase) return undefined
+  const { data, error } = await supabase.auth.getSession()
+  if (error || !data.session) {
+    useAuthStore.getState().set({ status: 'signed-out', email: null })
+    return undefined
+  }
+  return data.session.access_token
+}
+
 async function client(cfg: AuthConfig): Promise<SupabaseClient> {
   if (supabase) return supabase
   const { createClient } = await import('@supabase/supabase-js')

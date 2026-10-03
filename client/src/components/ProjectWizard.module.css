@@ -74,6 +74,10 @@
   color: var(--ad-ink-soft);
 }
 
+.sourceFields { display: grid; gap: 14px; }
+.sourceOptions { display: flex; gap: 8px; }
+.hint { margin: 0; color: var(--ad-ink-soft); font-size: 12px; line-height: 1.6; }
+
 .field input {
   border: 1px solid var(--ad-border);
   border-radius: 8px;

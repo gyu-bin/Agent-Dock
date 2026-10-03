@@ -1,6 +1,6 @@
 # Agent Deck
 
-로컬에서 돌아가는 **AI 개발 스튜디오**입니다. 프로젝트를 열고 자연어로 일을 시키면, Agent Deck이 Agent·Tool·Workflow를 자동으로 구성합니다.
+프로젝트와 AI 팀을 관리하는 **AI 개발 스튜디오**입니다. Local Runtime을 유지하면서 GitHub 저장소와 Vercel Sandbox를 사용하는 Cloud Runtime 기반을 추가하고 있습니다. Phase 1의 실제 배포 검증은 아직 완료되지 않았습니다.
 
 ## 제품 사용 흐름 (Project-first)
 
@@ -83,9 +83,9 @@ Provider 실패 시 **자동 Mock 전환은 하지 않습니다.**
 
 ### 에이전트 실행 지침 경로
 
-목록 조회와 OpenAI/Codex 실행은 같은 경로 resolver를 사용합니다. 우선순위는 명시적 호출 경로 → 설정의 `agents.codexAgentsDir` → `AGENT_DECK_AGENTS_DIR` → 서버 사용자 홈의 `~/.codex/agents`입니다. `~`는 서버 사용자 홈으로 확장하고, 상대 경로도 서버 사용자 홈을 기준으로 해석합니다. 작업 디렉터리 변경으로 경로가 달라지지 않으며, 존재하는 경로는 실제 경로로 정규화합니다.
+목록 조회와 OpenAI/Codex 실행은 같은 resolver를 사용합니다. Local 우선순위는 명시적 호출 경로 → 설정의 `agents.codexAgentsDir` → `AGENT_DECK_AGENTS_DIR` → 서버 사용자 홈의 `~/.codex/agents` → bundled agents입니다. 명시한 잘못된 경로는 오류를 유지하며, 기본 홈 경로가 없을 때 bundled로 전환합니다. `~`와 상대 경로는 서버 사용자 홈을 기준으로 해석합니다.
 
-`AGENT_DECK_AGENCY_DIR`는 부서 분류용 Markdown 소스입니다. TOML 실행 지침 경로로 사용하지 않습니다. 클라우드 서버는 개발자 컴퓨터의 `~/.codex/agents`에 접근할 수 없으므로 해당 서버에서 읽을 수 있는 지침 경로를 별도로 준비해야 합니다.
+Cloud는 서버에 포함된 **279 bundled agents**와 committed 부서 분류를 사용합니다. Settings·환경 변수의 로컬 에이전트 경로와 사용자 홈을 조회하지 않습니다. `AGENT_DECK_AGENCY_DIR`는 Local 부서 분류용 Markdown 소스이며 TOML 실행 지침 경로로 사용하지 않습니다. 실행 지침은 서버 전용으로 유지하고 manifest의 ID·파일·SHA256을 배포 전에 검증합니다.
 
 실제 지침 폴더를 읽을 수 없을 때 표시되는 임시 에이전트 목록은 REAL 실행에 사용할 수 없습니다. 실제 목록에서도 지침 파싱과 필수 필드 확인에 실패한 에이전트는 실행할 수 없습니다. 명시적 Developer Mock 모드는 기존 모의 실행기를 사용합니다. 설정 진단에서 실제 source, 정규화된 경로, 로드 수와 실행 가능 수를 확인할 수 있습니다.
 
@@ -105,11 +105,14 @@ Provider 실패 시 **자동 Mock 전환은 하지 않습니다.**
 | `node --import tsx tools/project-first-fixture.mts` | Project-first A–N |
 | `node --import tsx tools/buffer-connector-fixture.mts` | Buffer A–L |
 | `npm run generate:divisions` | agency-agents → division map |
+| `npm run validate:agents` | Bundled manifest / SHA256 / TOML / required agents |
+| `node --import tsx scripts/verify-cloud-registry.mts` | Cloud registry + Local regression |
+| `node --import tsx scripts/verify-project-cas.mts` | Concurrent project writes + ownership fixtures |
+| `node scripts/verify-agent-client-isolation.mjs` | Server instructions absent from built client |
 
 ## Architecture Freeze
 
-Core Architecture는 Freeze 상태입니다. 다음 단계는 **REAL PROJECT DOGFOOD**입니다.  
-새 Foundation / Orchestrator / Memory / Social rewrite를 추가하지 않습니다.
+이번에 승인된 Cloud Runtime Phase 1은 Agent Registry·GitHub Workspace·Vercel Sandbox에 한정합니다. Phase 1의 실제 검증이 완료되기 전 Cloud Codex 인증·Cloud ChatGPT 로그인·전체 Agent workflow 이전으로 확장하지 않습니다. Office·Marketing·SNS는 이번 범위에 포함하지 않습니다.
 
 ## 클라우드 배포 (Vercel + Supabase)
 
@@ -122,11 +125,26 @@ Vercel에 배포하면 클라우드 모드로 바뀝니다.
 | 데이터 | 서버의 데이터 폴더가 Supabase `public.fs_files` 테이블에 저장됨 (`server/src/storage/dataFs.ts`) |
 | 루틴 | Vercel Cron이 매일 `/api/cron/routines` 호출 (`CRON_SECRET` 필요) |
 | Codex · 로컬 폴더 첨부 | 로컬 전용 — 클라우드에서는 비활성 |
+| Agent Registry | Server-only bundled TOML 279개; HOME 경로 사용 안 함 |
+| Project Source | GitHub Repository 기본; 로컬 폴더 source 생성 금지 |
+| Workspace | 공식 `@vercel/sandbox` SDK; 명시적 환경 준비·확인·종료 |
 
 Vercel 환경변수: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
 `AGENT_DECK_ALLOWED_EMAILS`, `CRON_SECRET`, `OPENAI_API_KEY` (필요 시 `BUFFER_API_KEY` 등).
 Supabase → Authentication → URL Configuration의 **Site URL**을 배포 주소로 맞춰야 로그인 링크가 앱으로 돌아옵니다.
 설정이 빠지면 서버는 모든 요청을 거부합니다(fail closed).
+
+### Cloud Runtime Phase 1 requirements
+
+- Vercel 배포와 Supabase Auth·allowlist·`public.fs_files` 저장소
+- Supabase migrations: workspace lease/fencing 및 project snapshot CAS RPC. 원격 적용·검증이 필요합니다.
+- Sandbox 인증: Vercel의 `VERCEL_OIDC_TOKEN`, 또는 서버 전용 `VERCEL_TOKEN` + `VERCEL_TEAM_ID` + `VERCEL_PROJECT_ID`
+- 비공개 저장소: 서버 전용 `GITHUB_TOKEN` (공개 저장소에는 선택). 토큰을 저장소 URL에 넣지 않습니다.
+- Cloud 프로젝트 생성 후 개요의 **환경 준비**를 명시적으로 눌러 provision합니다. **환경 확인**은 lockfile에 맞춰 install, 존재하는 typecheck/build/test를 실행합니다.
+
+Workspace metadata는 Supabase에 저장하고 다른 Function 인스턴스에서 named Sandbox에 재연결합니다. 프로젝트 삭제는 Sandbox와 Agent Deck 데이터만 정리하고 GitHub 저장소·브랜치·커밋은 삭제하지 않습니다. Local mode는 계속 지원합니다.
+
+현재 상태·검증 결과·남은 blocker: [Cloud Runtime Phase 1](docs/cloud-runtime-phase1.md). **실제 Vercel smoke와 private repository 검증 전에는 READY가 아닙니다.**
 
 ### Direct SNS connections and work status
 

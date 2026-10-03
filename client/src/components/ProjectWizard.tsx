@@ -5,6 +5,7 @@ import { getPresetMatches } from '../domain/teamMatcher'
 import { createProject } from '../api/client'
 import { useDeckStore } from '../store/useDeckStore'
 import { defaultRuntimeForNewTeam } from '../domain/teamRuntime'
+import { useAuthStore } from '../auth/cloudAuth'
 import { t } from '../i18n/ko'
 import { AgentPicker } from './AgentPicker'
 import styles from './ProjectWizard.module.css'
@@ -27,11 +28,15 @@ export function ProjectWizard() {
   const registry = useDeckStore((s) => s.registry)
   const applyProjectsSnapshot = useDeckStore((s) => s.applyProjectsSnapshot)
   const setNav = useDeckStore((s) => s.setNav)
+  const cloud = useAuthStore((s) => s.status === 'ready')
 
   const [step, setStep] = useState<Step>(1)
   const [name, setName] = useState('')
   const [type, setType] = useState<ProjectType>('steam-game')
   const [path, setPath] = useState('')
+  const [sourceType, setSourceType] = useState<'local' | 'github'>(cloud ? 'github' : 'local')
+  const [repository, setRepository] = useState('')
+  const [branch, setBranch] = useState('')
   const [agentIds, setAgentIds] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,9 +49,12 @@ export function ProjectWizard() {
     setName('')
     setType('steam-game')
     setPath('')
+    setSourceType(cloud ? 'github' : 'local')
+    setRepository('')
+    setBranch('')
     setAgentIds([])
     setError(null)
-  }, [open])
+  }, [open, cloud])
 
   useEffect(() => {
     if (step === 4) {
@@ -64,7 +72,10 @@ export function ProjectWizard() {
       const snap = await createProject({
         name: name.trim() || '제목 없는 프로젝트',
         type,
-        path: path.trim() || undefined,
+        sourceType: cloud ? 'github' : sourceType,
+        repository: sourceType === 'github' || cloud ? repository.trim() : undefined,
+        branch: sourceType === 'github' || cloud ? branch.trim() || undefined : undefined,
+        path: sourceType === 'local' && !cloud ? path.trim() || undefined : undefined,
         agentIds,
         status: 'active',
       })
@@ -131,14 +142,30 @@ export function ProjectWizard() {
           )}
 
           {step === 3 && (
-            <label className={styles.field}>
+            <div className={styles.sourceFields}>
+              <div className={styles.sourceOptions} aria-label="프로젝트 소스">
+                {!cloud && <button type="button" className={sourceType === 'local' ? styles.typeOn : styles.type} onClick={() => setSourceType('local')}>로컬 폴더</button>}
+                <button type="button" className={sourceType === 'github' ? styles.typeOn : styles.type} onClick={() => setSourceType('github')}>GitHub Repository</button>
+              </div>
+              {sourceType === 'github' || cloud ? <>
+                <label className={styles.field}>
+                  <span>GitHub 저장소</span>
+                  <input value={repository} onChange={(e) => setRepository(e.target.value)} placeholder="owner/repo 또는 https://github.com/owner/repo" />
+                </label>
+                <label className={styles.field}>
+                  <span>브랜치 (선택)</span>
+                  <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="비워두면 저장소 기본 브랜치" />
+                </label>
+                <p className={styles.hint}>프로젝트를 만든 후 환경 준비를 누르면 Vercel Sandbox에 저장소를 가져옵니다. 비공개 저장소는 서버의 GitHub 인증이 필요합니다.</p>
+              </> : <label className={styles.field}>
               <span>프로젝트 경로 (선택)</span>
               <input
                 value={path}
                 onChange={(e) => setPath(e.target.value)}
                 placeholder="~/Desktop/Coding/my-game"
               />
-            </label>
+              </label>}
+            </div>
           )}
 
           {step === 4 && (
@@ -177,9 +204,10 @@ export function ProjectWizard() {
                   <dd>{TYPES.find((item) => item.id === type)?.label}</dd>
                 </div>
                 <div>
-                  <dt>{t('project.path')}</dt>
-                  <dd>{path.trim() || '—'}</dd>
+                  <dt>{sourceType === 'github' || cloud ? 'GitHub' : t('project.path')}</dt>
+                  <dd>{sourceType === 'github' || cloud ? repository.trim() || '—' : path.trim() || '—'}</dd>
                 </div>
+                {(sourceType === 'github' || cloud) && <div><dt>브랜치</dt><dd>{branch.trim() || '기본 브랜치'}</dd></div>}
                 <div>
                   <dt>팀</dt>
                   <dd>{agentIds.length}명</dd>
@@ -204,7 +232,7 @@ export function ProjectWizard() {
               type="button"
               className={styles.primary}
               onClick={() => setStep((s) => (s < 6 ? ((s + 1) as Step) : s))}
-              disabled={step === 1 && !name.trim()}
+              disabled={(step === 1 && !name.trim()) || (step === 3 && (sourceType === 'github' || cloud) && !repository.trim())}
             >
               다음
             </button>

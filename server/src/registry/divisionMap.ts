@@ -3,6 +3,7 @@ import path from 'node:path'
 import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import type { DivisionId } from '../types.js'
+import { isCloudRuntime } from '../loadEnv.js'
 import fallbackMap from './agencyDivisionMap.json' with { type: 'json' }
 
 const AGENT_DIRS = [
@@ -75,8 +76,13 @@ function defaultAgencyDir(): string {
  * Does not modify agency-agents. Falls back to committed JSON snapshot.
  */
 export async function loadDivisionMap(
-  agencyDir = defaultAgencyDir(),
+  agencyDir?: string,
 ): Promise<DivisionMapResult> {
+  if (isCloudRuntime()) {
+    const slugToDivision = fallbackMap.slugToDivision as Record<string, DivisionId>
+    return { slugToDivision, source: 'committed-json', agentCount: Object.keys(slugToDivision).length }
+  }
+  agencyDir ??= defaultAgencyDir()
   try {
     await stat(agencyDir)
     const slugToDivision: Record<string, DivisionId> = {}

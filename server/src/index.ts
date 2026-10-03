@@ -1,3 +1,4 @@
+import { WorkspaceService, resolveGitHubRepository } from './workspace/index.js'
 import { requestCancellation, cancellableAi, cancellableSearch } from './runtime/requestCancellation.js'
 import './bootstrapEnv.js'
 import express from 'express'
@@ -143,6 +144,7 @@ const webSearchProvider = {
   search: (request: import('./search/types.js').WebSearchRequest) => aiProvider.getState().authMode === 'api-key' ? createWebSearchProvider(true).search(request) : chatgptSearch.search(request),
 }
 const projects = new ProjectService(projectRepository)
+const cloudWorkspaces = new WorkspaceService()
 const artifacts = new ArtifactService(artifactRepository)
 const knowledge = new KnowledgeService(knowledgeRepository)
 const operations = new OperationsService(operationsRepository)
@@ -294,6 +296,15 @@ app.use((req, res, next) => {
   next()
 })
 
+// Ownership applies to every project subresource in cloud mode.
+app.use(async (req, res, next) => {
+  if (!isCloudRuntime()) { next(); return }
+  const match = req.path.match(/^\/api\/projects\/([^/]+)(?:\/|$)/)
+  if (!match || match[1] === 'active') { next(); return }
+  try { await ownedProject(decodeURIComponent(match[1]), res); next() }
+  catch (error) { sendError(res, error) }
+})
+
 app.use('/api/ai', async (_req, res, next) => {
   try { await aiProvider.refresh(); next() } catch (error) { sendError(res, error) }
 })
@@ -346,10 +357,17 @@ app.get('/api/health', async (_req, res) => {
   res.json({
     ok: true,
     service: 'agent-deck-server',
+    cloud: isCloudRuntime(),
+    storage: usesCloudStore() ? 'supabase' : isCloudRuntime() ? 'ephemeral' : 'local',
+    workspaceProvider: 'vercel-sandbox',
+    workspace: cloudWorkspaces.diagnostics(),
     host: HOST,
     provider: aiProvider.getState(),
     registry: {
       source: registry.source,
+      state: registry.state,
+      executableCount: registry.executableCount,
+      instructionErrors: registry.instructionErrors,
       total: registry.total,
       agentsDir: registry.agentsDir,
       divisionMapSource: registry.divisionMapSource,
@@ -370,7 +388,7 @@ app.get('/api/session/bootstrap', async (req, res) => {
     // Cloud: exchange a verified Supabase access token for the HttpOnly session cookie.
     const token = bearerFrom(req)
     const result = await verifyAccessToken(token)
-    if (!result.ok) {
+    if ('reason' in result) {
       res.status(result.reason === 'not_configured' ? 503 : 401).json({
         ok: false,
         authenticated: false,
@@ -1020,65 +1038,81 @@ app.post('/api/ai/synthesize', async (req, res) => {
   }
 })
 
+function workspaceOwner(res: express.Response): string {
+  if (!isCloudRuntime()) return 'local'
+  if (!res.locals.authUser?.id) throw Object.assign(new Error('인증된 계정이 필요합니다.'), { status: 401, code: 'AUTH_REQUIRED' })
+  return res.locals.authUser.id
+}
+async function ownedProject(id: string, res: express.Response) {
+  const project = (await projects.getSnapshot()).projects.find(p => p.id === id)
+  if (!project) throw Object.assign(new Error('프로젝트가 없습니다.'), {status:404})
+  if (isCloudRuntime() && project.ownerId !== workspaceOwner(res)) throw Object.assign(new Error('이 프로젝트에 접근할 수 없습니다.'), {status:403,code:'PROJECT_ACCESS_DENIED'})
+  return project
+}
+function projectView(snap: Awaited<ReturnType<typeof projects.getSnapshot>>, res: express.Response) {
+  if (!isCloudRuntime()) return snap
+  const ownerId = workspaceOwner(res)
+  const view = structuredClone(snap)
+  view.projects = view.projects.filter(p => p.ownerId === ownerId)
+  const ids = new Set(view.projects.map(p => p.id))
+  view.tasks = view.tasks.filter(t => ids.has(t.projectId))
+  const taskIds = new Set(view.tasks.map(t => t.id))
+  view.pipelineSteps = view.pipelineSteps.filter(t => taskIds.has(t.taskId))
+  view.agentRuns = view.agentRuns.filter(t => taskIds.has(t.taskId))
+  view.codexRuns = (view.codexRuns ?? []).filter(t => taskIds.has(t.taskId))
+  if (view.activeProjectId && !ids.has(view.activeProjectId)) view.activeProjectId = null
+  return view
+}
 app.get('/api/projects', async (_req, res) => {
   try {
-    const snap = await projects.getSnapshot()
-    res.json(snap)
-  } catch (err) {
-    sendError(res, err)
+    if (isCloudRuntime() && allowedEmails().length === 1) await projects.claimLegacy(workspaceOwner(res))
+    res.json(projectView(await projects.getSnapshot(), res))
   }
+  catch (err) { sendError(res, err) }
 })
-
 app.post('/api/projects', async (req, res) => {
   try {
-    const { name, type, path: projectPath, agentIds, status } = req.body ?? {}
-    if (!name || !type) {
-      res.status(400).json({ error: 'name and type are required' })
-      return
-    }
-    const snap = await projects.create({
-      name: String(name),
-      type: type as ProjectType,
-      path: projectPath ? String(projectPath) : undefined,
-      agentIds: Array.isArray(agentIds) ? agentIds.map(String) : [],
-      status: status as ProjectStatus | undefined,
-    })
-    res.status(201).json(snap)
-  } catch (err) {
-    sendError(res, err)
-  }
+    const {name,type,path:projectPath,agentIds,status,sourceType,repository,branch} = req.body ?? {}
+    if (!name || !type) throw Object.assign(new Error('name and type are required'),{status:400})
+    const source = sourceType ?? (isCloudRuntime() ? 'github' : 'local')
+    if (!['local','github'].includes(source) || (isCloudRuntime() && source !== 'github')) throw Object.assign(new Error('클라우드 프로젝트는 GitHub 저장소가 필요합니다.'),{status:400,code:'CLOUD_PROJECT_SOURCE_REQUIRED'})
+    if (isCloudRuntime() && projectPath) throw Object.assign(new Error('클라우드에서 로컬 폴더를 사용할 수 없습니다.'),{status:400,code:'CLOUD_LOCAL_PATH_FORBIDDEN'})
+    const repo = source === 'github' ? await resolveGitHubRepository(String(repository ?? ''), branch ? String(branch) : undefined, workspaceOwner(res)) : undefined
+    const snap = await projects.create({ name:String(name),type:type as ProjectType,path:source === 'local' && projectPath ? String(projectPath) : undefined,sourceType:source,repository:repo,ownerId:workspaceOwner(res),agentIds:Array.isArray(agentIds)?agentIds.map(String):[],status:status as ProjectStatus|undefined })
+    res.status(201).json(projectView(snap,res))
+  } catch(err) {sendError(res,err)}
 })
-
-app.patch('/api/projects/:id', async (req, res) => {
+app.patch('/api/projects/:id', async(req,res)=>{
   try {
-    const snap = await projects.update(req.params.id, req.body ?? {})
-    res.json(snap)
-  } catch (err) {
-    sendError(res, err)
-  }
+    await ownedProject(req.params.id,res)
+    const {name,type,path:projectPath,status,agentIds,context}=req.body ?? {}
+    if(isCloudRuntime() && projectPath) throw Object.assign(new Error('클라우드에서 로컬 폴더를 사용할 수 없습니다.'),{status:400})
+    const patch = Object.fromEntries(Object.entries({name,type,path:projectPath,status,agentIds,context}).filter(([,value])=>value!==undefined))
+    res.json(projectView(await projects.update(req.params.id,patch),res))
+  }catch(err){sendError(res,err)}
 })
-
-app.put('/api/projects/:id/team', async (req, res) => {
-  try {
-    const agentIds = req.body?.agentIds
-    if (!Array.isArray(agentIds)) {
-      res.status(400).json({ error: 'agentIds array required' })
-      return
-    }
-    const snap = await projects.update(req.params.id, {
-      agentIds: agentIds.map(String),
-    })
-    res.json(snap)
-  } catch (err) {
-    sendError(res, err)
-  }
+app.put('/api/projects/:id/team',async(req,res)=>{
+  try {await ownedProject(req.params.id,res);if(!Array.isArray(req.body?.agentIds))throw Object.assign(new Error('agentIds array required'),{status:400});res.json(projectView(await projects.update(req.params.id,{agentIds:req.body.agentIds.map(String)}),res))}catch(err){sendError(res,err)}
+})
+app.post('/api/projects/:projectId/workspace/provision',async(req,res)=>{
+  try{const project=await ownedProject(req.params.projectId,res);res.json({workspace:await cloudWorkspaces.provision(project,workspaceOwner(res))})}catch(err){sendError(res,err)}
+})
+app.get('/api/projects/:projectId/workspace',async(req,res)=>{
+  try{await ownedProject(req.params.projectId,res);res.json({workspace:await cloudWorkspaces.get(req.params.projectId,workspaceOwner(res))})}catch(err){sendError(res,err)}
+})
+app.post('/api/projects/:projectId/workspace/verify',async(req,res)=>{
+  try{const project=await ownedProject(req.params.projectId,res);res.json({workspace:await cloudWorkspaces.verify(project,workspaceOwner(res))})}catch(err){sendError(res,err)}
+})
+app.delete('/api/projects/:projectId/workspace',async(req,res)=>{
+  try{await ownedProject(req.params.projectId,res);await cloudWorkspaces.destroy(req.params.projectId,workspaceOwner(res));res.json({workspace:null})}catch(err){sendError(res,err)}
 })
 
 app.post('/api/projects/active', async (req, res) => {
   try {
     const id = req.body?.projectId ?? null
+    if (id) await ownedProject(String(id), res)
     const snap = await projects.setActive(id ? String(id) : null)
-    res.json(snap)
+    res.json(projectView(snap,res))
   } catch (err) {
     sendError(res, err)
   }
@@ -1086,13 +1120,15 @@ app.post('/api/projects/active', async (req, res) => {
 
 app.delete('/api/projects/:id', async (req, res) => {
   try {
+    const project = await ownedProject(req.params.id, res)
+    if (project.sourceType === 'github') await cloudWorkspaces.destroy(project.id, workspaceOwner(res))
     const snap = await projects.remove(req.params.id)
     await artifacts.deleteProject(req.params.id).catch(() => undefined)
     await knowledgeRepository.deleteProject(req.params.id).catch(() => undefined)
     await operations.deleteProject(req.params.id).catch(() => undefined)
     await marketing.deleteProject(req.params.id).catch(() => undefined)
     await usageRepository.deleteProject(req.params.id).catch(() => undefined)
-    res.json(snap)
+    res.json(projectView(snap,res))
   } catch (err) {
     sendError(res, err)
   }
@@ -1113,6 +1149,7 @@ app.put('/api/work-state', async (req, res) => {
       return
     }
     const payload = {
+      ownerId: isCloudRuntime() ? workspaceOwner(res) : undefined,
       tasks,
       pipelineSteps,
       agentRuns: Array.isArray(agentRuns) ? agentRuns : undefined,
@@ -1127,7 +1164,7 @@ app.put('/api/work-state', async (req, res) => {
     hydrateSearchFromSnapshot(snap)
     // On recover: cancel any in-memory Codex processes
     if (recover === true) {
-      for (const t of snap.tasks) {
+      for (const t of projectView(snap, res).tasks) {
         if (t.status === 'interrupted' || t.status === 'paused') {
           cancelCodexRunsForTask(t.id)
         }
@@ -1136,7 +1173,7 @@ app.put('/api/work-state', async (req, res) => {
     void syncUsageFromSnapshot(snap).catch((err) =>
       console.warn('[agent-deck] usage sync failed', err),
     )
-    res.json(snap)
+    res.json(projectView(snap,res))
   } catch (err) {
     sendError(res, err)
   }
@@ -2759,6 +2796,7 @@ app.post('/api/projects/:projectId/handoffs/derive', async (req, res) => {
 
 app.patch('/api/projects/:id/context', async (req, res) => {
   try {
+    await ownedProject(req.params.id, res)
     const body = req.body ?? {}
     const context: ProjectContext = {}
     if (body.description != null) context.description = String(body.description)
@@ -2766,7 +2804,7 @@ app.patch('/api/projects/:id/context', async (req, res) => {
     if (body.constraints != null) context.constraints = String(body.constraints)
     if (body.techStack != null) context.techStack = String(body.techStack)
     const snap = await projects.update(req.params.id, { context })
-    res.json(snap)
+    res.json(projectView(snap, res))
   } catch (err) {
     sendError(res, err)
   }

@@ -3,6 +3,13 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ProjectRepository, ProjectStoreSnapshot } from './types.js'
 import { atomicWriteJson } from './atomicWrite.js'
+import { isCloudRuntime } from '../loadEnv.js'
+
+export class ProjectCasConflict extends Error {
+  readonly code = 'PROJECT_CAS_CONFLICT'
+  readonly status = 409
+  constructor() { super('Project data changed in another server instance. Retry the operation.'); this.name = 'ProjectCasConflict' }
+}
 
 const EMPTY: ProjectStoreSnapshot = {
   version: 5,
@@ -24,7 +31,7 @@ function defaultDataPath(): string {
 }
 
 function migrate(raw: unknown): ProjectStoreSnapshot {
-  if (!raw || typeof raw !== 'object') return { ...EMPTY }
+  if (!raw || typeof raw !== 'object') return structuredClone(EMPTY)
   const obj = raw as Record<string, unknown>
   const projects = Array.isArray(obj.projects) ? obj.projects : []
   return {
@@ -96,7 +103,7 @@ export class JsonProjectRepository implements ProjectRepository {
         err && typeof err === 'object' && 'code' in err
           ? (err as { code?: string }).code
           : ''
-      if (code === 'ENOENT') return { ...EMPTY }
+      if (code === 'ENOENT') return structuredClone(EMPTY)
       throw err
     }
   }
@@ -113,10 +120,35 @@ export class JsonProjectRepository implements ProjectRepository {
         agentRuns: snapshot.agentRuns ?? [],
         codexRuns: snapshot.codexRuns ?? [],
       }
-      await atomicWriteJson(this.filePath, payload)
+      if (isCloudRuntime()) await this.saveCloud(payload)
+      else await atomicWriteJson(this.filePath, payload)
     }
     this.writeChain = this.writeChain.then(run, run)
     return this.writeChain
+  }
+
+  private async saveCloud(payload: ProjectStoreSnapshot): Promise<void> {
+    const base = process.env.SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const root = path.resolve(process.env.AGENT_DECK_CLOUD_ROOT ?? '/tmp/agent-deck')
+    const relative = path.relative(root, path.resolve(this.filePath)).split(path.sep).join('/')
+    if (!base || !key || relative !== 'projects.json') throw Object.assign(new Error('Supabase project storage is required with its canonical projects.json path.'), { code: 'PROJECT_STORAGE_NOT_CONFIGURED', status: 503 })
+    const headers: Record<string, string> = { apikey: key, 'Content-Type': 'application/json' }
+    if (!key.startsWith('sb_')) headers.Authorization = `Bearer ${key}`
+    let committed: unknown
+    try {
+      const response = await fetch(`${base.replace(/\/$/, '')}/rest/v1/rpc/project_snapshot_compare_and_set`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ p_expected_revision: Math.max(0, (payload.revision ?? 0) - 1), p_content: JSON.stringify(payload) }),
+        signal: AbortSignal.timeout(10000),
+      })
+      if (!response.ok) throw new Error('Project RPC unavailable')
+      committed = await response.json()
+      if (typeof committed !== 'boolean') throw new Error('Invalid project RPC response')
+    } catch {
+      throw Object.assign(new Error('Supabase project persistence or its CAS migration is unavailable.'), { code: 'PROJECT_STORAGE_UNAVAILABLE', status: 503 })
+    }
+    if (committed !== true) throw new ProjectCasConflict()
   }
 }
 

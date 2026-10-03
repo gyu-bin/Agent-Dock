@@ -2,12 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "npm install",
-  "buildCommand": "npm run build -w client",
+  "buildCommand": "npm run validate:agents && npm run build -w client",
   "outputDirectory": "client/dist",
   "functions": {
     "api/index.ts": {
       "maxDuration": 60,
-      "includeFiles": "{shared/**,server/src/**}"
+      "includeFiles": "{shared/**,server/src/**,server/assets/agents/**}"
     }
   },
   "rewrites": [

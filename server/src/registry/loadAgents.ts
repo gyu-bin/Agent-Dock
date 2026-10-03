@@ -3,6 +3,7 @@ import path from 'node:path'
 import { resolveAgentSource, type AgentSource } from './agentSource.js'
 import { loadAgentInstructions } from './loadAgentInstructions.js'
 import { AgentInstructionError } from './agentInstructionError.js'
+import { readBundleManifest } from './bundleManifest.js'
 import type { AgentRecord } from '../types.js'
 import {
   loadDivisionMap,
@@ -13,7 +14,7 @@ import { getMockRegistry, MOCK_TOTAL_HINT } from './mockAgents.js'
 
 export interface RegistryResult {
   agents: AgentRecord[]
-  source: 'filesystem' | 'mock'
+  source: 'filesystem' | 'bundled' | 'mock'
   state: 'REAL' | 'FALLBACK'
   executableCount: number
   instructionErrors: number
@@ -34,6 +35,12 @@ export async function loadAgentRegistry(runtimeDirectory?: string): Promise<Regi
     if (!resolvedSource.available) throw Object.assign(new Error('Agent source unavailable'), { code: resolvedSource.failureCode })
     const entries = await readdir(agentsDir)
     const tomls = entries.filter((f) => f.endsWith('.toml'))
+    if (resolvedSource.type === 'bundled') {
+      const manifest = await readBundleManifest(agentsDir)
+      if (manifest.agents.length !== tomls.length || manifest.agents.some((item) => !tomls.includes(item.filename))) {
+        throw new Error('Agent bundle files do not match manifest')
+      }
+    }
     if (tomls.length === 0) {
       return {
         agents: applyDivisions(getMockRegistry(), divisionMap.slugToDivision),
@@ -64,7 +71,7 @@ export async function loadAgentRegistry(runtimeDirectory?: string): Promise<Regi
           enabled: true,
           executable: true,
           instructionAvailable: true,
-          source: { type: 'filesystem', directory: agentsDir, instructionPath: path.join(agentsDir, file) },
+          source: { type: resolvedSource.type, directory: agentsDir, instructionPath: path.join(agentsDir, file) },
         })
       } catch (err) {
         const code = err instanceof AgentInstructionError ? err.code : 'AGENT_INSTRUCTION_READ_FAILED'
@@ -78,7 +85,7 @@ export async function loadAgentRegistry(runtimeDirectory?: string): Promise<Regi
           executable: false,
           instructionAvailable: false,
           instructionErrorCode: code,
-          source: { type: 'filesystem', directory: agentsDir, instructionPath: path.join(agentsDir, file) },
+          source: { type: resolvedSource.type, directory: agentsDir, instructionPath: path.join(agentsDir, file) },
         })
       }
     }
@@ -86,7 +93,7 @@ export async function loadAgentRegistry(runtimeDirectory?: string): Promise<Regi
     agents.sort((a, b) => a.name.localeCompare(b.name))
     return {
       agents,
-      source: 'filesystem',
+      source: resolvedSource.type,
       state: 'REAL',
       executableCount: agents.filter((a) => a.executable).length,
       instructionErrors: agents.filter((a) => !a.instructionAvailable).length,

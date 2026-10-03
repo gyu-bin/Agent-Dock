@@ -1,6 +1,6 @@
 # Agent Deck — Product Status
 
-Last updated: 2026-10-03 (local ChatGPT Plan integration)
+Last updated: 2026-10-03 (Cloud Runtime Phase 1 implementation; live deployment verification pending)
 
 ## Summary
 
@@ -19,7 +19,13 @@ Last updated: 2026-10-03 (local ChatGPT Plan integration)
 | Threads Direct Connector | **CONFIG REQUIRED** (OAuth apps) |
 | Active pixel office | Reception removed; lounge/terrace/garden connected; map and browser checked |
 | SNS direct account connection | **CONFIG REQUIRED / LOCAL** — Threads existing; four new OAuth flows fixture-tested, real app login pending; publishing unavailable for new four |
-| New Foundations | **FROZEN** — dogfood only |
+| Cloud Agent Registry | **LIVE VERIFIED** — Production bundled REAL, 279 executable, no instruction errors |
+| Cloud GitHub Workspace | **PUBLIC DEPLOYMENT VERIFIED** — GitHub create/provision/HEAD/verify + Supabase results, ownership and CAS/leases |
+| Vercel Sandbox | **PUBLIC DEPLOYMENT VERIFIED** — install/typecheck/build passed; tests skipped (no script), private clone pending |
+| Cloud Codex | **NOT CONFIGURED / NEXT PHASE** — local CLI credentials are not transferred |
+| Cloud ChatGPT Plan | **UNAVAILABLE / NEXT PHASE** — local OAuth remains local-only |
+| Local Runtime | **SUPPORTED** |
+| Cloud Runtime Phase 1 | **NOT READY** — private repository evidence and deployed cold-start reconnect pending |
 
 ## READY
 
@@ -57,7 +63,7 @@ Last updated: 2026-10-03 (local ChatGPT Plan integration)
 4. Attach references as needed  
 5. Approve only when Safety asks  
 
-Architecture freeze: do not add new Foundations until REAL PROJECT DOGFOOD feedback.
+Authorized exception to architecture freeze: Cloud Runtime Phase 1 foundation only. See [implementation and verification report](cloud-runtime-phase1.md). Phase 2 remains blocked until Phase 1 passes.
 
 ## ChatGPT integration evidence
 
@@ -66,3 +72,7 @@ OAuth A–D and provider E–J use synthetic tokens/streams. Typecheck/build and
 ## Work UI and office activity
 
 Advanced tasks layout repaired and redesigned; Home live work summary added; idle agents roam the connected lounge/garden with assignment precedence and reduced-motion support. See [verification and SNS setup](work-ui-and-social-connections.md).
+
+## Cloud Runtime Phase 1
+
+Bundled registry and project persistence/ownership fixtures pass locally. Both service-only Supabase migrations and real SQL lease/CAS checks passed; Production health confirms Sandbox configuration. Workspace creation and verification do not require AI provider authentication. Authenticated deployed workspace/restart smoke and private clone must be recorded before changing this phase to READY. Existing Office, character, Marketing, SNS and OAuth behavior are outside this phase.

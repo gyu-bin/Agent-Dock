@@ -37,6 +37,7 @@ import type {
   ProjectRoutine,
   RoutineRun,
 } from '../domain/operations'
+import { getCloudAccessToken } from '../auth/cloudAuth'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -65,14 +66,15 @@ export async function preflightAgentInstructions(agentIds: string[]): Promise<vo
   if (!res.ok || body.ok === false) throw executionApiError(body, 'Agent instruction preflight failed')
 }
 
-/** Default fetch options — credentials for HttpOnly session cookie. */
-function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+/** Local session cookie plus the current SDK-managed Cloud bearer session. */
+async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers)
+  const token = await getCloudAccessToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
   return fetch(input, {
     ...init,
     credentials: 'include',
-    headers: {
-      ...(init?.headers ?? {}),
-    },
+    headers,
   })
 }
 
@@ -92,7 +94,7 @@ export async function bootstrapSession(): Promise<void> {
 
 export interface RegistryResponse {
   agents: Agent[]
-  source: 'mock' | 'filesystem'
+  source: 'mock' | 'filesystem' | 'bundled'
   total: number
   agentsDir?: string
   divisionMapSource: 'agency-agents' | 'committed-json'
@@ -133,6 +135,9 @@ export async function fetchProjects(): Promise<ProjectsSnapshot> {
 }
 
 export async function createProject(input: {
+  sourceType?: 'local' | 'github'
+  repository?: string
+  branch?: string
   name: string
   type: ProjectType
   path?: string
@@ -1679,4 +1684,32 @@ export async function directSocialAction(channel: 'instagram' | 'x' | 'youtube' 
   const body=await response.json().catch(()=>({}))
   if(!response.ok) throw executionApiError(body,'SNS 연결 요청을 완료하지 못했습니다.')
   return body
+}
+
+export interface ProjectWorkspaceDto {
+  projectId: string
+  provider: 'vercel-sandbox'
+  sandboxId: string
+  status: 'provisioning' | 'cloning' | 'ready' | 'busy' | 'failed' | 'expired'
+  revision?: string
+  branch?: string
+  expiresAt?: string
+  errorCode?: string
+  error?: { code: string; message: string }
+  repository: { fullName: string }
+  verification?: { status?: string; install?: WorkspaceStepDto; typecheck?: WorkspaceStepDto; build?: WorkspaceStepDto; test?: WorkspaceStepDto }
+}
+export interface WorkspaceStepDto { status: string; durationMs?: number; logTail?: string }
+export async function fetchProjectWorkspace(id: string): Promise<ProjectWorkspaceDto | null> {
+  const res = await apiFetch(`${API_BASE}/api/projects/${encodeURIComponent(id)}/workspace`)
+  const data = await res.json()
+  if (!res.ok) throw executionApiError(data, '작업 환경 상태를 확인하지 못했습니다.')
+  return data.workspace
+}
+export async function projectWorkspaceAction(id: string, action: 'provision' | 'verify' | 'destroy'): Promise<ProjectWorkspaceDto | null> {
+  const url = `${API_BASE}/api/projects/${encodeURIComponent(id)}/workspace${action === 'destroy' ? '' : `/${action}`}`
+  const res = await apiFetch(url, { method: action === 'destroy' ? 'DELETE' : 'POST' })
+  const data = await res.json()
+  if (!res.ok) throw executionApiError(data, '작업 환경 요청을 완료하지 못했습니다.')
+  return data.workspace ?? null
 }

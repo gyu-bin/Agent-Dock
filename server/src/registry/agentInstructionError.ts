@@ -6,6 +6,7 @@ export type AgentInstructionErrorCode =
   | 'AGENT_INSTRUCTION_PARSE_FAILED'
   | 'AGENT_INSTRUCTION_MISSING_FIELD'
   | 'AGENT_SOURCE_UNAVAILABLE'
+  | 'AGENT_BUNDLE_INVALID'
 
 export class AgentInstructionError extends Error {
   readonly status = 503

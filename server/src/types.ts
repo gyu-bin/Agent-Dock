@@ -38,7 +38,7 @@ export interface AgentRecord {
   executable?: boolean
   instructionAvailable?: boolean
   instructionErrorCode?: string
-  source?: { type: 'filesystem' | 'mock'; directory?: string; instructionPath?: string }
+  source?: { type: 'filesystem' | 'bundled' | 'mock'; directory?: string; instructionPath?: string }
 }
 
 export interface AiProviderState {

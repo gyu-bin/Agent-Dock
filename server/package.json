@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../scripts/validate-agent-bundle.mjs && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "tsx src/index.ts"
   },
@@ -13,6 +13,8 @@
     "@aws-sdk/client-s3": "^3.1138.0",
     "@aws-sdk/s3-request-presigner": "^3.1138.0",
     "@iarna/toml": "^2.2.5",
+    "@vercel/oidc": "3.2.0",
+    "@vercel/sandbox": "3.5.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "jose": "^6.2.12"

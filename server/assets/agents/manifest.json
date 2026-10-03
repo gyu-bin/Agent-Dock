@@ -1,0 +1,1679 @@
+{
+  "version": "1",
+  "agents": [
+    {
+      "id": "3d-scene-developer",
+      "filename": "3d-scene-developer.toml",
+      "sha256": "1c4e8e03864fd86fc164e4995d0c7e8882f59dd1ad72066e4fce92c0ce31fb4c",
+      "version": "1"
+    },
+    {
+      "id": "accessibility-auditor",
+      "filename": "accessibility-auditor.toml",
+      "sha256": "093dd07b2045d6899dd11e4b166784f84a3f1dd27009b625069646613f6df542",
+      "version": "1"
+    },
+    {
+      "id": "account-strategist",
+      "filename": "account-strategist.toml",
+      "sha256": "20e380059626beee5d82a7de7dcbd23c2de24b8815b09c6a0056f4b51df50b96",
+      "version": "1"
+    },
+    {
+      "id": "accounts-payable-agent",
+      "filename": "accounts-payable-agent.toml",
+      "sha256": "5a558e8a75f926629e70dc3e605b9c7291c93c436f7e5cc74e516877ff36b8e1",
+      "version": "1"
+    },
+    {
+      "id": "ad-creative-strategist",
+      "filename": "ad-creative-strategist.toml",
+      "sha256": "e258840c5f83e1e1f373486339d4704753ecfd2e895d178ba6e69480f1dd34d4",
+      "version": "1"
+    },
+    {
+      "id": "aeo-foundations-architect",
+      "filename": "aeo-foundations-architect.toml",
+      "sha256": "fada27961d7191a645d37756a837aa4fc82ee8abc0f56875abfbe9027e4f04f4",
+      "version": "1"
+    },
+    {
+      "id": "agentic-identity-trust-architect",
+      "filename": "agentic-identity-trust-architect.toml",
+      "sha256": "3d07716d6668a97aadf3fc4f8488cf4dde858e934e57b8e030dd7d01c1cb40fd",
+      "version": "1"
+    },
+    {
+      "id": "agentic-search-optimizer",
+      "filename": "agentic-search-optimizer.toml",
+      "sha256": "b14f944db98810d6de9d6731e1a01a560643d0b2a81087ace8b609804b67e60c",
+      "version": "1"
+    },
+    {
+      "id": "agents-orchestrator",
+      "filename": "agents-orchestrator.toml",
+      "sha256": "829abfd2eb8aa503c4d61365bb769129e2fd8705b9b8d3a273d3b2dee6611774",
+      "version": "1"
+    },
+    {
+      "id": "aging-parent-care-companion",
+      "filename": "aging-parent-care-companion.toml",
+      "sha256": "e648857a1be4b47a44df73ca86af0b0063faa05c092ed527c28d909603083973",
+      "version": "1"
+    },
+    {
+      "id": "ai-citation-strategist",
+      "filename": "ai-citation-strategist.toml",
+      "sha256": "42e229269a0887e46ef1864a5e3ca23d57591cf9687f24378da70c9a8e600808",
+      "version": "1"
+    },
+    {
+      "id": "ai-data-remediation-engineer",
+      "filename": "ai-data-remediation-engineer.toml",
+      "sha256": "c5c0fa8da426e0313cf4361498bc7937819e13068cf3c8dc29f84a6953d94c0f",
+      "version": "1"
+    },
+    {
+      "id": "ai-engineer",
+      "filename": "ai-engineer.toml",
+      "sha256": "f97d62e63a20c01ad879725250a38adbce719a66c03b89a06493259076073ad5",
+      "version": "1"
+    },
+    {
+      "id": "ai-generated-code-security-auditor",
+      "filename": "ai-generated-code-security-auditor.toml",
+      "sha256": "a2ed19652eb0d81a394344bb8fbe6b6c362b3f5654ab8ef64477aec95595cfb7",
+      "version": "1"
+    },
+    {
+      "id": "analytics-reporter",
+      "filename": "analytics-reporter.toml",
+      "sha256": "0781f66674e03bc03e481de1aa8d0f2bb1aaa2f3c7e00155746d59fa46f0d298",
+      "version": "1"
+    },
+    {
+      "id": "anthropologist",
+      "filename": "anthropologist.toml",
+      "sha256": "9f80ca52af0281b2d7dea679c6dfdf077b9c28ac5d7b36d1ff5b41652a8a4f20",
+      "version": "1"
+    },
+    {
+      "id": "api-platform-engineer",
+      "filename": "api-platform-engineer.toml",
+      "sha256": "e5645137da4f831fec2446aede90a89d3c30c20b38f230159e4ac41c4840e6dd",
+      "version": "1"
+    },
+    {
+      "id": "api-tester",
+      "filename": "api-tester.toml",
+      "sha256": "9e6e5addf754b2740b4bc8e4c87f01f245ce5f2e4150fc4a1d9b0e22c4646045",
+      "version": "1"
+    },
+    {
+      "id": "app-store-optimizer",
+      "filename": "app-store-optimizer.toml",
+      "sha256": "be3f6ff271d0299d2436a1d82ec0a33d78db8cf0bc2495f7f741ce62593e7cb2",
+      "version": "1"
+    },
+    {
+      "id": "application-security-engineer",
+      "filename": "application-security-engineer.toml",
+      "sha256": "90a79524fd7b0a6448c4f56a86cc5e28788138f406f63d66a8bb58fc99c3aa26",
+      "version": "1"
+    },
+    {
+      "id": "ats-validator-architect",
+      "filename": "ats-validator-architect.toml",
+      "sha256": "1601b4dc5b5867b4c4792306e8829b676c95584f174d0b21aef211c67283c0cb",
+      "version": "1"
+    },
+    {
+      "id": "automation-governance-architect",
+      "filename": "automation-governance-architect.toml",
+      "sha256": "2a437c76bc4161024a79db3304806d45250e8e268397da14341d859c848e605a",
+      "version": "1"
+    },
+    {
+      "id": "autonomous-optimization-architect",
+      "filename": "autonomous-optimization-architect.toml",
+      "sha256": "6226cf6474277c2fb36eaab8ce6b8c80a08d05c764b7b3a450a9b158e7d48dba",
+      "version": "1"
+    },
+    {
+      "id": "backend-architect",
+      "filename": "backend-architect.toml",
+      "sha256": "0079dc054384e437620c838fe29571f1e7550da2fd37abacf37486a251b8a93f",
+      "version": "1"
+    },
+    {
+      "id": "baidu-seo-specialist",
+      "filename": "baidu-seo-specialist.toml",
+      "sha256": "2b5bb116ee89098a3f0ca278db2bfffa0af96cb59cd680baa93c936be4afe8f5",
+      "version": "1"
+    },
+    {
+      "id": "behavioral-nudge-engine",
+      "filename": "behavioral-nudge-engine.toml",
+      "sha256": "51cf0ae8907c88b215d257d8565c402682317054216da49d1ce3c4dff25ef6d0",
+      "version": "1"
+    },
+    {
+      "id": "bilibili-content-strategist",
+      "filename": "bilibili-content-strategist.toml",
+      "sha256": "cb56a9a635ed7e833e0b5516f0b1434bec5edfc7a8db74688dc8688ca3c6ec89",
+      "version": "1"
+    },
+    {
+      "id": "bim-gis-specialist",
+      "filename": "bim-gis-specialist.toml",
+      "sha256": "e0c2cc22f6dd4c1707b54d57fd7f7f0504873ce0666d5079fc34820ea023602e",
+      "version": "1"
+    },
+    {
+      "id": "blender-add-on-engineer",
+      "filename": "blender-add-on-engineer.toml",
+      "sha256": "a2c50b62d7ee0cb7796660dad53a9371821f39d9d01d5de8722f8f993572a526",
+      "version": "1"
+    },
+    {
+      "id": "blockchain-security-auditor",
+      "filename": "blockchain-security-auditor.toml",
+      "sha256": "f82a1feb2899bf61a9bc04d3f0419a5a539602bd510c137192b39c9b99e9112f",
+      "version": "1"
+    },
+    {
+      "id": "book-co-author",
+      "filename": "book-co-author.toml",
+      "sha256": "241b5675fa29c491915fa59b78c633b0d846aa8872da548a4b02e968c786dd50",
+      "version": "1"
+    },
+    {
+      "id": "bookkeeper-controller",
+      "filename": "bookkeeper-controller.toml",
+      "sha256": "8ab5e3cfa7e0e8c0ecdbc871b1fbb56f4350b3993a6933060bfd91cc4b5f1948",
+      "version": "1"
+    },
+    {
+      "id": "brand-guardian",
+      "filename": "brand-guardian.toml",
+      "sha256": "143f873e00172a858d9f66b2fafc0def56877fe0442d7c5c83bcf3ce1462e2b8",
+      "version": "1"
+    },
+    {
+      "id": "business-strategist",
+      "filename": "business-strategist.toml",
+      "sha256": "6a29b5ae951f454a1838681a6df3811b12fc6d3fca248281dbf6474df322ac77",
+      "version": "1"
+    },
+    {
+      "id": "carousel-growth-engine",
+      "filename": "carousel-growth-engine.toml",
+      "sha256": "607720f64d3121cd7f70101faedc5b101dba9abff97449410f4b0f984e20123c",
+      "version": "1"
+    },
+    {
+      "id": "cartography-designer",
+      "filename": "cartography-designer.toml",
+      "sha256": "4fa0dc0e294a57db3328a84f5100b923748dce522513d6b54d7655636f8b2abe",
+      "version": "1"
+    },
+    {
+      "id": "change-management-consultant",
+      "filename": "change-management-consultant.toml",
+      "sha256": "88c3ceca7342cd436f82f3594ab37bfc07549ed87cb767cec7260ebf3ff21e29",
+      "version": "1"
+    },
+    {
+      "id": "chief-financial-officer",
+      "filename": "chief-financial-officer.toml",
+      "sha256": "de58aab194e4b6394ff1f867668159b3d2c7ffcdb5eb36b2508ef08656abfb4c",
+      "version": "1"
+    },
+    {
+      "id": "chief-of-staff",
+      "filename": "chief-of-staff.toml",
+      "sha256": "3197ed4844f1907cf5f621570f93b1f65ecdc7290a374d357ad50dc932dd7b51",
+      "version": "1"
+    },
+    {
+      "id": "china-e-commerce-operator",
+      "filename": "china-e-commerce-operator.toml",
+      "sha256": "334f8dc7567cba762a6cfe21d5bf7f23e7bf7fa72859fff70c2002e31368451e",
+      "version": "1"
+    },
+    {
+      "id": "china-market-localization-strategist",
+      "filename": "china-market-localization-strategist.toml",
+      "sha256": "0c85d5100dd4f6f692ba9f0623766db1869dfbdb536a9e6873f3b9a6493f6ffc",
+      "version": "1"
+    },
+    {
+      "id": "china-network-engineer",
+      "filename": "china-network-engineer.toml",
+      "sha256": "133d7170035d22cc03de44d724390859ba8a34397c4e41bfaf13ff7f3fa65d8b",
+      "version": "1"
+    },
+    {
+      "id": "civil-engineer",
+      "filename": "civil-engineer.toml",
+      "sha256": "ed52e1cbfe399720c95b8500e56206788774a14bb8584f72a1ff6146ec3e7e2b",
+      "version": "1"
+    },
+    {
+      "id": "clinical-evidence-agent",
+      "filename": "clinical-evidence-agent.toml",
+      "sha256": "965ffc41d3d6572b10514e9d07aa9f0143b7ac2c7295d8bc2b5478c8fcd62aad",
+      "version": "1"
+    },
+    {
+      "id": "cloud-security-architect",
+      "filename": "cloud-security-architect.toml",
+      "sha256": "f90eef27a9e94575336603243de0ba4735caf9e8115f51524f1f78f598249af7",
+      "version": "1"
+    },
+    {
+      "id": "cms-developer",
+      "filename": "cms-developer.toml",
+      "sha256": "0e4378a89beccb845979f214a46653ee54225b70927985e133fed1e6929bdfd0",
+      "version": "1"
+    },
+    {
+      "id": "code-reviewer",
+      "filename": "code-reviewer.toml",
+      "sha256": "40e32a1188bb51af8bc5bdfa69341510e8f9c2d331d3ed6b53f25b71c052eeaf",
+      "version": "1"
+    },
+    {
+      "id": "codebase-archaeologist",
+      "filename": "codebase-archaeologist.toml",
+      "sha256": "58c64ddb20e9cd449882445eeb60ecbb1487b2376528847c769226116cb63822",
+      "version": "1"
+    },
+    {
+      "id": "codebase-onboarding-engineer",
+      "filename": "codebase-onboarding-engineer.toml",
+      "sha256": "7d998862630c1bed686207b43dd677fa67df14eea63cb607dec28a82176b1f63",
+      "version": "1"
+    },
+    {
+      "id": "compliance-auditor",
+      "filename": "compliance-auditor.toml",
+      "sha256": "8b3636b0c6f2255ad06c7f6958d96ffc0b7c1674f1a321c8d096fe310f72e838",
+      "version": "1"
+    },
+    {
+      "id": "content-creator",
+      "filename": "content-creator.toml",
+      "sha256": "f6e117b69d51dd95dd356d691bbcbf4852095f74cb7b725e55bdaaf997b5d98a",
+      "version": "1"
+    },
+    {
+      "id": "corporate-training-designer",
+      "filename": "corporate-training-designer.toml",
+      "sha256": "69dea12aef079267bf845f2e163688cf539ea5cf50332c40f0359980be08250a",
+      "version": "1"
+    },
+    {
+      "id": "cross-border-e-commerce-specialist",
+      "filename": "cross-border-e-commerce-specialist.toml",
+      "sha256": "156d87c8a64faa3c24c235471720a5b0148fb16be3e9e260eaf9e2644b7fad45",
+      "version": "1"
+    },
+    {
+      "id": "cultural-intelligence-strategist",
+      "filename": "cultural-intelligence-strategist.toml",
+      "sha256": "48148d97d748ee91f50c10c74ee17570b3947efcdf9616125cc84c63cc93d694",
+      "version": "1"
+    },
+    {
+      "id": "customer-service",
+      "filename": "customer-service.toml",
+      "sha256": "08716f4db856ba5f9d7766b886e590e1762d17fe5b9190292af47a43faeecb85",
+      "version": "1"
+    },
+    {
+      "id": "customer-success-manager",
+      "filename": "customer-success-manager.toml",
+      "sha256": "43226a791ace687458b1920dafb373e8c271cf1433ea87dfb2ebf30c8fe9525f",
+      "version": "1"
+    },
+    {
+      "id": "data-consolidation-agent",
+      "filename": "data-consolidation-agent.toml",
+      "sha256": "50945a45f9d6dd25753c9a04a7c8fad08f3d30d6786690da55a41b8251573b28",
+      "version": "1"
+    },
+    {
+      "id": "data-engineer",
+      "filename": "data-engineer.toml",
+      "sha256": "7aa425e9378b340e13784f8d282ef7197e76d68d28fabcb914b3a4828cb13d92",
+      "version": "1"
+    },
+    {
+      "id": "data-privacy-officer",
+      "filename": "data-privacy-officer.toml",
+      "sha256": "b0adeb510775afd91f4ea01179a673a461e6ca5028ab79a671445a7126f0c42d",
+      "version": "1"
+    },
+    {
+      "id": "data-visualization-engineer",
+      "filename": "data-visualization-engineer.toml",
+      "sha256": "2b622d9522a498726c781838019156b9b5dfc264bed0b62735119632c172a121",
+      "version": "1"
+    },
+    {
+      "id": "database-optimizer",
+      "filename": "database-optimizer.toml",
+      "sha256": "b6719825e0cdc3f45f5783b3dfb7bb604c1d532135b31a2a62b398804617f122",
+      "version": "1"
+    },
+    {
+      "id": "database-reliability-engineer",
+      "filename": "database-reliability-engineer.toml",
+      "sha256": "749cde31339d9720a1149cad9edccf282038bdadfa9b0fb747a6a868feea32d6",
+      "version": "1"
+    },
+    {
+      "id": "deal-strategist",
+      "filename": "deal-strategist.toml",
+      "sha256": "59f5a0c9c964e37916066b7a1b125c1f1ca34165f27e381fbc3d3ff192186743",
+      "version": "1"
+    },
+    {
+      "id": "desktop-app-engineer",
+      "filename": "desktop-app-engineer.toml",
+      "sha256": "decd9f3ea716c0d4d1063416c45cba210dba037280c3c0aee2ef75114db7a2e7",
+      "version": "1"
+    },
+    {
+      "id": "developer-advocate",
+      "filename": "developer-advocate.toml",
+      "sha256": "7a99e2dc3f15069815497d257fb0901446f6e972ba0a29e81d67cb48c8d07385",
+      "version": "1"
+    },
+    {
+      "id": "developer-tooling-engineer",
+      "filename": "developer-tooling-engineer.toml",
+      "sha256": "db4ca997251a0373e8f069d7454e992655343d924ed106a45a3cdb3614b50076",
+      "version": "1"
+    },
+    {
+      "id": "devops-automator",
+      "filename": "devops-automator.toml",
+      "sha256": "3e8ddc7ad2c5ad58b85ba94482d2911a5e2dbc3b7ca0a96c43dab54d0fb9737b",
+      "version": "1"
+    },
+    {
+      "id": "discovery-coach",
+      "filename": "discovery-coach.toml",
+      "sha256": "7e1e78611178ad2e4a09c2d717069dc79cc443bd33ad8c2fb218bf3b64b5cc63",
+      "version": "1"
+    },
+    {
+      "id": "document-generator",
+      "filename": "document-generator.toml",
+      "sha256": "6556b3df670bd35af496580bbde2e74f41170d78aa0abc9e2f2502de5480ac1a",
+      "version": "1"
+    },
+    {
+      "id": "douyin-strategist",
+      "filename": "douyin-strategist.toml",
+      "sha256": "e58e4923d01d90c9c8f6c27633dc825624714e30b5ee8acf326cd4ba2a51ccfb",
+      "version": "1"
+    },
+    {
+      "id": "drone-reality-mapping-specialist",
+      "filename": "drone-reality-mapping-specialist.toml",
+      "sha256": "94cb729a9bf7c06fb486b7e5b78a06c575e567a01c40065b73081b410557ef69",
+      "version": "1"
+    },
+    {
+      "id": "drupal-performance-engineer",
+      "filename": "drupal-performance-engineer.toml",
+      "sha256": "bf3d496a6a6d5a032d628242f729006ad1e1aa8fc49b911e87bb4d60421f04bd",
+      "version": "1"
+    },
+    {
+      "id": "drupal-shopping-cart-engineer",
+      "filename": "drupal-shopping-cart-engineer.toml",
+      "sha256": "8a7f0a73162edc8ce48a287a0152ede6972f76a750b671d56a6e4cdf8c6e11a2",
+      "version": "1"
+    },
+    {
+      "id": "economy-designer",
+      "filename": "economy-designer.toml",
+      "sha256": "dbd5a51f85c60dad38f628255a0bfa8deeeb1dd313a4cd7d0d2e85ba9602c8ec",
+      "version": "1"
+    },
+    {
+      "id": "email-intelligence-engineer",
+      "filename": "email-intelligence-engineer.toml",
+      "sha256": "8817303b6f89f0dd75c323ecdbb53bfcdcfe1df430df75683f486a425c907e82",
+      "version": "1"
+    },
+    {
+      "id": "email-marketing-strategist",
+      "filename": "email-marketing-strategist.toml",
+      "sha256": "b3dc70b923089c81cf4a513b590917e9b59f10e1a7dcb9dc92f583627bee701b",
+      "version": "1"
+    },
+    {
+      "id": "embedded-firmware-engineer",
+      "filename": "embedded-firmware-engineer.toml",
+      "sha256": "ace4f068029ea790b5bf4fba5cb8c4810ed9d02af29cf8dc659a75c01fbfe3c4",
+      "version": "1"
+    },
+    {
+      "id": "esg-sustainability-officer",
+      "filename": "esg-sustainability-officer.toml",
+      "sha256": "fb64ebbb455d9c0562daba0cc04a44a358c6256c8f3ef69227732eb0de5040f2",
+      "version": "1"
+    },
+    {
+      "id": "evidence-collector",
+      "filename": "evidence-collector.toml",
+      "sha256": "437477c50bb8e40cac5e7612ad3c2e2a022b604c4ba428c27b3c3a08e852645f",
+      "version": "1"
+    },
+    {
+      "id": "executive-summary-generator",
+      "filename": "executive-summary-generator.toml",
+      "sha256": "4d740b9e3744c943833c3cbe9f45b0a7d99e335517da578701ca3b2cc220bca0",
+      "version": "1"
+    },
+    {
+      "id": "experiment-tracker",
+      "filename": "experiment-tracker.toml",
+      "sha256": "55e68119f7cf8a6ba1f56a396bad00855dc4471b2fbfa9e80bcf913902cd94d8",
+      "version": "1"
+    },
+    {
+      "id": "fedramp-rmf-compliance-engineer",
+      "filename": "fedramp-rmf-compliance-engineer.toml",
+      "sha256": "42c28864583c73714099ef19107ec9135d4d66309e8c18b7a40c2b12d4e1a8f2",
+      "version": "1"
+    },
+    {
+      "id": "feedback-synthesizer",
+      "filename": "feedback-synthesizer.toml",
+      "sha256": "06179c767b839b995d1deae9d8fb9d6f7a415611dd722e81d3f5913eeb62cf5d",
+      "version": "1"
+    },
+    {
+      "id": "feishu-integration-developer",
+      "filename": "feishu-integration-developer.toml",
+      "sha256": "1a3a64af20200ddf6f7b439c73abd191f193c88a134d0fd9be21c732d704b218",
+      "version": "1"
+    },
+    {
+      "id": "filament-optimization-specialist",
+      "filename": "filament-optimization-specialist.toml",
+      "sha256": "41695c9fc0c2c53dfd57b9eff4dfd284c42a6e03e4505a58873f73125fa2cf3e",
+      "version": "1"
+    },
+    {
+      "id": "finance-tracker",
+      "filename": "finance-tracker.toml",
+      "sha256": "640b1ed86a6e62ca9702821b4a271b3c140187ec4b5f31f75ae3b485ab40a007",
+      "version": "1"
+    },
+    {
+      "id": "financial-analyst",
+      "filename": "financial-analyst.toml",
+      "sha256": "8e6f44e530141f0165b99238e1f1f5f7cae18eef3764f3cbfdd06836bfc788e7",
+      "version": "1"
+    },
+    {
+      "id": "finops-engineer",
+      "filename": "finops-engineer.toml",
+      "sha256": "c0aee2be7a04319613922ff9fca4f21fb28c3742eccaf2a42ee28322f598a1d4",
+      "version": "1"
+    },
+    {
+      "id": "focus-music-architect",
+      "filename": "focus-music-architect.toml",
+      "sha256": "a4e061176ea990502b381bca78d3e6b5bf02ccbb30adaa29bbbf321b998f4cfb",
+      "version": "1"
+    },
+    {
+      "id": "fp-a-analyst",
+      "filename": "fp-a-analyst.toml",
+      "sha256": "78b140a4d334b060033f9fe149d4db0cce54bc486f58c0672d40dde598a60f17",
+      "version": "1"
+    },
+    {
+      "id": "french-consulting-market-navigator",
+      "filename": "french-consulting-market-navigator.toml",
+      "sha256": "c828b70cf4689c142adb0db8d58afb1d44836d9846b92117ad5a8c6d6be4bd39",
+      "version": "1"
+    },
+    {
+      "id": "frontend-developer",
+      "filename": "frontend-developer.toml",
+      "sha256": "774e15531ea51378b7d8cf599732571705de9754cfb4282fe0616c99fdff0f10",
+      "version": "1"
+    },
+    {
+      "id": "game-audio-engineer",
+      "filename": "game-audio-engineer.toml",
+      "sha256": "ed81d928bbc6b204e94903e70927098f5fadf7252d8e97704b7575df6fe38166",
+      "version": "1"
+    },
+    {
+      "id": "game-designer",
+      "filename": "game-designer.toml",
+      "sha256": "a1565bff1cf2389e22a6744849ab2e003deb669aa775ab67a4b513d08e4631d7",
+      "version": "1"
+    },
+    {
+      "id": "gaussdb-expert-engineer",
+      "filename": "gaussdb-expert-engineer.toml",
+      "sha256": "c9b08cf8a70a2ad0850865b24acc484f25bf57a88213f766dca9217c813735c7",
+      "version": "1"
+    },
+    {
+      "id": "geoai-ml-engineer",
+      "filename": "geoai-ml-engineer.toml",
+      "sha256": "b7f40b2bf2765bad015c2c7fd6d96bdaf97a7df4a70b02acdebcdedfdb69a012",
+      "version": "1"
+    },
+    {
+      "id": "geographer",
+      "filename": "geographer.toml",
+      "sha256": "952aabfd6fac2800587a8081b960f50659e4c47ed8f9062f30a13748ac651696",
+      "version": "1"
+    },
+    {
+      "id": "geoprocessing-specialist",
+      "filename": "geoprocessing-specialist.toml",
+      "sha256": "697a2ba9ff5e9823f6d2cb9335021450c6f6ca88d39f57d0b26ab7e583d6c991",
+      "version": "1"
+    },
+    {
+      "id": "gis-analyst",
+      "filename": "gis-analyst.toml",
+      "sha256": "7e501afb7b5d05529c4acbeeac3b156969f04434ed51e61c1814bb2383b617f7",
+      "version": "1"
+    },
+    {
+      "id": "gis-qa-engineer",
+      "filename": "gis-qa-engineer.toml",
+      "sha256": "02071336f54a4eee4b7c8db9553c26748a50a4127b7b47cf609bf59578d1558c",
+      "version": "1"
+    },
+    {
+      "id": "git-workflow-master",
+      "filename": "git-workflow-master.toml",
+      "sha256": "7a109b468788db05b8563d19150aaef71f424bfd6ba7ed1056c970a2336961e3",
+      "version": "1"
+    },
+    {
+      "id": "global-podcast-strategist",
+      "filename": "global-podcast-strategist.toml",
+      "sha256": "aa0d2f7c9dba5d7364fa3be1847cb368c9b8975217696a0bf7db703d86450dab",
+      "version": "1"
+    },
+    {
+      "id": "godot-gameplay-scripter",
+      "filename": "godot-gameplay-scripter.toml",
+      "sha256": "813911ee0e17440216dd126fd929e68902eec17ad1b90e9cb5505d546aad025c",
+      "version": "1"
+    },
+    {
+      "id": "godot-multiplayer-engineer",
+      "filename": "godot-multiplayer-engineer.toml",
+      "sha256": "9d3249f3a48bd5b275aebc5817d9e3facad9f9867155d68d58ee947ebb97bde2",
+      "version": "1"
+    },
+    {
+      "id": "godot-shader-developer",
+      "filename": "godot-shader-developer.toml",
+      "sha256": "e348ddcb4fe595e131fd696db4f9c8e504af072235b5087c39cad33885f901a8",
+      "version": "1"
+    },
+    {
+      "id": "government-digital-presales-consultant",
+      "filename": "government-digital-presales-consultant.toml",
+      "sha256": "f0f041c9c9414c511d9159fb111abc1132046ce6284a80f7db77a26b3d3f475e",
+      "version": "1"
+    },
+    {
+      "id": "grant-writer",
+      "filename": "grant-writer.toml",
+      "sha256": "b0e95d52eb3fd8069f9df8884b296fb456fe03eec090b9bcd00368892536fdca",
+      "version": "1"
+    },
+    {
+      "id": "growth-hacker",
+      "filename": "growth-hacker.toml",
+      "sha256": "d2bd022e6051a0d32412e619e3c49e46592a712fb6eed66fb7a62e944fc0a57a",
+      "version": "1"
+    },
+    {
+      "id": "healthcare-customer-service",
+      "filename": "healthcare-customer-service.toml",
+      "sha256": "32df5b352dba5f98bdef0b023a047f642b306bf3ca24b0d219540927fcaf7406",
+      "version": "1"
+    },
+    {
+      "id": "healthcare-innovation-strategist",
+      "filename": "healthcare-innovation-strategist.toml",
+      "sha256": "7246b52f78c9d36d1ab4d1ba946ca0357af7bcb816bdd34e4a4f039f87d82133",
+      "version": "1"
+    },
+    {
+      "id": "healthcare-marketing-compliance-specialist",
+      "filename": "healthcare-marketing-compliance-specialist.toml",
+      "sha256": "be503d473969e33b44b5f393a7951b98df178160122e8b586f1a42df20845e23",
+      "version": "1"
+    },
+    {
+      "id": "historian",
+      "filename": "historian.toml",
+      "sha256": "987e29c7a0fceb9e8f60fd8b791df93f75e218d3d3e97034f733b6392b10783e",
+      "version": "1"
+    },
+    {
+      "id": "hospitality-guest-services",
+      "filename": "hospitality-guest-services.toml",
+      "sha256": "b214a888b5a59ffdda9305571de56e25962ebb67982f8ba719ecce3c4a0c262e",
+      "version": "1"
+    },
+    {
+      "id": "hr-onboarding",
+      "filename": "hr-onboarding.toml",
+      "sha256": "14505e5659d03d439e2d97ce1311b78a1f32bccad95dac32303edea675e4b14a",
+      "version": "1"
+    },
+    {
+      "id": "identity-access-engineer",
+      "filename": "identity-access-engineer.toml",
+      "sha256": "2abcd36ff66461ea42f22e6b9e5bb0b9d6d6fa930dc69eb9f8b7d2b38737760e",
+      "version": "1"
+    },
+    {
+      "id": "identity-graph-operator",
+      "filename": "identity-graph-operator.toml",
+      "sha256": "372d64886e1ff31be36d741193f4b980e9077e79e07d0b862b0deadb3886f82c",
+      "version": "1"
+    },
+    {
+      "id": "image-prompt-engineer",
+      "filename": "image-prompt-engineer.toml",
+      "sha256": "baba313713bdec27c0fc6c849378c8fa1699cd3744375ced0a4fc0b113819827",
+      "version": "1"
+    },
+    {
+      "id": "incident-responder",
+      "filename": "incident-responder.toml",
+      "sha256": "dd1e8e40ae0e237d92489c268f6b71fb89ebcaa082424ed9875bec21148a1650",
+      "version": "1"
+    },
+    {
+      "id": "incident-response-commander",
+      "filename": "incident-response-commander.toml",
+      "sha256": "698befe63f7a08a0a8dd259c479000a15d61eafd5558e4b8b4a7e31546652494",
+      "version": "1"
+    },
+    {
+      "id": "inclusive-visuals-specialist",
+      "filename": "inclusive-visuals-specialist.toml",
+      "sha256": "b44947b4c5aa2d4d6d3cb1ee645a44a13a45711f9b04265505f31eed986778c4",
+      "version": "1"
+    },
+    {
+      "id": "infrastructure-maintainer",
+      "filename": "infrastructure-maintainer.toml",
+      "sha256": "42004cc9a1045cd29e1f250babbc97d3d5d81a1081aa91250728154a7e8da250",
+      "version": "1"
+    },
+    {
+      "id": "instagram-curator",
+      "filename": "instagram-curator.toml",
+      "sha256": "3de4a109a698bb23cf3f24755d57cb7e81c9fa0202aef98c4f6fc84bc03cc152",
+      "version": "1"
+    },
+    {
+      "id": "internationalization-engineer",
+      "filename": "internationalization-engineer.toml",
+      "sha256": "e4102142d1aa4db68ddb863177213cb6973e35e25d031f41dbf473a90000c104",
+      "version": "1"
+    },
+    {
+      "id": "investment-researcher",
+      "filename": "investment-researcher.toml",
+      "sha256": "74a5821befbc0e91fc468a6e59693c40ea8610ed2a48bcf28ecaea58d70a89d8",
+      "version": "1"
+    },
+    {
+      "id": "iot-fleet-engineer",
+      "filename": "iot-fleet-engineer.toml",
+      "sha256": "c94bddb02125efab4bdb5533a977dfe26695ea241e30413ef52a86b12209ed46",
+      "version": "1"
+    },
+    {
+      "id": "it-service-manager",
+      "filename": "it-service-manager.toml",
+      "sha256": "b2ed30111f41bc614bb167a989aad63339d5d2abed4cc46b06a25688caaacb27",
+      "version": "1"
+    },
+    {
+      "id": "jira-workflow-steward",
+      "filename": "jira-workflow-steward.toml",
+      "sha256": "96fec2758c76c80f6dbf9206a0952bb9315f87bf44467f40b4c93eba6f936880",
+      "version": "1"
+    },
+    {
+      "id": "knowledge-graph-engineer",
+      "filename": "knowledge-graph-engineer.toml",
+      "sha256": "9ad8614751eac3e337bd6236d4a42e3091ab8abf610332a33da3fcc1cd53842d",
+      "version": "1"
+    },
+    {
+      "id": "korean-business-navigator",
+      "filename": "korean-business-navigator.toml",
+      "sha256": "30aef9264af8c9df6970d4f4e4f5788e490b0b7dc6e15984ea7a13196ac686bd",
+      "version": "1"
+    },
+    {
+      "id": "kuaishou-strategist",
+      "filename": "kuaishou-strategist.toml",
+      "sha256": "9e9289309bc7857c92f64b7a8639bbc7e2c01e11d85a17557a06504b26df1e4e",
+      "version": "1"
+    },
+    {
+      "id": "language-translator",
+      "filename": "language-translator.toml",
+      "sha256": "784d16908858075e420e93e2c2c0351b5e3361f6e0662b6a3f60c1e2d0534a54",
+      "version": "1"
+    },
+    {
+      "id": "legal-billing-time-tracking",
+      "filename": "legal-billing-time-tracking.toml",
+      "sha256": "22c6336c81c819d729f7c6c98f7c17c49a1b082e062687734118291e638f00df",
+      "version": "1"
+    },
+    {
+      "id": "legal-client-intake",
+      "filename": "legal-client-intake.toml",
+      "sha256": "0a9fc1bd333fc0eb78e1c660441b08e0cc3281985caed9f8afef1a3f16089973",
+      "version": "1"
+    },
+    {
+      "id": "legal-compliance-checker",
+      "filename": "legal-compliance-checker.toml",
+      "sha256": "1bfe97ce27e4c1d4c452c5272cce9aee885756d4b789054f5b55569aa299f781",
+      "version": "1"
+    },
+    {
+      "id": "legal-document-review",
+      "filename": "legal-document-review.toml",
+      "sha256": "7c32a0c5aedb3a8e8224b46ff37ca852713fcc94ea1b262fe7843d8187d046e6",
+      "version": "1"
+    },
+    {
+      "id": "level-designer",
+      "filename": "level-designer.toml",
+      "sha256": "9248b7fb791aaad35cf9add642fd7350275df0d012301ceb24bb69ed7461c7d9",
+      "version": "1"
+    },
+    {
+      "id": "linkedin-content-creator",
+      "filename": "linkedin-content-creator.toml",
+      "sha256": "70fbb7e6a21ed5934ec8686d89219072b91af83c749283bb7055bf15d54420b0",
+      "version": "1"
+    },
+    {
+      "id": "livestream-commerce-coach",
+      "filename": "livestream-commerce-coach.toml",
+      "sha256": "c84157160c91166b80f797aea180156a91b455c5a58d25e3e623c70388098dd7",
+      "version": "1"
+    },
+    {
+      "id": "llm-post-training-engineer",
+      "filename": "llm-post-training-engineer.toml",
+      "sha256": "a6b8350d711be106aedc8de71afa01141c69f263578c2b61aacd322ddf20e56c",
+      "version": "1"
+    },
+    {
+      "id": "loan-officer-assistant",
+      "filename": "loan-officer-assistant.toml",
+      "sha256": "2070c140ac398dbbc220e6777a497484d8690f24f33a6257f31cd68d7f002197",
+      "version": "1"
+    },
+    {
+      "id": "lsp-index-engineer",
+      "filename": "lsp-index-engineer.toml",
+      "sha256": "545ab5c8d043b89409baee7d2368318a64446698c2a48612857561971a3fac94",
+      "version": "1"
+    },
+    {
+      "id": "m-a-integration-manager",
+      "filename": "m-a-integration-manager.toml",
+      "sha256": "1988720ff7a6dc0d0269b2fe4676d1c6fd8c86fcfa08f3f11ea6e4c396be2018",
+      "version": "1"
+    },
+    {
+      "id": "macos-spatial-metal-engineer",
+      "filename": "macos-spatial-metal-engineer.toml",
+      "sha256": "ff0f1cc767b03cc4c721bbbcb3603b8e335954b7cbc3e0a5ba72d1b16aa91599",
+      "version": "1"
+    },
+    {
+      "id": "master-plan-architect",
+      "filename": "master-plan-architect.toml",
+      "sha256": "55442e64b5b6fdabb0c5b19c6fb0e53a2be350c45044fd135f66ad8d4bd19a7b",
+      "version": "1"
+    },
+    {
+      "id": "mcp-builder",
+      "filename": "mcp-builder.toml",
+      "sha256": "53db541938928a497f35ca262f15921c115631e913e664af9ea0e7017abe861e",
+      "version": "1"
+    },
+    {
+      "id": "medical-billing-coding-specialist",
+      "filename": "medical-billing-coding-specialist.toml",
+      "sha256": "3a9a30d80a170a6283a6422881d567fa96d37a8ea4a96c0969dada8d14e773d5",
+      "version": "1"
+    },
+    {
+      "id": "meeting-notes-specialist",
+      "filename": "meeting-notes-specialist.toml",
+      "sha256": "6023d70e42ec6f534813a8dbb8df61020b2662810f6b5e6da7bf927fed599ca3",
+      "version": "1"
+    },
+    {
+      "id": "minimal-change-engineer",
+      "filename": "minimal-change-engineer.toml",
+      "sha256": "1e1ff753662bb4827df5d3d4707988b6fc8e13225833ee7cd1d141c876f88d2b",
+      "version": "1"
+    },
+    {
+      "id": "mobile-app-builder",
+      "filename": "mobile-app-builder.toml",
+      "sha256": "d2d1638502e3933945311b5edc4a1ef300ffdb64454a11ed643c527a0927ce72",
+      "version": "1"
+    },
+    {
+      "id": "mobile-release-engineer",
+      "filename": "mobile-release-engineer.toml",
+      "sha256": "90f9f5be5a910e05d44ddf3b0c330653651734d1becd59a3dba22b6e2ca27e1e",
+      "version": "1"
+    },
+    {
+      "id": "model-qa-specialist",
+      "filename": "model-qa-specialist.toml",
+      "sha256": "7e3a909a6e2e74e156e357a0298ba339851daf9dd63056c5d0bbbef3553510f2",
+      "version": "1"
+    },
+    {
+      "id": "multi-agent-systems-architect",
+      "filename": "multi-agent-systems-architect.toml",
+      "sha256": "da186fa44e18433080a7f05f6bd2add6e689a482dd5367d55da0e80b787b60df",
+      "version": "1"
+    },
+    {
+      "id": "multi-platform-publisher",
+      "filename": "multi-platform-publisher.toml",
+      "sha256": "ecda90313bdb42179a4d9a0ae0e0e1bcf01c23baea950ccf6e58bab3b74b6d3b",
+      "version": "1"
+    },
+    {
+      "id": "narrative-designer",
+      "filename": "narrative-designer.toml",
+      "sha256": "f80e5eec8112fbfc3a14d2ee705581a2d6997ae48c0029b5ac461c03b374fd19",
+      "version": "1"
+    },
+    {
+      "id": "narratologist",
+      "filename": "narratologist.toml",
+      "sha256": "807fa94b4655bde718ce82845f98a75450bf0c8d37512a2365150eedb160dea2",
+      "version": "1"
+    },
+    {
+      "id": "network-engineer",
+      "filename": "network-engineer.toml",
+      "sha256": "1a5c19ae8f600c18ee549526a5a4f35f03f66381844537fd90e9a35fc5105c3f",
+      "version": "1"
+    },
+    {
+      "id": "offer-lead-gen-strategist",
+      "filename": "offer-lead-gen-strategist.toml",
+      "sha256": "40f128e37f364ccbab2ba617279bac11adfaebe4ce1c204c002de79ff1d8ded9",
+      "version": "1"
+    },
+    {
+      "id": "operations-manager",
+      "filename": "operations-manager.toml",
+      "sha256": "fdda19360f6f5030e11af29d64cb0165561639b6df38325c101846f2bed8b73a",
+      "version": "1"
+    },
+    {
+      "id": "organizational-psychologist",
+      "filename": "organizational-psychologist.toml",
+      "sha256": "44bcd4ba18b0b979bf113a688fdcd24fa2eb6110b39e0d712fc227e4a9f90bd0",
+      "version": "1"
+    },
+    {
+      "id": "orgscript-engineer",
+      "filename": "orgscript-engineer.toml",
+      "sha256": "1ffcf5b71e0cd0c6aedda72328045eb024771cccda8873eb0eee95943bdeaec3",
+      "version": "1"
+    },
+    {
+      "id": "outbound-strategist",
+      "filename": "outbound-strategist.toml",
+      "sha256": "037fd073407366e3e36b8168b30200d65ef2921df06db151180884728d93bbc6",
+      "version": "1"
+    },
+    {
+      "id": "paid-media-auditor",
+      "filename": "paid-media-auditor.toml",
+      "sha256": "b0d6ef2d07e2f10009af6b5512c26a9149b6dd2838e6ffa4005b0d4914d9546d",
+      "version": "1"
+    },
+    {
+      "id": "paid-social-strategist",
+      "filename": "paid-social-strategist.toml",
+      "sha256": "de9422f6b111d885fc58b0fb145b1a94d406889ae5944ff23466892d3ccd17a2",
+      "version": "1"
+    },
+    {
+      "id": "payments-billing-engineer",
+      "filename": "payments-billing-engineer.toml",
+      "sha256": "1d16ead0b5f6b210d69c398756f6a2d4e874fd30037721349f88870bd568ef77",
+      "version": "1"
+    },
+    {
+      "id": "pdf-engine-architect",
+      "filename": "pdf-engine-architect.toml",
+      "sha256": "af6ef24951f417a6e26f36880f0bc39407843bd73aae9222d8d4d3da8e39ab6e",
+      "version": "1"
+    },
+    {
+      "id": "penetration-tester",
+      "filename": "penetration-tester.toml",
+      "sha256": "8caef948958ced0384625a5a35053907d7dbd03febfbb4751d6f4c2fa914385c",
+      "version": "1"
+    },
+    {
+      "id": "performance-benchmarker",
+      "filename": "performance-benchmarker.toml",
+      "sha256": "5ec6963b84c331b5cb3692c38255d68b8819395c4455104ef0cb040eac05d9e7",
+      "version": "1"
+    },
+    {
+      "id": "persona-walkthrough-specialist",
+      "filename": "persona-walkthrough-specialist.toml",
+      "sha256": "b7764ba0c8148b2866d80e1a6b11dc41688fc3f9481b3c6984b97658b9cec115",
+      "version": "1"
+    },
+    {
+      "id": "personal-growth-mentor",
+      "filename": "personal-growth-mentor.toml",
+      "sha256": "a18fb88587dcd788405358668694d2004929c644aef89b6184a21c8e90a0e934",
+      "version": "1"
+    },
+    {
+      "id": "pipeline-analyst",
+      "filename": "pipeline-analyst.toml",
+      "sha256": "99b6910614ca702af886ccd7aadb23454d5e180180a25598f5ca20526b5f7147",
+      "version": "1"
+    },
+    {
+      "id": "platform-engineer",
+      "filename": "platform-engineer.toml",
+      "sha256": "c01257a0fa69eb8e7eeca1f443dca455e9778d239e2877258ae6d2759ddab316",
+      "version": "1"
+    },
+    {
+      "id": "podcast-strategist",
+      "filename": "podcast-strategist.toml",
+      "sha256": "a250e34482bcb5902505c9966c565250a89317fe7e1bc4f59228ea62fd5197e5",
+      "version": "1"
+    },
+    {
+      "id": "ppc-campaign-strategist",
+      "filename": "ppc-campaign-strategist.toml",
+      "sha256": "c8b80c6f3f61bd5a6658467214a3045c2bc307abbb4d575b6154fd761dd1660b",
+      "version": "1"
+    },
+    {
+      "id": "pr-communications-manager",
+      "filename": "pr-communications-manager.toml",
+      "sha256": "287006c7766558ba844a2a07edc4a8bb0a74809f22aadb249c1e8df7682d7561",
+      "version": "1"
+    },
+    {
+      "id": "pricing-analyst",
+      "filename": "pricing-analyst.toml",
+      "sha256": "aa93c470b1e7e54028b358b95ee4aaeaf9189bbeb3bbe197354cb565aa4b0479",
+      "version": "1"
+    },
+    {
+      "id": "privacy-engineer",
+      "filename": "privacy-engineer.toml",
+      "sha256": "e4424716b7047dbb09c8a4e14f2233e8f70138b9d150d419f32dd7d1c49e1aab",
+      "version": "1"
+    },
+    {
+      "id": "private-domain-operator",
+      "filename": "private-domain-operator.toml",
+      "sha256": "f506a0436037a57e7fef8d160a6c639ce240c4f2cda9bdd915fe467f2369e91c",
+      "version": "1"
+    },
+    {
+      "id": "product-manager",
+      "filename": "product-manager.toml",
+      "sha256": "6e25b1080fa15480b1244e16e1a2ab71624ccd7766b860409f516fdb9fac5eb6",
+      "version": "1"
+    },
+    {
+      "id": "programmatic-display-buyer",
+      "filename": "programmatic-display-buyer.toml",
+      "sha256": "9c76a764b0c75ab13a0d21b951c9420038e286abe48aca5d68f49506a6bec23e",
+      "version": "1"
+    },
+    {
+      "id": "project-shepherd",
+      "filename": "project-shepherd.toml",
+      "sha256": "56c739de65a03c3faaea6b140edea8187f75f745203566fb1d23c5f91dcb02e5",
+      "version": "1"
+    },
+    {
+      "id": "prompt-engineer",
+      "filename": "prompt-engineer.toml",
+      "sha256": "b6191206d9b72a3689dce1d70d929de6947e80451c29f92ad318153d4608819f",
+      "version": "1"
+    },
+    {
+      "id": "proposal-strategist",
+      "filename": "proposal-strategist.toml",
+      "sha256": "0969a5d85a06438fee0eeab951ad354611ef2de60988ffa1960dea92062e0109",
+      "version": "1"
+    },
+    {
+      "id": "psychologist",
+      "filename": "psychologist.toml",
+      "sha256": "001fdd6fdb0ec48afd2fdb9345ed9533dee4fb7ec0cb76483b5c975b524eed90",
+      "version": "1"
+    },
+    {
+      "id": "rag-pipeline-engineer",
+      "filename": "rag-pipeline-engineer.toml",
+      "sha256": "cff471d833f08c13903386009bd28ac6301aa2e4723e2fe37653d997dc71e12d",
+      "version": "1"
+    },
+    {
+      "id": "rapid-prototyper",
+      "filename": "rapid-prototyper.toml",
+      "sha256": "c54b5b7c358911d870c3be56cbdec4d4be6682798073314f5968348d59c89daf",
+      "version": "1"
+    },
+    {
+      "id": "real-estate-buyer-seller",
+      "filename": "real-estate-buyer-seller.toml",
+      "sha256": "4a87b3d317ae6fc2b8bd5e60d90d185ada166b07d78e38d2220a802288c6c02b",
+      "version": "1"
+    },
+    {
+      "id": "reality-checker",
+      "filename": "reality-checker.toml",
+      "sha256": "c820df1f0fc131238b423e5343a28d29a7d8f5f2e5ee5dbdaa69868fa8357bc7",
+      "version": "1"
+    },
+    {
+      "id": "realtime-collaboration-engineer",
+      "filename": "realtime-collaboration-engineer.toml",
+      "sha256": "c4d31df3937969f7655a905ee571356761f7d78353062f41cbd6f6376fc96551",
+      "version": "1"
+    },
+    {
+      "id": "recruitment-specialist",
+      "filename": "recruitment-specialist.toml",
+      "sha256": "d50222bd39743367f9ee7f940029e1e9243c21345e5382134d33bd0ac0126cce",
+      "version": "1"
+    },
+    {
+      "id": "reddit-community-builder",
+      "filename": "reddit-community-builder.toml",
+      "sha256": "262b8b11db05fe3d8967332b6c066dc9df0320099ec33e17fc97e8e91577a86e",
+      "version": "1"
+    },
+    {
+      "id": "report-distribution-agent",
+      "filename": "report-distribution-agent.toml",
+      "sha256": "f0cb7424e26e80b76e11d759279b89ba7475bfa2c9405e20c35eb7056be24349",
+      "version": "1"
+    },
+    {
+      "id": "research-synthesist",
+      "filename": "research-synthesist.toml",
+      "sha256": "95640c34667b5bc3f482e93c35b25aab7683057169b3c78a010bb1cd6cbfcdb1",
+      "version": "1"
+    },
+    {
+      "id": "resume-tailor",
+      "filename": "resume-tailor.toml",
+      "sha256": "3bd41d72ddbbbdf9bd62b4311bedf63f85f283937577ff2d0d99fde5ac214e02",
+      "version": "1"
+    },
+    {
+      "id": "retail-customer-returns",
+      "filename": "retail-customer-returns.toml",
+      "sha256": "3aafdb8af550cef07b1de8f93f367fdaa5f6859f10ec56c68d5197983c82b478",
+      "version": "1"
+    },
+    {
+      "id": "roblox-avatar-creator",
+      "filename": "roblox-avatar-creator.toml",
+      "sha256": "af27911c90e6c40eb30590e6ad5c4c712ce3e0d09e1da91cdcfc9f340f9043f3",
+      "version": "1"
+    },
+    {
+      "id": "roblox-experience-designer",
+      "filename": "roblox-experience-designer.toml",
+      "sha256": "443fb4c2793d470a9d09f58297a7131bb3cdc5dd3629cef22877c41d209f1e52",
+      "version": "1"
+    },
+    {
+      "id": "roblox-systems-scripter",
+      "filename": "roblox-systems-scripter.toml",
+      "sha256": "452fa07552b795e191a44df1254978309555ffe8399796c97b9c0d29c8d7a9c7",
+      "version": "1"
+    },
+    {
+      "id": "rust-refactoring-specialist",
+      "filename": "rust-refactoring-specialist.toml",
+      "sha256": "2fc1b81dabe8ee85e7941c7ee69e61e48765a63d6bba1e8c2256ff94534b32ff",
+      "version": "1"
+    },
+    {
+      "id": "sales-coach",
+      "filename": "sales-coach.toml",
+      "sha256": "1f8b4056819c23e40590e91ff1fa8b1c06e19139f3b498599e4e7e1e5ec26081",
+      "version": "1"
+    },
+    {
+      "id": "sales-data-extraction-agent",
+      "filename": "sales-data-extraction-agent.toml",
+      "sha256": "a296b5446612a79aa9f4c300c8b76309cd1725b726684110b48f35d69d90e950",
+      "version": "1"
+    },
+    {
+      "id": "sales-engineer",
+      "filename": "sales-engineer.toml",
+      "sha256": "0c4723e9c917bc42317b540065a30ce58e27cbc5cc069c7f68d2290711702418",
+      "version": "1"
+    },
+    {
+      "id": "sales-outreach",
+      "filename": "sales-outreach.toml",
+      "sha256": "193c8a0a2c672c1c720a8d3616fc7a9057337f430d4da05fb1ff88831c930ec3",
+      "version": "1"
+    },
+    {
+      "id": "salesforce-architect",
+      "filename": "salesforce-architect.toml",
+      "sha256": "7da6f234ddcd8364fcaefe0a01b84d7f8162c0fd524fecac5c998c24e262ae35",
+      "version": "1"
+    },
+    {
+      "id": "search-query-analyst",
+      "filename": "search-query-analyst.toml",
+      "sha256": "0380124a98288bd791aee21c27b59e88248f5435e80224586e5851f246b06a9f",
+      "version": "1"
+    },
+    {
+      "id": "search-relevance-engineer",
+      "filename": "search-relevance-engineer.toml",
+      "sha256": "876088e5fc018e2c67985a9e77d23ce1a7c5648bce1f68524a59a730b5c94fa0",
+      "version": "1"
+    },
+    {
+      "id": "secrets-credential-hygiene-engineer",
+      "filename": "secrets-credential-hygiene-engineer.toml",
+      "sha256": "d758de5ccf566d6a4b7657be3b795c6a3413e5c7ac4a8b071e8dd88646b90f08",
+      "version": "1"
+    },
+    {
+      "id": "section-508-accessibility-specialist",
+      "filename": "section-508-accessibility-specialist.toml",
+      "sha256": "2104fe896f180d3a6059713732162b1aeef4951364a57f168f7bc60e9f0b3c3f",
+      "version": "1"
+    },
+    {
+      "id": "security-architect",
+      "filename": "security-architect.toml",
+      "sha256": "a0c458a831a042f4dde42fc69680911034f91632259e5b6a808ee2601acea80c",
+      "version": "1"
+    },
+    {
+      "id": "senior-developer",
+      "filename": "senior-developer.toml",
+      "sha256": "5366c695927828b116b48b0aa0d188792adb8698b06f363d9ba87861c953c3ce",
+      "version": "1"
+    },
+    {
+      "id": "senior-project-manager",
+      "filename": "senior-project-manager.toml",
+      "sha256": "6d4edcb955f20c79fd193b931b85853271c89520c7f321204db6fda688a88794",
+      "version": "1"
+    },
+    {
+      "id": "senior-secops-engineer",
+      "filename": "senior-secops-engineer.toml",
+      "sha256": "8411a18f14fb93efd91a4a25922d940ec8127dd5272227a8750093947ea9caed",
+      "version": "1"
+    },
+    {
+      "id": "seo-specialist",
+      "filename": "seo-specialist.toml",
+      "sha256": "028276a8e2b3a2da49924e9c0ff566166c7349b0c2b706146c0a5045a31d7354",
+      "version": "1"
+    },
+    {
+      "id": "short-video-editing-coach",
+      "filename": "short-video-editing-coach.toml",
+      "sha256": "ffffb667eef21ce02c7524c9ccbf295370851248c8d40312b8d63c7d2252ed89",
+      "version": "1"
+    },
+    {
+      "id": "social-media-strategist",
+      "filename": "social-media-strategist.toml",
+      "sha256": "9c278cc65744c3449ed1c1aaf1ba297f17613e3962565846587f679392614ef2",
+      "version": "1"
+    },
+    {
+      "id": "software-architect",
+      "filename": "software-architect.toml",
+      "sha256": "dec3e4de3fdbac219d2d1420be7c40fd98fdd241b887ee74fcbde80e5ffdcd2a",
+      "version": "1"
+    },
+    {
+      "id": "solidity-smart-contract-engineer",
+      "filename": "solidity-smart-contract-engineer.toml",
+      "sha256": "7d0f777da539fb44dea8a38929eeb6f538568a278dfd4c483e8d7951ac758c65",
+      "version": "1"
+    },
+    {
+      "id": "solution-engineer",
+      "filename": "solution-engineer.toml",
+      "sha256": "2d8f4dc29bafc0d01a3802fbcd5df3c745e573f37673b7b3c60b597046498ad6",
+      "version": "1"
+    },
+    {
+      "id": "sovereign-health-systems-agent",
+      "filename": "sovereign-health-systems-agent.toml",
+      "sha256": "941eac2f5d4381f61144746ec75623b98950ec9d256e58e54b6228a085c7d013",
+      "version": "1"
+    },
+    {
+      "id": "spatial-data-engineer",
+      "filename": "spatial-data-engineer.toml",
+      "sha256": "74eaa63aeb412150768309bfcf2833d83965cfc551a124e1ee5da665c4182f02",
+      "version": "1"
+    },
+    {
+      "id": "spatial-data-scientist",
+      "filename": "spatial-data-scientist.toml",
+      "sha256": "22df511955332077f7fc1de2b33c418d031e97ff0e857b40dfe9194cec4423d1",
+      "version": "1"
+    },
+    {
+      "id": "sprint-prioritizer",
+      "filename": "sprint-prioritizer.toml",
+      "sha256": "2f21f4ab56d86b1389a72144aef3d89b4b512ada7dd3d1d5d663ead340b1ec87",
+      "version": "1"
+    },
+    {
+      "id": "sre-site-reliability-engineer",
+      "filename": "sre-site-reliability-engineer.toml",
+      "sha256": "a5ee075aa2a49d57b9ffbaa2b00c42efa0d19e7d803d1b15389a025ccd00e669",
+      "version": "1"
+    },
+    {
+      "id": "statistician",
+      "filename": "statistician.toml",
+      "sha256": "b7ae9856fc5ff88e09cd2bf35a9e368eb7fd22ff9ad4625b5c17e7e29f6fdee8",
+      "version": "1"
+    },
+    {
+      "id": "strategy-duel-agent",
+      "filename": "strategy-duel-agent.toml",
+      "sha256": "74e7c342e1169056550d599d4921ad4fb290d9f81a0c820ea1519c9a884c25b6",
+      "version": "1"
+    },
+    {
+      "id": "studio-operations",
+      "filename": "studio-operations.toml",
+      "sha256": "abaecd55876e444a0a3d528518ffb80f2f247aa9e84c2dd95da24ad600eae235",
+      "version": "1"
+    },
+    {
+      "id": "studio-producer",
+      "filename": "studio-producer.toml",
+      "sha256": "fdc1be5d0955644fc255f8795a252644bf107629ec4816a160ac6c9dc2c93977",
+      "version": "1"
+    },
+    {
+      "id": "study-abroad-advisor",
+      "filename": "study-abroad-advisor.toml",
+      "sha256": "0a1aa3e5a6201770e2f85e44c3088baa852dc307eeb2f99fa67e5c246ed33338",
+      "version": "1"
+    },
+    {
+      "id": "supply-chain-strategist",
+      "filename": "supply-chain-strategist.toml",
+      "sha256": "27aca14cb4f440b10ddbd03e3afd245bc4571cd9f029b8de49a6f696604336ad",
+      "version": "1"
+    },
+    {
+      "id": "support-responder",
+      "filename": "support-responder.toml",
+      "sha256": "455d136d5ba4bb37e520384ccb63ca92e5899c5a7fbacdbb3c7414d2eaa13a36",
+      "version": "1"
+    },
+    {
+      "id": "tax-strategist",
+      "filename": "tax-strategist.toml",
+      "sha256": "f6c0412d59dddfb12f1904e38ada6f6f3758495c19dd293712db90625c689be1",
+      "version": "1"
+    },
+    {
+      "id": "technical-artist",
+      "filename": "technical-artist.toml",
+      "sha256": "e16276e1cf61fe8deb27e6395b904e88337f87a1e9408701df99fbd1299e7225",
+      "version": "1"
+    },
+    {
+      "id": "technical-consultant",
+      "filename": "technical-consultant.toml",
+      "sha256": "fc9a6e286c05b604a7e8082438db26ae4de8403f4983b18aceb76a3dc8b4d2f4",
+      "version": "1"
+    },
+    {
+      "id": "technical-writer",
+      "filename": "technical-writer.toml",
+      "sha256": "1e0a7043850192233cc3c4423db1f49ed15529476bb94f5046b3fdb71450a47b",
+      "version": "1"
+    },
+    {
+      "id": "terminal-integration-specialist",
+      "filename": "terminal-integration-specialist.toml",
+      "sha256": "728d94f636560c0c2b99a99d0578841d23e296c8e77fa7849c6a8311fc03afd9",
+      "version": "1"
+    },
+    {
+      "id": "test-automation-engineer",
+      "filename": "test-automation-engineer.toml",
+      "sha256": "b4c52c74f8c6fc854e61d0561df5f7f955338b1ebf24af03d3986e734a59dad0",
+      "version": "1"
+    },
+    {
+      "id": "test-results-analyzer",
+      "filename": "test-results-analyzer.toml",
+      "sha256": "c989bfb0674718618169fc4caee92bc1b2b3a4e1471159d0beeaf7ac58565ef7",
+      "version": "1"
+    },
+    {
+      "id": "threat-detection-engineer",
+      "filename": "threat-detection-engineer.toml",
+      "sha256": "29f11d536efdba5a9d43558356e95dd36ae96bf68cf66fed1a358325c12f46cb",
+      "version": "1"
+    },
+    {
+      "id": "threat-intelligence-analyst",
+      "filename": "threat-intelligence-analyst.toml",
+      "sha256": "1582dc594bf0286e009cdac43e183b9d80a320a9532117e0199e68d6841ab733",
+      "version": "1"
+    },
+    {
+      "id": "tiktok-strategist",
+      "filename": "tiktok-strategist.toml",
+      "sha256": "522023af35bc62003a0db869246eabb57b5a5724358576b71ca9d03c9ba614a1",
+      "version": "1"
+    },
+    {
+      "id": "tool-evaluator",
+      "filename": "tool-evaluator.toml",
+      "sha256": "4692e2f0d988fb61d2635f657e2e6f4e9d5b4f2a60e47de51e8046b043097bb9",
+      "version": "1"
+    },
+    {
+      "id": "tracking-measurement-specialist",
+      "filename": "tracking-measurement-specialist.toml",
+      "sha256": "a51238e1fb04aa578473e4fce5df85af2288c19a5548b72f892c4c712e7f54e9",
+      "version": "1"
+    },
+    {
+      "id": "trend-researcher",
+      "filename": "trend-researcher.toml",
+      "sha256": "ffd4fff41dd2e375247a383097a40358956466c583b88a9ff7da0eb60d376606",
+      "version": "1"
+    },
+    {
+      "id": "twitter-engager",
+      "filename": "twitter-engager.toml",
+      "sha256": "23ad2ce8fb665edd976c79ed11f46e4a035ae606ecdb6df0436d3e73bff8225f",
+      "version": "1"
+    },
+    {
+      "id": "ui-designer",
+      "filename": "ui-designer.toml",
+      "sha256": "0a1f6d6082bea1622ccef93acd56c0764ae98f2b6a18d670f6b943434beeacba",
+      "version": "1"
+    },
+    {
+      "id": "ui-finish-gate-reviewer",
+      "filename": "ui-finish-gate-reviewer.toml",
+      "sha256": "64537184f826d7577af0bbc7b4898f4148f27e96d800185c2706ce944c45168f",
+      "version": "1"
+    },
+    {
+      "id": "unity-architect",
+      "filename": "unity-architect.toml",
+      "sha256": "ecd8e9dc88603de1c5c8bd91cd4147b871999e804a685909f0a17d9a1e8f7b02",
+      "version": "1"
+    },
+    {
+      "id": "unity-editor-tool-developer",
+      "filename": "unity-editor-tool-developer.toml",
+      "sha256": "e913e22806a543ba4eaf94606b749cf0b902dfae119989bf3283faed3823c8ca",
+      "version": "1"
+    },
+    {
+      "id": "unity-multiplayer-engineer",
+      "filename": "unity-multiplayer-engineer.toml",
+      "sha256": "33e969b35b7f34c95d25fa36b759949fba892d22499ec53b267c08c18ecaf06e",
+      "version": "1"
+    },
+    {
+      "id": "unity-shader-graph-artist",
+      "filename": "unity-shader-graph-artist.toml",
+      "sha256": "dd90369d5fe572f74833766b07771a67c8fb849a1e78792933deb9d3bf7bc278",
+      "version": "1"
+    },
+    {
+      "id": "universal-document-compiler",
+      "filename": "universal-document-compiler.toml",
+      "sha256": "50ab75c21d6da43bee211a263337d0d62062107e93a45447ed88154730d67238",
+      "version": "1"
+    },
+    {
+      "id": "unreal-multiplayer-architect",
+      "filename": "unreal-multiplayer-architect.toml",
+      "sha256": "e1c1d941f7418895effa6cd2412cd8077aec1660603ac5800f6d7edec20e04d3",
+      "version": "1"
+    },
+    {
+      "id": "unreal-systems-engineer",
+      "filename": "unreal-systems-engineer.toml",
+      "sha256": "edb42eec0dbe070685f4f4137cf82ef8349cf131ade962cf92efb55f410078ee",
+      "version": "1"
+    },
+    {
+      "id": "unreal-technical-artist",
+      "filename": "unreal-technical-artist.toml",
+      "sha256": "f4d446af6f6779c10b02d3dfc4456de81e23285bb45b5f0082e4e5dbfb6fb067",
+      "version": "1"
+    },
+    {
+      "id": "unreal-world-builder",
+      "filename": "unreal-world-builder.toml",
+      "sha256": "e5aa8e1db60cf59eac1e2f45d804f11a300765b4acbc62ee6c8557d3df44860a",
+      "version": "1"
+    },
+    {
+      "id": "uswds-developer",
+      "filename": "uswds-developer.toml",
+      "sha256": "c1350d96774a6fb09beb3254ba4a0bc747940f091c1e94d1cd2ab02b5c20da88",
+      "version": "1"
+    },
+    {
+      "id": "ux-architect",
+      "filename": "ux-architect.toml",
+      "sha256": "a39a5fff52d8bf7628901e2fed256c5d5cfdf0869c05719fd01a76983bb0603f",
+      "version": "1"
+    },
+    {
+      "id": "ux-researcher",
+      "filename": "ux-researcher.toml",
+      "sha256": "19d46b064b79a7ffa59050691951da657fe6c30ce6d6b122b0faee2f9f9d8a32",
+      "version": "1"
+    },
+    {
+      "id": "video-optimization-specialist",
+      "filename": "video-optimization-specialist.toml",
+      "sha256": "8a96bb725cfbf484d37c6b3c7d4f7d99fb44355cd71484108b4238a64b6659f1",
+      "version": "1"
+    },
+    {
+      "id": "video-streaming-engineer",
+      "filename": "video-streaming-engineer.toml",
+      "sha256": "09ebf3f8450c0e50f78e30d564571fa5440f01be71937491693923370b1a0689",
+      "version": "1"
+    },
+    {
+      "id": "visionos-spatial-engineer",
+      "filename": "visionos-spatial-engineer.toml",
+      "sha256": "8d9fec9fe0aaf3b2eaa5c74a07a2a5888b146141430385a76a1cada62edaa8a6",
+      "version": "1"
+    },
+    {
+      "id": "visual-storyteller",
+      "filename": "visual-storyteller.toml",
+      "sha256": "3b7b5240ad15af4986ec2493645a96f466271f5d5fafd9c6c6091006b5e9b441",
+      "version": "1"
+    },
+    {
+      "id": "voice-ai-integration-engineer",
+      "filename": "voice-ai-integration-engineer.toml",
+      "sha256": "8074dbc1933bddc131436ab746cee224e87b276143b8d5d59eb2ea1d7720de2f",
+      "version": "1"
+    },
+    {
+      "id": "web-gis-developer",
+      "filename": "web-gis-developer.toml",
+      "sha256": "5c3e58f2fdc83437800e4bb5513433a297b9f5b4ec596ee9a691a1db635493a8",
+      "version": "1"
+    },
+    {
+      "id": "webassembly-engineer",
+      "filename": "webassembly-engineer.toml",
+      "sha256": "ace74310dbfa485a6e43a47eeabd35fce8bdb17b7a6b31b37ca78aae1b92e5bf",
+      "version": "1"
+    },
+    {
+      "id": "wechat-mini-program-developer",
+      "filename": "wechat-mini-program-developer.toml",
+      "sha256": "6ec69d63525b39c9c7cc07333bcba446f81987854da24e39e4f70820be416e0e",
+      "version": "1"
+    },
+    {
+      "id": "wechat-official-account-manager",
+      "filename": "wechat-official-account-manager.toml",
+      "sha256": "ab80b6069fbc89917c7bd88c48ee3e4ce5b228dbe92f285c5ca3fcc790ce60c3",
+      "version": "1"
+    },
+    {
+      "id": "weibo-strategist",
+      "filename": "weibo-strategist.toml",
+      "sha256": "883c028e3f53373828dad8bf6dbde71382db0ac15cdedfb5de74097419e17b44",
+      "version": "1"
+    },
+    {
+      "id": "whimsy-injector",
+      "filename": "whimsy-injector.toml",
+      "sha256": "d3eef91735eed9898d21e1ff8c663c4404b968c58da427cb35e116e759eba86a",
+      "version": "1"
+    },
+    {
+      "id": "wordpress-performance-engineer",
+      "filename": "wordpress-performance-engineer.toml",
+      "sha256": "62a989617d378d4a7aeff463ccea77a59776477cc3eaa4b08be33ee2b55b0e47",
+      "version": "1"
+    },
+    {
+      "id": "wordpress-shopping-cart-engineer",
+      "filename": "wordpress-shopping-cart-engineer.toml",
+      "sha256": "548612b0f03a23e9c633b684eafcf4e16383f86b2c15e34523355cc517b05a3d",
+      "version": "1"
+    },
+    {
+      "id": "workflow-architect",
+      "filename": "workflow-architect.toml",
+      "sha256": "d43e8dec21d01455e996d30640b399c960d722488ddf033f203fd06e7b6e814e",
+      "version": "1"
+    },
+    {
+      "id": "workflow-optimizer",
+      "filename": "workflow-optimizer.toml",
+      "sha256": "754dfae4d9e567462bcbf66dbf5656a3a3dd0be660f8c509f1d9f08a332dde9d",
+      "version": "1"
+    },
+    {
+      "id": "x-twitter-intelligence-analyst",
+      "filename": "x-twitter-intelligence-analyst.toml",
+      "sha256": "0e08c04826067b0be04e040918376f0400b0a77594caa13cbf4f6f7bbe691c77",
+      "version": "1"
+    },
+    {
+      "id": "xiaohongshu-specialist",
+      "filename": "xiaohongshu-specialist.toml",
+      "sha256": "552d15a2ed258badc8b14ddd2e14d05c0355e9ef5a31f3adcdc474d36c8bafcc",
+      "version": "1"
+    },
+    {
+      "id": "xr-cockpit-interaction-specialist",
+      "filename": "xr-cockpit-interaction-specialist.toml",
+      "sha256": "7eb6b9c12a8c02e3fce5e6d936e32ff93cbe2dee8bdd04dd98b88b9a20363e80",
+      "version": "1"
+    },
+    {
+      "id": "xr-immersive-developer",
+      "filename": "xr-immersive-developer.toml",
+      "sha256": "a2f54e9964fb8c5862fb3aa34d6e04eeb53a31b1d9717b8b520f39bd22c8e355",
+      "version": "1"
+    },
+    {
+      "id": "xr-interface-architect",
+      "filename": "xr-interface-architect.toml",
+      "sha256": "525310cae100f78619409b898bb78d8ab588614717194c8490d7ad12c53fa8f0",
+      "version": "1"
+    },
+    {
+      "id": "zhihu-strategist",
+      "filename": "zhihu-strategist.toml",
+      "sha256": "544abc4d6290de1f943a1b2a7a7296f01238f24b8f5c464e663565f0a0acf19d",
+      "version": "1"
+    },
+    {
+      "id": "zk-steward",
+      "filename": "zk-steward.toml",
+      "sha256": "29ba47dd8a5baa4f1f7d31b0e8bfd80824ef6e83fa6af1a39886c6478513cadd",
+      "version": "1"
+    }
+  ]
+}

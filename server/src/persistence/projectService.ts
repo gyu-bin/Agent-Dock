@@ -18,12 +18,39 @@ export class ProjectService {
   constructor(private readonly repo: ProjectRepository) {}
 
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {
-    const run = this.queue.then(fn, fn)
+    const attempt = async () => {
+      for (let retries = 0; ; retries++) {
+        try { return await fn() }
+        catch (error) {
+          if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'PROJECT_CAS_CONFLICT' || retries >= 4) throw error
+        }
+      }
+    }
+    const run = this.queue.then(attempt, attempt)
     this.queue = run.then(
       () => undefined,
       () => undefined,
     )
     return run
+  }
+
+  /** Call only after the API verifies that the authenticated account is the single allowlisted owner. */
+  async claimLegacy(ownerId: string): Promise<ProjectStoreSnapshot> {
+    if (!ownerId) throw Object.assign(new Error('An authenticated project owner is required.'), { status: 401 })
+    return this.enqueue(async () => {
+      const snap = this.normalize(await this.repo.load())
+      let changed = false
+      snap.projects = snap.projects.map((project) => {
+        if (project.ownerId) return project
+        changed = true
+        return { ...project, ownerId, updatedAt: new Date().toISOString() }
+      })
+      if (changed) {
+        snap.revision = (snap.revision ?? 0) + 1
+        await this.repo.save(snap)
+      }
+      return snap
+    })
   }
 
   async getSnapshot(): Promise<ProjectStoreSnapshot> {
@@ -35,7 +62,7 @@ export class ProjectService {
       version: 5,
       revision: snap.revision ?? 0,
       activeProjectId: snap.activeProjectId,
-      projects: snap.projects ?? [],
+      projects: (snap.projects ?? []).map(p => ({ ...p, sourceType: p.sourceType ?? (p.repository ? 'github' : 'local') })),
       tasks: snap.tasks ?? [],
       pipelineSteps: snap.pipelineSteps ?? [],
       agentRuns: snap.agentRuns ?? [],
@@ -60,6 +87,9 @@ export class ProjectService {
     name: string
     type: ProjectType
     path?: string
+    sourceType?: 'local' | 'github'
+    repository?: StoredProject['repository']
+    ownerId?: string
     agentIds?: string[]
     status?: ProjectStatus
   }): Promise<ProjectStoreSnapshot> {
@@ -71,6 +101,9 @@ export class ProjectService {
         name: input.name,
         type: input.type,
         path: input.path,
+        sourceType: input.sourceType ?? (input.repository ? 'github' : 'local'),
+        repository: input.repository,
+        ownerId: input.ownerId,
         status: input.status ?? 'active',
         agentIds: input.agentIds ?? [],
         createdAt: now,
@@ -144,26 +177,27 @@ export class ProjectService {
     agentRuns?: StoredAgentRun[]
     codexRuns?: StoredCodexRun[]
     expectedRevision?: number
+    ownerId?: string
   }): Promise<ProjectStoreSnapshot> {
     return this.enqueue(async () => {
       const snap = this.normalize(await this.repo.load())
       this.assertRevision(snap, input.expectedRevision)
-      snap.tasks = input.tasks
-      snap.pipelineSteps = input.pipelineSteps
-      if (input.agentRuns) snap.agentRuns = input.agentRuns
-      if (input.codexRuns) snap.codexRuns = input.codexRuns
+      const scopedIds = this.applyWorkState(snap, input)
       for (const t of snap.tasks) {
+        if (scopedIds && !scopedIds.has(t.id)) continue
         if (t.status === 'running' || t.status === 'verifying') {
           t.status = 'interrupted'
           t.updatedAt = new Date().toISOString()
         }
       }
       for (const s of snap.pipelineSteps) {
+        if (scopedIds && !scopedIds.has(s.taskId)) continue
         if (s.status === 'running' || s.status === 'reviewing') {
           s.status = 'waiting'
         }
       }
       for (const r of snap.agentRuns) {
+        if (scopedIds && !scopedIds.has(r.taskId)) continue
         if (r.status === 'running') {
           r.status = 'failed'
           r.error = r.error ?? 'Interrupted — not completed'
@@ -171,6 +205,7 @@ export class ProjectService {
         }
       }
       for (const r of snap.codexRuns ?? []) {
+        if (scopedIds && !scopedIds.has(r.taskId)) continue
         if (r.status === 'running' || r.status === 'queued') {
           r.status = 'cancelled'
           r.error = r.error ?? 'Interrupted — process must be cancelled'
@@ -189,18 +224,47 @@ export class ProjectService {
     agentRuns?: StoredAgentRun[]
     codexRuns?: StoredCodexRun[]
     expectedRevision?: number
+    ownerId?: string
   }): Promise<ProjectStoreSnapshot> {
     return this.enqueue(async () => {
       const snap = this.normalize(await this.repo.load())
       this.assertRevision(snap, input.expectedRevision)
-      snap.tasks = input.tasks
-      snap.pipelineSteps = input.pipelineSteps
-      if (input.agentRuns) snap.agentRuns = input.agentRuns
-      if (input.codexRuns) snap.codexRuns = input.codexRuns
+      this.applyWorkState(snap, input)
       snap.revision = (snap.revision ?? 0) + 1
       await this.repo.save(snap)
       return snap
     })
+  }
+
+  private applyWorkState(snap: ProjectStoreSnapshot, input: {
+    tasks: StoredTask[]; pipelineSteps: StoredPipelineStep[]; agentRuns?: StoredAgentRun[]; codexRuns?: StoredCodexRun[]; ownerId?: string
+  }): Set<string> | undefined {
+    if (!input.ownerId) {
+      snap.tasks = input.tasks
+      snap.pipelineSteps = input.pipelineSteps
+      if (input.agentRuns) snap.agentRuns = input.agentRuns
+      if (input.codexRuns) snap.codexRuns = input.codexRuns
+      return undefined
+    }
+    const ownedProjects = new Set(snap.projects.filter((project) => project.ownerId === input.ownerId).map((project) => project.id))
+    const otherTasks = snap.tasks.filter((task) => !ownedProjects.has(task.projectId))
+    const otherIds = new Set(otherTasks.map((task) => task.id))
+    const incomingIds = new Set(input.tasks.map((task) => task?.id))
+    const deny = () => { throw Object.assign(new Error('Work state must belong to your projects.'), { status: 403, code: 'PROJECT_ACCESS_DENIED' }) }
+    if (input.tasks.some((task) => !task || typeof task.id !== 'string' || !ownedProjects.has(task.projectId) || otherIds.has(task.id))) deny()
+    if ([...input.pipelineSteps, ...(input.agentRuns ?? []), ...(input.codexRuns ?? [])].some((item) => !item || typeof item.id !== 'string' || !incomingIds.has(item.taskId))) deny()
+    // Record IDs also cannot collide with another owner's step or run.
+    for (const [existing, incoming] of [
+      [snap.pipelineSteps, input.pipelineSteps], [snap.agentRuns, input.agentRuns ?? []], [snap.codexRuns ?? [], input.codexRuns ?? []],
+    ] as const) {
+      const protectedIds = new Set(existing.filter((item) => otherIds.has(item.taskId)).map((item) => item.id))
+      if (incoming.some((item) => protectedIds.has(item.id))) deny()
+    }
+    snap.tasks = [...otherTasks, ...input.tasks]
+    snap.pipelineSteps = [...snap.pipelineSteps.filter((item) => otherIds.has(item.taskId)), ...input.pipelineSteps]
+    if (input.agentRuns) snap.agentRuns = [...snap.agentRuns.filter((item) => otherIds.has(item.taskId)), ...input.agentRuns]
+    if (input.codexRuns) snap.codexRuns = [...(snap.codexRuns ?? []).filter((item) => otherIds.has(item.taskId)), ...input.codexRuns]
+    return incomingIds
   }
 
   /** Append tasks/steps without replacing the whole work-state (scheduler). */
