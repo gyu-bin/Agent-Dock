@@ -569,7 +569,11 @@ function createDeckStore() {
         if (!running.length) return 0
         const abandoned = new Set<string>()
         for (const projectId of new Set(running.map((t) => t.projectId))) {
-          const lock = await getExecutionLockState(projectId).catch(() => ({ taskId: null, alive: false }))
+          const lock = await getExecutionLockState(projectId).catch(() => null)
+          if (!lock) {
+            console.warn(`[AgentDeck] execution lock state unknown for ${projectId}; skipping recovery`)
+            continue
+          }
           for (const t of running) {
             if (t.projectId !== projectId) continue
             if (!(lock.alive && lock.taskId === t.id)) abandoned.add(t.id)
