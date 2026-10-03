@@ -20,6 +20,7 @@ import type {
 import {
   defaultRuntimeForNewTeam,
   mergeTeamAgents,
+  isRuntimeActive,
   type AgentRuntime,
 } from '../domain/teamRuntime'
 import type { ProjectsSnapshot } from '../api/client'
@@ -282,6 +283,17 @@ function createDeckStore() {
           ],
         })),
       persistSoon,
+      say: ({ agentId, text, taskId }: { agentId: string; text: string; taskId: string }) => {
+        const name = get().registry.find((a) => a.id === agentId)?.name ?? agentId
+        get().appendChat({ role: 'assistant', content: text, speaker: { agentId, name } })
+        const bubble = text.split('\n')[0]
+        set((s) => ({
+          agentRuntime: {
+            ...s.agentRuntime,
+            [agentId]: { ...s.agentRuntime[agentId], speech: bubble.length > 60 ? `${bubble.slice(0, 58)}…` : bubble, speechAt: Date.now(), currentTaskId: s.agentRuntime[agentId]?.currentTaskId ?? taskId },
+          },
+        }))
+      },
     })
 
     const CLIENT_ID =
@@ -531,7 +543,7 @@ function createDeckStore() {
             }
             // Keep specialists outside the team while they still hold a task.
             for (const [id, r] of Object.entries(state.agentRuntime)) {
-              if (!keep[id] && r && (r.currentTaskId || !['idle', 'waiting', 'offline'].includes(r.status))) keep[id] = r
+              if (!keep[id] && isRuntimeActive(r)) keep[id] = r
             }
             nextRuntime = keep
           }
@@ -647,6 +659,7 @@ function createDeckStore() {
               suggestedAgents: msg.suggestedAgents,
               workProposal: msg.workProposal,
               taskResult: msg.taskResult,
+              speaker: msg.speaker,
             },
           ],
         })),

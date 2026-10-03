@@ -477,3 +477,10 @@
 .attachMenu button:hover {
   background: var(--ad-control-hover);
 }
+
+.speakerName {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ad-ink-soft);
+}

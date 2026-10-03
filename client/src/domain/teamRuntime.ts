@@ -3,7 +3,16 @@ import type { Agent, AgentStatus, Project } from '../domain/types'
 /** Runtime overlays (status/speech/task) — not persisted. Registry is identity SoT. */
 export type AgentRuntime = Partial<
   Pick<Agent, 'status' | 'speech' | 'currentTaskId' | 'currentTaskLabel'>
->
+> & {
+  /** Set when the agent says something worth a visible bubble (ms epoch). */
+  speechAt?: number
+}
+
+/** A runtime entry that should keep a non-team specialist visible in the office. */
+export function isRuntimeActive(r: AgentRuntime | undefined, now = Date.now()): boolean {
+  if (!r) return false
+  return Boolean(r.currentTaskId) || !['idle', 'waiting', 'offline'].includes(r.status ?? 'idle') || (r.speechAt !== undefined && now - r.speechAt < 8000)
+}
 
 export function mergeTeamAgents(
   registry: Agent[],
@@ -16,7 +25,7 @@ export function mergeTeamAgents(
   // on the project team, but while they hold a task they must appear in the office.
   const team = new Set(project.agentIds)
   const guests = Object.entries(runtime)
-    .filter(([id, r]) => !team.has(id) && byId.has(id) && r && (r.currentTaskId || !['idle', 'waiting', 'offline'].includes(r.status)))
+    .filter(([id, r]) => !team.has(id) && byId.has(id) && isRuntimeActive(r))
     .map(([id]) => id)
   return [...project.agentIds, ...guests]
     .map((id) => {

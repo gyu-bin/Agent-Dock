@@ -27,6 +27,8 @@ export interface EngineStoreAccess {
   /** Replace all pipeline steps for a task (safety pipeline injection). */
   replaceStepsForTask?: (taskId: string, steps: PipelineStep[]) => void
   persistSoon: () => void
+  /** An agent speaks to the team: shown in chat (with the speaker) and as an office bubble. */
+  say?: (msg: { agentId: string; text: string; taskId: string }) => void
 }
 
 /** Agents currently RUNNING on any non-paused task. */

@@ -1,0 +1,96 @@
+/**
+ * Team talk — what agents say to each other while a task runs (kickoff, handoff, wrap-up).
+ * Lines are built from the real plan and the real step output; no extra LLM call.
+ */
+import type { Agent, PipelineStep, Project } from './types'
+
+const PM_PREFERENCE = [
+  'senior-project-manager',
+  'project-shepherd',
+  'product-manager',
+  'studio-producer',
+  'agents-orchestrator',
+]
+
+/** The manager who distributes the work: a PM on the team, else the registry orchestrator/PM. */
+export function pickManager(project: Project | undefined, registry: Agent[]): Agent | undefined {
+  const usable = (a: Agent | undefined) => a && a.executable !== false && a.instructionAvailable !== false
+  const team = new Set(project?.agentIds ?? [])
+  for (const id of PM_PREFERENCE) {
+    const a = registry.find((r) => r.id === id)
+    if (team.has(id) && usable(a)) return a
+  }
+  for (const id of PM_PREFERENCE) {
+    const a = registry.find((r) => r.id === id)
+    if (usable(a)) return a
+  }
+  return undefined
+}
+
+export function displayName(agentId: string, registry: Agent[]): string {
+  return registry.find((a) => a.id === agentId)?.name ?? agentId
+}
+
+/** PM kickoff: who does what, in which order. */
+export function kickoffLine(input: { request: string; steps: PipelineStep[]; registry: Agent[] }): string {
+  const work = input.steps.filter((s) => s.provider !== 'human')
+  const lines = work.map((s, i) => `${i + 1}. ${s.label} — ${displayName(s.agentId, input.registry)}`)
+  const gates = input.steps.filter((s) => s.provider === 'human').length
+  return [
+    `이번 요청은 ${work.length}단계로 나눠서 순서대로 진행할게요.`,
+    ...lines,
+    gates ? `중간에 확인이 필요한 단계가 ${gates}번 있어요.` : '',
+    '단계가 끝날 때마다 다음 담당자에게 인수인계하겠습니다.',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** First substantive sentences of a step output, markdown stripped. */
+export function gist(output: string, max = 160): string {
+  const text = output
+    .split('\n')
+    .map((l) => l.replace(/^\s*(#{1,6}\s+|[-*•]\s+|\d+[.)]\s+|>\s*)/, '').replace(/\*\*|__|`/g, '').trim())
+    .filter((l) => l.length > 15 && !/^(요약|summary|개요|결론)\s*:?$/i.test(l))
+    .join(' ')
+    .replace(/\[(cite_)?\d+\]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (text.length <= max) return text
+  const cut = text.slice(0, max)
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('다. '), cut.lastIndexOf('요. '))
+  return (end > max * 0.5 ? cut.slice(0, end + 1) : cut) + '…'
+}
+
+/** Outgoing agent → next agent. */
+export function handoffLine(input: {
+  from: PipelineStep
+  to: PipelineStep
+  output: string
+  sourceCount?: number
+  registry: Agent[]
+}): string {
+  const toName = displayName(input.to.agentId, input.registry)
+  const summary = gist(input.output)
+  const sources = input.sourceCount ? ` (출처 ${input.sourceCount}건 정리해 뒀어요)` : ''
+  return [
+    `${toName}님, ${input.from.label} 끝났어요${sources}.`,
+    summary ? `핵심: ${summary}` : '',
+    `이어서 "${input.to.label}" 부탁드려요.`,
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** Next agent acknowledges. */
+export function ackLine(step: PipelineStep): string {
+  return `넵, 받았어요. ${step.label} 시작할게요.`
+}
+
+export function approvalLine(step: PipelineStep): string {
+  return `여기서 확인이 필요해요: "${step.label}". 확인해 주시면 이어서 진행할게요.`
+}
+
+export function wrapUpLine(stepCount: number): string {
+  return `${stepCount}단계 모두 끝났습니다. 최종 결과를 정리해서 전달드릴게요.`
+}

@@ -219,11 +219,12 @@ export function AiChatPanel({
                 }
               >
                 {msg.role === 'assistant' ? (
-                  <div className={styles.botAvatar} aria-hidden>
-                    AI
+                  <div className={styles.botAvatar} aria-hidden title={msg.speaker?.name}>
+                    {msg.speaker ? speakerInitials(msg.speaker.name) : 'AI'}
                   </div>
                 ) : null}
                 <div className={styles.bubble}>
+                  {msg.speaker ? <p className={styles.speakerName}>{msg.speaker.name}</p> : null}
                   {msg.workProposal ? (
                     <div className={styles.proposal}>
                       <p className={styles.proposalTitle}>
@@ -527,4 +528,9 @@ function stripPreviewPrefix(label: string): string {
     .replace(/변경 승인/g, '변경 확인')
     .replace(/계획 승인/g, '계획 확인')
     .trim()
+}
+
+function speakerInitials(name: string): string {
+  const parts = name.split(/[\s-]+/).filter(Boolean)
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : name.slice(0, 2)).toUpperCase()
 }

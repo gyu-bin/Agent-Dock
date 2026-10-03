@@ -561,6 +561,8 @@ export interface ChatMessage {
   role: 'assistant' | 'user' | 'system'
   content: string
   createdAt: string
+  /** Agent who said this (team talk); absent = the assistant itself */
+  speaker?: { agentId: string; name: string }
   suggestedAgents?: Array<{
     agentId: string
     label: string

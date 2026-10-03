@@ -21,6 +21,7 @@ import {
   persistOpenAiArtifact,
 } from '../domain/artifactActions'
 import { CodexExecutionEngine } from './codexExecutionEngine'
+import { ackLine, approvalLine, handoffLine, kickoffLine, pickManager, wrapUpLine } from '../domain/teamTalk'
 
 /**
  * RealAIExecutionEngine — OpenAI steps + hybrid Codex delegation by step.provider.
@@ -184,6 +185,19 @@ export class RealAIExecutionEngine implements ExecutionEngine {
       deckEvents.emit({ type: 'task.started', taskId })
       this.store.persistSoon()
 
+      const registry = this.store.getRegistry?.() ?? []
+      const project = this.store.getProjects?.().find((p) => p.id === task.projectId)
+      const manager = pickManager(project, registry)
+      const taskSteps = () => this.store.getSteps().filter((s) => s.taskId === taskId).sort((a, b) => a.order - b.order)
+      // Kickoff: the manager distributes the work once, at the very start (not on resume).
+      if (manager && this.store.say && taskSteps().every((s) => s.status === 'queued')) {
+        this.store.setAgentRuntime(manager.id, { status: 'reviewing', currentTaskId: taskId, currentTaskLabel: '작업 분배', speech: '작업 분배 중…' })
+        this.store.say({ agentId: manager.id, taskId, text: kickoffLine({ request: task.title, steps: taskSteps(), registry }) })
+        await sleep(2500)
+        this.store.setAgentRuntime(manager.id, { status: 'idle', currentTaskId: undefined, currentTaskLabel: undefined })
+        if (this.aborted.has(taskId) || this.disposed) return
+      }
+
       while (!this.disposed && !this.aborted.has(taskId)) {
         const current = this.store.getTasks().find((t) => t.id === taskId)
         if (
@@ -202,6 +216,8 @@ export class RealAIExecutionEngine implements ExecutionEngine {
           (s) => s.status === 'queued' || s.status === 'waiting',
         )
         if (!next) {
+          const worked = steps.filter((s) => s.provider !== 'human' && s.status === 'completed').length
+          if (manager && this.store.say && worked) this.store.say({ agentId: manager.id, taskId, text: wrapUpLine(worked) })
           await this.finishSuccess(current, steps)
           break
         }
@@ -221,12 +237,39 @@ export class RealAIExecutionEngine implements ExecutionEngine {
 
         const ok = await this.executeStep(current, next, steps)
         if (!ok) break
+        await this.handoff(taskId, next.id)
       }
     } finally {
       this.running.delete(taskId)
       this.requests.delete(taskId)
       if (this.resumePending.delete(taskId) && !this.disposed) this.resume(taskId)
     }
+  }
+
+  /** Outgoing agent briefs the next one with the real step output; the next one acknowledges. */
+  private async handoff(taskId: string, doneStepId: string): Promise<void> {
+    const say = this.store.say
+    if (!say || this.aborted.has(taskId) || this.disposed) return
+    const steps = this.store.getSteps().filter((s) => s.taskId === taskId).sort((a, b) => a.order - b.order)
+    const done = steps.find((s) => s.id === doneStepId)
+    if (!done || done.status !== 'completed' || done.provider === 'human') return
+    const following = steps.find((s) => s.order > done.order && (s.status === 'queued' || s.status === 'waiting'))
+    if (!following) return
+    const registry = this.store.getRegistry?.() ?? []
+    if (following.provider === 'human') {
+      say({ agentId: done.agentId, taskId, text: approvalLine(following) })
+      return
+    }
+    const run = (this.store.getAgentRuns?.() ?? []).filter((r) => r.stepId === done.id && r.status === 'completed').at(-1)
+    const codex = (this.store.getCodexRuns?.() ?? []).filter((r) => r.stepId === done.id && r.status === 'completed').at(-1)
+    const output = run?.output || codex?.summary || ''
+    const task = this.store.getTasks().find((t) => t.id === taskId)
+    const sourceCount = task?.webSearchSessions?.filter((s) => s.stepId === done.id).reduce((n, s) => n + (s.sources?.length ?? 0), 0)
+    say({ agentId: done.agentId, taskId, text: handoffLine({ from: done, to: following, output, sourceCount, registry }) })
+    await sleep(1800)
+    if (this.aborted.has(taskId) || this.disposed) return
+    say({ agentId: following.agentId, taskId, text: ackLine(following) })
+    await sleep(700)
   }
 
   private async executeStep(
