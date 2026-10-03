@@ -19,8 +19,9 @@ export function HomeWorkStatus() {
     const rank = (status: string) => ['running','review','verifying'].includes(status) ? 0 : status === 'awaiting_approval' ? 1 : 2
     return rank(a.status) - rank(b.status) || b.updatedAt.localeCompare(a.updatedAt)
   })
-  const recent = projectTasks.filter(t => !ACTIVE.has(t.status)).slice(0, 3)
-  const visible = [...active, ...recent].slice(0, 4)
+  // Live shows only work that is in flight or needs action; terminal tasks
+  // (completed/failed/cancelled/rejected) live in the project's task history.
+  const visible = active.slice(0, 4)
   const workers = Object.entries(runtime).filter(([,r]) => r.currentTaskId && active.some(t => t.id === r.currentTaskId) && ['working','reviewing','verifying'].includes(r.status ?? ''))
   function openTask(id: string) { selectTask(id); setNav('tasks') }
   return <section className={styles.panel} aria-label="실시간 작업 현황">
