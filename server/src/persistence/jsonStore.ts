@@ -1,4 +1,4 @@
-import { mkdir, readFile } from 'node:fs/promises'
+import { mkdir, readFile } from '../storage/dataFs.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ProjectRepository, ProjectStoreSnapshot } from './types.js'

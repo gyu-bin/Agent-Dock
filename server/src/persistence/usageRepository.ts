@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, rename, readdir, unlink } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, rename, readdir, unlink } from '../storage/dataFs.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type {

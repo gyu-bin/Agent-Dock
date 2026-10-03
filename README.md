@@ -86,3 +86,20 @@ Provider 실패 시 **자동 Mock 전환은 하지 않습니다.**
 
 Core Architecture는 Freeze 상태입니다. 다음 단계는 **REAL PROJECT DOGFOOD**입니다.  
 새 Foundation / Orchestrator / Memory / Social rewrite를 추가하지 않습니다.
+
+## 클라우드 배포 (Vercel + Supabase)
+
+로컬에서는 지금처럼 `npm run dev`로 실행합니다(로그인 없음, 데이터는 `server/data/`).
+Vercel에 배포하면 클라우드 모드로 바뀝니다.
+
+| 항목 | 클라우드 모드 동작 |
+|------|------|
+| 로그인 | Supabase Auth 이메일 링크. `AGENT_DECK_ALLOWED_EMAILS`에 있는 이메일만 API 사용 가능 |
+| 데이터 | 서버의 데이터 폴더가 Supabase `public.fs_files` 테이블에 저장됨 (`server/src/storage/dataFs.ts`) |
+| 루틴 | Vercel Cron이 매일 `/api/cron/routines` 호출 (`CRON_SECRET` 필요) |
+| Codex · 로컬 폴더 첨부 | 로컬 전용 — 클라우드에서는 비활성 |
+
+Vercel 환경변수: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+`AGENT_DECK_ALLOWED_EMAILS`, `CRON_SECRET`, `OPENAI_API_KEY` (필요 시 `BUFFER_API_KEY` 등).
+Supabase → Authentication → URL Configuration의 **Site URL**을 배포 주소로 맞춰야 로그인 링크가 앱으로 돌아옵니다.
+설정이 빠지면 서버는 모든 요청을 거부합니다(fail closed).

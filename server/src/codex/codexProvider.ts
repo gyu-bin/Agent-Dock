@@ -5,6 +5,8 @@ import { promisify } from 'node:util'
 import path from 'node:path'
 import type { CodexProviderState } from './types.js'
 
+import { isCloudRuntime } from '../loadEnv.js'
+
 const execFileAsync = promisify(execFile)
 
 async function isExecutable(filePath: string): Promise<boolean> {
@@ -43,6 +45,7 @@ export async function resolveCodexBinary(): Promise<{
   binary: string | null
   error?: string
 }> {
+  if (isCloudRuntime()) return { binary: null, error: 'Codex는 로컬 실행 전용입니다.' }
   const fromEnv = process.env.CODEX_BIN?.trim()
   if (fromEnv) {
     if (await isExecutable(fromEnv)) return { binary: path.resolve(fromEnv) }
@@ -63,6 +66,15 @@ export async function resolveCodexBinary(): Promise<{
 }
 
 export async function getCodexProviderState(): Promise<CodexProviderState> {
+  // Codex edits a local checkout; a serverless deployment has none, so it is local-only.
+  if (isCloudRuntime()) {
+    return {
+      available: false,
+      binary: null,
+      label: 'Codex · 로컬 전용',
+      error: 'Codex는 로컬(Mac)에서 실행할 때만 사용할 수 있어요.',
+    }
+  }
   const { binary, error } = await resolveCodexBinary()
   if (!binary) {
     return {

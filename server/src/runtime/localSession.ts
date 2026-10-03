@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import type { Request, Response, NextFunction } from 'express'
 import { isCloudRuntime } from '../loadEnv.js'
 import { hardenError } from './hardenErrors.js'
+import { bearerFrom, verifyAccessToken } from './cloudAuth.js'
 
 const SESSION_HEADER = 'x-agent-deck-session'
 const COOKIE_NAME = 'agent_deck_session'
@@ -113,14 +114,45 @@ export function isAllowedOrigin(origin: string | undefined): boolean {
 /**
  * Issue HttpOnly cookie — token value is not rendered in UI.
  */
-export function issueSessionCookie(res: Response): void {
-  const token = getLocalSessionToken()
+export function issueSessionCookie(res: Response, cloudToken?: string): void {
+  // Cloud: the cookie carries the verified Supabase access token (≈1h, refreshed by the client).
+  const token = cloudToken ?? getLocalSessionToken()
   const secure = isCloudRuntime() ? '; Secure' : ''
   const sameSite = isCloudRuntime() ? 'Lax' : 'Strict'
+  const maxAge = cloudToken ? 3600 : 86400
   res.setHeader(
     'Set-Cookie',
-    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=${sameSite}${secure}; Max-Age=86400`,
+    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=${sameSite}${secure}; Max-Age=${maxAge}`,
   )
+}
+
+export function clearSessionCookie(res: Response): void {
+  const secure = isCloudRuntime() ? '; Secure' : ''
+  res.setHeader('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=0`)
+}
+
+function sendUnauthorized(res: Response, detail: string): void {
+  const err = hardenError('SESSION_UNAUTHORIZED', detail)
+  res.status(err.status).json({ error: err.message, code: err.code, userMessageKo: err.userMessageKo })
+}
+
+/** Cloud: valid Supabase token (cookie or Bearer) for an allowlisted email. */
+export async function requireCloudSession(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const token = bearerFrom(req) ?? extractToken(req)
+  const result = await verifyAccessToken(token)
+  if (result.ok) {
+    next()
+    return
+  }
+  if (result.reason === 'not_configured') {
+    res.status(503).json({
+      error: 'Cloud auth is not configured (SUPABASE_URL, SUPABASE_ANON_KEY, AGENT_DECK_ALLOWED_EMAILS).',
+      code: 'AUTH_NOT_CONFIGURED',
+      userMessageKo: '클라우드 로그인 설정이 아직 안 되어 있어요. Vercel 환경변수를 확인해 주세요.',
+    })
+    return
+  }
+  sendUnauthorized(res, result.reason === 'not_allowed' ? 'Email not allowed' : 'Missing or invalid login session')
 }
 
 /**
@@ -132,6 +164,10 @@ export function requireLocalSession(
   res: Response,
   next: NextFunction,
 ): void {
+  if (isCloudRuntime()) {
+    void requireCloudSession(req, res, next)
+    return
+  }
   const token = extractToken(req)
   const expected = getLocalSessionToken()
   if (!token || token !== expected) {

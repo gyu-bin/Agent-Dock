@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from '../storage/dataFs.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { AttachmentStoreSnapshot, WorkAttachment } from './types.js'

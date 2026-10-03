@@ -3,7 +3,9 @@ import {
   useDeckStore,
   selectActiveProject,
 } from '../store/useDeckStore'
-import { fetchRegistry, fetchProjects, fetchProvider, bootstrapSession } from '../api/client'
+import { fetchRegistry, fetchProjects, fetchProvider } from '../api/client'
+import { ensureSession, useAuthStore } from '../auth/cloudAuth'
+import { LoginScreen } from '../auth/LoginScreen'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { PixelOfficeScene } from '../office/pixel/PixelOfficeScene'
@@ -27,6 +29,7 @@ export function AppShell() {
   const hydrated = useDeckStore((s) => s.hydrated)
   const theme = useDeckStore((s) => s.theme)
 
+  const authStatus = useAuthStore((s) => s.status)
   const isHome = activeNav === 'home'
 
   useEffect(() => {
@@ -42,7 +45,8 @@ export function AppShell() {
 
     async function boot() {
       try {
-        await bootstrapSession()
+        const ready = await ensureSession()
+        if (!ready || cancelled) return
         const [reg, projects, provider] = await Promise.all([
           fetchRegistry(),
           fetchProjects(),
@@ -77,6 +81,10 @@ export function AppShell() {
       cancelled = true
     }
   }, [])
+
+  if (authStatus === 'signed-out' || authStatus === 'not-allowed' || authStatus === 'misconfigured') {
+    return <LoginScreen />
+  }
 
   return (
     <div className={styles.shell}>

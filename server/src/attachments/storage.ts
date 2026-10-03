@@ -2,7 +2,7 @@
  * Attachment file storage — safe paths, no original filename as path segment.
  */
 
-import { mkdir, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdir, writeFile, readFile, rm } from '../storage/dataFs.js'
 import {
   existsSync,
   statSync,
@@ -14,6 +14,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
 import { createAttachmentError } from './errors.js'
+import { isCloudRuntime } from '../loadEnv.js'
 import { ATTACHMENT_LIMITS } from './errors.js'
 
 function defaultRoot(): string {
@@ -152,6 +153,13 @@ export function validateLocalFolderPath(rawPath: string): {
   path: string
   displayName: string
 } {
+  if (isCloudRuntime()) {
+    throw createAttachmentError({
+      category: 'ATTACHMENT_PATH_VIOLATION',
+      userMessage: '로컬 폴더 첨부는 Mac에서 실행할 때만 쓸 수 있어요. 파일이나 GitHub 링크로 첨부해 주세요.',
+      technicalSummary: 'local folder attachments are disabled in cloud runtime',
+    })
+  }
   const trimmed = rawPath.trim()
   if (!trimmed) {
     throw createAttachmentError({

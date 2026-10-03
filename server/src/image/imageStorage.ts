@@ -3,7 +3,7 @@
  * Never embed base64 in JSON. Never trust prompt for paths.
  */
 
-import { mkdir, writeFile, readFile } from 'node:fs/promises'
+import { mkdir, writeFile, readFile } from '../storage/dataFs.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'

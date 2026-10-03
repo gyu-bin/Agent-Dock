@@ -4,7 +4,7 @@
  * Fake: fixture only — never production fallback.
  */
 
-import { readFile } from 'node:fs/promises'
+import { readFile } from '../storage/dataFs.js'
 import {
   DeleteObjectCommand,
   HeadBucketCommand,

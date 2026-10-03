@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, unlink } from 'node:fs/promises'
+import { mkdir, readFile, readdir, unlink } from '../storage/dataFs.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { atomicWriteJson } from '../persistence/atomicWrite.js'

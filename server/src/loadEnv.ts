@@ -9,15 +9,28 @@ export function isCloudRuntime(): boolean {
   )
 }
 
-/** Ephemeral writable paths for serverless (Vercel /tmp). */
+/**
+ * Cloud data paths. Everything lives under one root (default /tmp/agent-deck);
+ * when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, storage/dataFs.ts
+ * persists that root to Supabase instead of the ephemeral per-instance /tmp.
+ */
 export function applyCloudDataDefaults(): void {
   if (!isCloudRuntime()) return
-  process.env.AGENT_DECK_DATA_FILE ??= '/tmp/agent-deck/projects.json'
-  process.env.AGENT_DECK_ARTIFACTS_DIR ??= '/tmp/agent-deck/artifacts'
-  process.env.AGENT_DECK_KNOWLEDGE_DIR ??= '/tmp/agent-deck/knowledge'
-  process.env.AGENT_DECK_USAGE_DIR ??= '/tmp/agent-deck/usage'
-  process.env.AGENT_DECK_SETTINGS_FILE ??= '/tmp/agent-deck/settings.json'
-  process.env.AGENT_DECK_SESSION_FILE ??= '/tmp/agent-deck/.local-session'
+  const root = (process.env.AGENT_DECK_CLOUD_ROOT ??= '/tmp/agent-deck')
+  process.env.AGENT_DECK_DATA_FILE ??= `${root}/projects.json`
+  process.env.AGENT_DECK_ARTIFACTS_DIR ??= `${root}/artifacts`
+  process.env.AGENT_DECK_KNOWLEDGE_DIR ??= `${root}/knowledge`
+  process.env.AGENT_DECK_USAGE_DIR ??= `${root}/usage`
+  process.env.AGENT_DECK_SETTINGS_FILE ??= `${root}/settings.json`
+  process.env.AGENT_DECK_SESSION_FILE ??= `${root}/.local-session`
+  process.env.AGENT_DECK_OPERATIONS_DIR ??= `${root}/operations`
+  process.env.AGENT_DECK_MARKETING_DIR ??= `${root}/marketing`
+  process.env.AGENT_DECK_SOCIAL_DIR ??= `${root}/social`
+  process.env.AGENT_DECK_MEDIA_DELIVERY_DIR ??= `${root}/media-delivery`
+  process.env.AGENT_DECK_GENERATED_DIR ??= `${root}/generated`
+  process.env.AGENT_DECK_ATTACHMENTS_DIR ??= `${root}/attachments`
+  process.env.AGENT_DECK_ATTACHMENTS_META_DIR ??= `${root}/attachments-meta`
+  process.env.AGENT_DECK_CREDENTIALS_DIR ??= `${root}/credentials`
 }
 
 /** Load .env from repo root / server without printing values. */

@@ -4,7 +4,8 @@
  */
 
 import { createHash } from 'node:crypto'
-import { lstat, realpath, readFile } from 'node:fs/promises'
+import { lstat, realpath } from 'node:fs/promises'
+import { readFile, usesCloudStore } from '../storage/dataFs.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ArtifactService } from '../persistence/artifactService.js'
@@ -129,9 +130,11 @@ export async function resolveArtifactMediaFile(input: {
     })
   }
 
+  // Cloud store has no symlinks: containment is checked on the resolved path string.
+  const cloud = usesCloudStore()
   let real: string
   try {
-    real = await realpath(candidate)
+    real = cloud ? path.resolve(candidate) : await realpath(candidate)
   } catch {
     throw createMediaError({
       category: 'MEDIA_PATH_VIOLATION',
@@ -140,7 +143,7 @@ export async function resolveArtifactMediaFile(input: {
     })
   }
 
-  const rootReal = await realpath(root).catch(() => root)
+  const rootReal = cloud ? path.resolve(root) : await realpath(root).catch(() => root)
   if (real !== rootReal && !real.startsWith(rootReal + path.sep)) {
     throw createMediaError({
       category: 'MEDIA_PATH_VIOLATION',
@@ -159,7 +162,21 @@ export async function resolveArtifactMediaFile(input: {
     })
   }
 
-  const st = await lstat(real)
+  let cloudBytes: Buffer | null = null
+  if (cloud) {
+    try {
+      cloudBytes = (await readFile(real)) as Buffer
+    } catch {
+      throw createMediaError({
+        category: 'MEDIA_PATH_VIOLATION',
+        userMessage: '미디어 파일을 열 수 없습니다.',
+        technicalSummary: `cloud read failed: ${candidate}`,
+      })
+    }
+  }
+  const st = cloudBytes
+    ? { isFile: () => true, isSymbolicLink: () => false, size: cloudBytes.length }
+    : await lstat(real)
   if (!st.isFile() || st.isSymbolicLink()) {
     // After realpath, symlink should be resolved; still reject if somehow link
     throw createMediaError({
@@ -193,7 +210,7 @@ export async function resolveArtifactMediaFile(input: {
     })
   }
 
-  const bytes = await readFile(real)
+  const bytes = cloudBytes ?? ((await readFile(real)) as Buffer)
   const contentHash = createHash('sha256').update(bytes).digest('hex')
 
   return {

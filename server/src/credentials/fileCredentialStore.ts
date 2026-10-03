@@ -4,10 +4,10 @@
  * Mode 0o600. Never mixed into projects.json / social / marketing.
  */
 
-import { mkdir, readFile, writeFile, readdir, unlink, chmod } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, readdir, unlink, chmod } from '../storage/dataFs.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { rename } from 'node:fs/promises'
+import { rename } from '../storage/dataFs.js'
 import type {
   CredentialProviderId,
   CredentialPublicMeta,

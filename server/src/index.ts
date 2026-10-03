@@ -1,8 +1,9 @@
+import './bootstrapEnv.js'
 import express from 'express'
 import cors from 'cors'
-import { isCloudRuntime, loadDotEnv } from './loadEnv.js'
-
-loadDotEnv()
+import { isCloudRuntime } from './loadEnv.js'
+import { allowedEmails, bearerFrom, cloudAuthConfig, verifyAccessToken } from './runtime/cloudAuth.js'
+import { usesCloudStore } from './storage/dataFs.js'
 
 import { loadAgentRegistry } from './registry/loadAgents.js'
 import { createAiProvider } from './providers/aiProvider.js'
@@ -113,6 +114,7 @@ import {
   initLocalSession,
   requireLocalSession,
   issueSessionCookie,
+  clearSessionCookie,
   isAllowedOrigin,
   sessionFilePath,
 } from './runtime/localSession.js'
@@ -255,9 +257,17 @@ app.use((req, res, next) => {
   if (
     p === '/api/health' ||
     p === '/api/session/bootstrap' ||
+    p === '/api/session/logout' ||
+    p === '/api/auth/config' ||
+    p === '/api/cron/routines' ||
     (req.method === 'GET' && p === '/api/session/status')
   ) {
     next()
+    return
+  }
+  // Cloud: every API call needs a signed-in, allowlisted user (reads included).
+  if (isCloudRuntime() && p.startsWith('/api/')) {
+    requireLocalSession(req, res, next)
     return
   }
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
@@ -332,13 +342,65 @@ app.get('/api/health', async (_req, res) => {
 })
 
 /** Bootstrap local session cookie — never returns the token value. */
-app.get('/api/session/bootstrap', (req, res) => {
+app.get('/api/session/bootstrap', async (req, res) => {
+  if (isCloudRuntime()) {
+    // Cloud: exchange a verified Supabase access token for the HttpOnly session cookie.
+    const token = bearerFrom(req)
+    const result = await verifyAccessToken(token)
+    if (!result.ok) {
+      res.status(result.reason === 'not_configured' ? 503 : 401).json({
+        ok: false,
+        authenticated: false,
+        reason: result.reason,
+      })
+      return
+    }
+    issueSessionCookie(res, token!)
+    res.json({ ok: true, authenticated: true, email: result.email })
+    return
+  }
   issueSessionCookie(res)
   res.json({
     ok: true,
     authenticated: true,
     note: 'Local session cookie issued. Token is not returned in the body.',
   })
+})
+
+/** Public: tells the client whether to show the cloud login screen. */
+app.get('/api/auth/config', (_req, res) => {
+  const cfg = cloudAuthConfig()
+  res.json({
+    cloud: isCloudRuntime(),
+    configured: Boolean(cfg) && allowedEmails().length > 0,
+    supabaseUrl: cfg?.supabaseUrl ?? null,
+    anonKey: cfg?.anonKey ?? null,
+    storage: usesCloudStore() ? 'supabase' : isCloudRuntime() ? 'ephemeral' : 'local',
+  })
+})
+
+/**
+ * Vercel Cron entry for routines (serverless has no long-lived setInterval).
+ * Vercel sends `Authorization: Bearer $CRON_SECRET`; fails closed without it.
+ */
+app.get('/api/cron/routines', async (req, res) => {
+  const secret = process.env.CRON_SECRET?.trim()
+  if (!secret || bearerFrom(req) !== secret) {
+    res.status(401).json({ ok: false })
+    return
+  }
+  try {
+    await ensureReady()
+    const result = await schedulerRuntime.tick(new Date())
+    res.json({ ok: true, ...result })
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.post('/api/session/logout', (_req, res) => {
+  clearSessionCookie(res)
+  res.json({ ok: true })
 })
 
 app.get('/api/session/status', (req, res) => {

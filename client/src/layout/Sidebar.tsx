@@ -11,6 +11,7 @@ import {
   type NavId,
 } from '../store/useDeckStore'
 import styles from './Sidebar.module.css'
+import { signOut, useAuthStore } from '../auth/cloudAuth'
 
 const MAIN: Array<{
   id: NavId
@@ -28,6 +29,8 @@ export function Sidebar() {
   const setNav = useDeckStore((s) => s.setNav)
   const pendingCount = useDeckStore(selectPendingApprovalCount)
   const aiProvider = useDeckStore((s) => s.aiProvider)
+  const authStatus = useAuthStore((s) => s.status)
+  const authEmail = useAuthStore((s) => s.email)
   const executionMode = useDeckStore((s) => s.executionMode)
   const developerAllowMock = useDeckStore((s) => s.developerAllowMock)
   const user = useDeckStore((s) => s.user)
@@ -117,6 +120,11 @@ export function Sidebar() {
           <span className={styles.providerDot} />
           {providerLabel}
         </button>
+        {authStatus === 'ready' ? (
+          <button type="button" className={styles.navItem} onClick={() => void signOut()} title={authEmail ?? ''}>
+            <span style={{ fontSize: 11, opacity: 0.7 }}>로그아웃</span>
+          </button>
+        ) : null}
         <div className={styles.profile}>
           <div className={styles.avatar}>
             {user.name.slice(0, 1).toUpperCase()}
