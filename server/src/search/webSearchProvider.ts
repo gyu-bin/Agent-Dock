@@ -214,14 +214,36 @@ export function createWebSearchProvider(allowApiBilling = false): WebSearchProvi
     return new SteamStoreWebSearchProvider()
   }
   const key = process.env.OPENAI_API_KEY?.trim()
-  const steam = new SteamStoreWebSearchProvider()
-  const ddg = new DuckDuckGoHtmlWebSearchProvider()
-  const fallback = new FallbackWebSearchProvider(steam, ddg)
+  const fallback = new QueryAwareKeylessSearchProvider()
   if (key && allowApiBilling) {
     const primary = new OpenAIResponsesWebSearchProvider(key)
     return new FallbackWebSearchProvider(primary, fallback)
   }
   return fallback
+}
+
+/** Steam store search only makes sense for game/Steam questions. */
+export function isGameQuery(query: string): boolean {
+  return /steam|스팀|게임|game|gaming|indie|인디|rpg|fps|moba|roguelike|로그라이크/i.test(query)
+}
+
+/**
+ * Keyless search: general web (DuckDuckGo) for everything; Steam store is tried first
+ * only for game queries. Prevents unrelated questions (e.g. app-market analysis)
+ * from being "answered" with Steam game listings.
+ */
+export class QueryAwareKeylessSearchProvider implements WebSearchProvider {
+  readonly id = 'keyless-query-aware'
+  readonly label = 'DuckDuckGo (Steam for game queries)'
+  private readonly ddg = new DuckDuckGoHtmlWebSearchProvider()
+  private readonly steamFirst = new FallbackWebSearchProvider(new SteamStoreWebSearchProvider(), this.ddg)
+  isAvailable(): boolean {
+    return this.ddg.isAvailable()
+  }
+  async search(request: WebSearchRequest): Promise<WebSearchResult> {
+    if (isGameQuery(request.query)) return this.steamFirst.search(request)
+    return this.ddg.search(request)
+  }
 }
 
 /** Prefer OpenAI; on quota/5xx fall back to DuckDuckGo for real URLs. */

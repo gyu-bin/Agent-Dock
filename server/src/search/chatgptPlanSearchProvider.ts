@@ -9,16 +9,22 @@ export class ChatGPTPlanSearchProvider implements WebSearchProvider {
   constructor(private plan: ChatGPTPlanProvider, private configured: () => boolean) {}
   isAvailable() { return this.configured() || createWebSearchProvider(false).isAvailable() }
   async search(request: WebSearchRequest) {
+    let reason = 'ChatGPT Plan not configured'
     if (this.configured()) {
       try {
         const response = await this.plan.webSearch(request.query, request.signal)
         const sources = extractSourcesFromResponses(response, request.maxSources ?? 8)
         if (sources.length) return { query: request.query, sources, searchedAt: new Date().toISOString(), providerNote: 'ChatGPT Plan Web Search' }
+        reason = 'ChatGPT Plan web search returned no sources'
       } catch (error) {
         const code = (error as { code?: string }).code
         if (code !== 'CHATGPT_UNSUPPORTED_CAPABILITY' && code !== 'CHATGPT_PLAN_UNAVAILABLE') throw error
+        reason = `ChatGPT Plan web search unavailable (${code})`
       }
     }
-    return createWebSearchProvider(false).search(request)
+    // Degraded path: never silent. The note travels with the result so the UI/agents can flag it.
+    console.warn(`[web-search] degraded: ${reason}; using keyless fallback for "${request.query.slice(0, 80)}"`)
+    const result = await createWebSearchProvider(false).search(request)
+    return { ...result, providerNote: `degraded fallback (${reason}) · ${result.providerNote ?? 'keyless search'}` }
   }
 }
