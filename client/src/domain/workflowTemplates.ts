@@ -51,6 +51,8 @@ export interface WorkflowTemplateStep {
    * Role matching still applies; capabilities bias agent + tool choice.
    */
   requiredCapabilities?: import('./capabilities/capabilityTypes').AgentCapability[]
+  /** Preferred specialist agent ids (first available wins) */
+  preferAgentIds?: string[]
 }
 
 export interface WorkflowTemplate {
@@ -464,6 +466,54 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         required: true,
         outputArtifactType: 'report',
         approvalPolicy: 'none',
+      },
+    ],
+  },
+  {
+    id: 'RESEARCH_REPORT',
+    version: 1,
+    name: 'Research Report',
+    nameKo: '조사·분석 보고서',
+    description: '웹 리서치 → 분석·기회 도출 → 최종 보고서 (코드 변경 없음)',
+    intents: ['분석해', '조사해', '리서치해', '알아봐', '찾아봐', '정리해', '비교해', '시장 분석', '트렌드', '동향', '현황', '경쟁사'],
+    supportedProjectTypes: ['*'],
+    workflowKind: 'RESEARCH',
+    steps: [
+      {
+        key: 'research',
+        label: '자료 조사',
+        role: 'researcher',
+        preferAgentIds: ['research-synthesist', 'trend-researcher'],
+        provider: 'openai',
+        required: true,
+        requiresWebSearch: true,
+        outputArtifactType: 'research',
+        approvalPolicy: 'none',
+        requiredCapabilities: ['research.web', 'research.analyze', 'research.synthesize'],
+      },
+      {
+        key: 'analysis',
+        label: '분석·기회 도출',
+        role: 'product',
+        preferAgentIds: ['trend-researcher', 'business-strategist', 'product-manager'],
+        provider: 'openai',
+        required: true,
+        outputArtifactType: 'plan',
+        approvalPolicy: 'none',
+        inputArtifactTypes: ['research'],
+        requiredCapabilities: ['project.plan', 'research.analyze'],
+      },
+      {
+        key: 'report',
+        label: '최종 보고서',
+        role: 'reality',
+        preferAgentIds: ['executive-summary-generator', 'reality-checker'],
+        provider: 'openai',
+        required: true,
+        outputArtifactType: 'report',
+        approvalPolicy: 'none',
+        inputArtifactTypes: ['research', 'plan'],
+        requiredCapabilities: ['qa.verify', 'research.analyze'],
       },
     ],
   },

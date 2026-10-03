@@ -100,7 +100,14 @@ export function matchAgentForRole(input: {
   registry: Agent[]
   usedIds: Set<string>
   requiredCapabilities?: AgentCapability[]
+  /** Specialist ids that fit this step best; tried (team, then registry) before role scoring. */
+  preferAgentIds?: string[]
 }): Agent | null {
+  for (const id of input.preferAgentIds ?? []) {
+    if (input.usedIds.has(id)) continue
+    const hit = [...input.team, ...input.registry].find((a) => a.id === id && a.executable !== false && a.instructionAvailable !== false)
+    if (hit) return hit
+  }
   if (input.role === 'human') {
     const prefer = ['product-manager', 'studio-producer']
     for (const pool of [input.team, input.registry]) {
@@ -169,6 +176,15 @@ export function isSmallScopeRequest(text: string): boolean {
   return false
 }
 
+const ANALYSIS_VERB = /(분석|조사|리서치|알아|찾아|정리|비교|평가|요약)\s*(해|하고|해서|해줘|해봐|해 줘|해 봐|좀|부탁)|(분석|조사|리서치)(만|부터)|\b(analy[sz]e|research|investigate|compare|summari[sz]e)\b/
+const BUILD_ORDER = /(만들어|구현해|개발해|추가해|고쳐|수정해|코딩해|작성해서 넣|붙여)\s*(줘|주세요|봐|달라)?|(만들|구현|개발)(까지|도 해)|\b(build|implement|fix|add)\s+(it|this|the|a)\b/
+
+/** True when the request asks to analyse/research and gives no instruction to build or change code. */
+export function isAnalysisOnlyRequest(text: string): boolean {
+  const t = text.toLowerCase()
+  return ANALYSIS_VERB.test(t) && !BUILD_ORDER.test(t)
+}
+
 export function selectWorkflowTemplate(input: {
   request: string
   projectType?: ProjectType
@@ -186,6 +202,16 @@ export function selectWorkflowTemplate(input: {
   }
 
   const text = input.request.toLowerCase()
+
+  // Analysis-only requests ("…시장 분석해봐", "…조사해줘") must not get build/code steps.
+  // A wish like "앱을 만들고 싶은데" is context, not an instruction to build now.
+  if (isAnalysisOnlyRequest(text)) {
+    const report = WORKFLOW_TEMPLATES.find((t) => t.id === 'RESEARCH_REPORT')
+    if (report) {
+      return { template: report, confidence: 0.9, rationale: `${report.nameKo} 선택 — 분석·조사 요청 (구현 지시 없음)` }
+    }
+  }
+
   let best: WorkflowTemplate | null = null
   let bestScore = 0
   const reasons: string[] = []
@@ -302,6 +328,7 @@ export function resolveTemplateToSteps(input: {
       registry: input.registry,
       usedIds: used,
       requiredCapabilities,
+      preferAgentIds: s.preferAgentIds,
     })
     // Allow reuse for human / reviewer roles across steps
     const agentId =
