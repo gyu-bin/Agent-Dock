@@ -8,6 +8,7 @@ import officeMap from '../../../public/assets/pixel-office/office-map.json'
 import charManifest from '../../../public/assets/pixel-office/characters.json'
 import bubbleManifest from '../../../public/assets/pixel-office/bubbles.json'
 import { findPath, type Pt } from './pixelPath'
+import { pickExchange } from './idleChatter'
 import { advanceWalk, canWander, nextWanderRoute, wanderPause, wanderPoints, type Facing } from './pixelMovement'
 import { pickDefaultCrew, simulateCrew } from './defaultCrew'
 import './PixelOfficeScene.css'
@@ -194,6 +195,22 @@ function AgentCard({
   )
 }
 
+/** Text bubble: something the agent said in the last few seconds (handoff, kickoff, idle chat). */
+function talkFor(
+  id: string,
+  runtime: Record<string, { speech?: string; speechAt?: number }>,
+  chatter: Record<string, { text: string; at: number }>,
+  nowMs: number,
+): string | null {
+  const wall = Date.now()
+  void nowMs
+  const r = runtime[id]
+  if (r?.speech && r.speechAt && wall - r.speechAt < 6000) return r.speech
+  const c = chatter[id]
+  if (c && wall - c.at < 5000) return c.text
+  return null
+}
+
 const STATUS_KO: Record<Agent['status'], string> = {
   idle: '대기', waiting: '대기', working: '작업 중', reviewing: '리뷰 중',
   verifying: '검증 중', blocked: '막힘', offline: '오프라인',
@@ -201,6 +218,10 @@ const STATUS_KO: Record<Agent['status'], string> = {
 
 export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
   const teamRoster = useDeckStore(useShallow((s) => selectTeamAgents(s).slice(0, 30)))
+  const runtime = useDeckStore((s) => s.agentRuntime)
+  const recentTaskTitle = useDeckStore((s) => s.tasks.filter((t) => t.status === 'completed').sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))[0]?.title)
+  const chatterRef = useRef<Record<string, { text: string; at: number }>>({})
+  const chatter = chatterRef.current
   const registry = useDeckStore((s) => s.registry)
   const openWizard = useDeckStore((s) => s.openWizard)
   const crew = useMemo(() => (preview ? pickDefaultCrew(registry) : []), [preview, registry])
@@ -229,6 +250,30 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
   const assignments = useMemo(() => assignOfficeDestinations(agents, { offlineMode: 'hidden' }), [agents])
 
   const runners = useRef<Map<string, Runner>>(new Map())
+  // Idle chatter: every ~9s two resting staff standing close together exchange a short line.
+  useEffect(() => {
+    let seed = 0
+    const timers: number[] = []
+    const id = window.setInterval(() => {
+      const resting = [...runners.current.values()].filter((r) => !r.moving && canWander(r.agent))
+      const wall = Date.now()
+      const busy = (r: Runner) => (chatterRef.current[r.agent.id]?.at ?? 0) > wall - 8000
+      for (const a of resting) {
+        if (busy(a)) continue
+        const b = resting.find((o) => o !== a && !busy(o) && Math.hypot(o.pos.x - a.pos.x, o.pos.y - a.pos.y) < 96)
+        if (!b) continue
+        const [first, reply] = pickExchange(seed++ * 7 + a.agent.id.length, recentTaskTitle)
+        chatterRef.current[a.agent.id] = { text: first, at: wall }
+        // Stay put for the exchange instead of walking off mid-sentence.
+        const hold = performance.now() + 6000
+        a.nextWanderAt = Math.max(a.nextWanderAt, hold)
+        b.nextWanderAt = Math.max(b.nextWanderAt, hold)
+        timers.push(window.setTimeout(() => { chatterRef.current[b.agent.id] = { text: reply, at: Date.now() } }, 2400))
+        break
+      }
+    }, 9000)
+    return () => { window.clearInterval(id); timers.forEach((t) => window.clearTimeout(t)) }
+  }, [recentTaskTitle])
   const [now, setNow] = useState(() => performance.now())
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   useEffect(() => {
@@ -442,7 +487,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
             {list.map((r) => {
               const { row, col } = animationFor(r, now)
               const bp = `-${col * FW}px -${row * FH}px`
-              const bubble = bubbleFor(r, now)
+              const bubble = talkFor(r.agent.id, runtime, chatter, now) ? null : bubbleFor(r, now)
               const bubbleIdx = bubble ? bubbleManifest.names.indexOf(bubble) : -1
               const sitting = !r.moving && r.target.pose === 'sit'
               const left = Math.round(r.pos.x - FW / 2)
@@ -479,6 +524,15 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
                 {l.text}
               </span>
             ))}
+            {list.map((r) => {
+              const line = talkFor(r.agent.id, runtime, chatter, now)
+              if (!line || focus?.agent.id === r.agent.id) return null
+              return (
+                <span key={`say-${r.agent.id}`} className="pxo-say" style={{ left: r.pos.x * scale, top: (r.pos.y - FH - 2) * scale }}>
+                  <span>{line}</span>
+                </span>
+              )
+            })}
             {focus ? (
               <span
                 className="pxo-nametag"
