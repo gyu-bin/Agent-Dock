@@ -11,7 +11,9 @@ import {
   type EngineStoreAccess,
   type ExecutionEngine,
 } from './types'
-import { runAiStep, synthesizeAiResult } from '../api/client'
+import { preflightAgentInstructions, runAiStep, synthesizeAiResult } from '../api/client'
+import { executionFailure } from '../domain/executionFailure'
+import { isAgentInstructionError, isWebSearchError } from '../domain/taskDisplay'
 import {
   maybeCreateHandoff,
   persistCodexArtifact,
@@ -129,12 +131,41 @@ export class RealAIExecutionEngine implements ExecutionEngine {
       if (!task) return
       if (task.status === 'completed' || task.status === 'cancelled') return
 
+      // Validate every assigned provider before the first step can make a call.
+      const assignedSteps = this.store.getSteps().filter((s) => s.taskId === taskId && (s.provider ?? inferStepProvider({ agentId: s.agentId, workflow: task.workflow, stepTask: s.label, userRequest: task.description || task.title })) !== 'human')
+      try {
+        await preflightAgentInstructions([...task.assignedAgentIds, ...assignedSteps.map((s) => s.agentId)])
+      } catch (error) {
+        if (this.aborted.has(taskId) || this.disposed) return
+        const failure = executionFailure(error)
+        const failedAt = new Date().toISOString()
+        const agentId = (error as { agentId?: string }).agentId
+        const failedStep = assignedSteps.find((s) => s.agentId === agentId && s.status !== 'completed') ?? assignedSteps.find((s) => s.status !== 'completed')
+        if (failedStep) {
+          this.store.patchStep(failedStep.id, { ...failure, status: 'failed', completedAt: failedAt })
+          this.store.upsertAgentRun?.({
+            id: `preflight_${Date.now().toString(36)}`, taskId, stepId: failedStep.id,
+            agentId: failedStep.agentId, status: 'failed', inputSummary: '에이전트 지침 확인',
+            output: '', startedAt: failedAt, completedAt: failedAt,
+            error: failure.technicalSummary, ...failure,
+          })
+        }
+        this.store.patchTask(taskId, { ...failure, status: 'blocked', updatedAt: failedAt, webSearchFailure: undefined })
+        deckEvents.emit({ type: 'task.failed', taskId })
+        this.store.persistSoon()
+        return
+      }
+      if (this.aborted.has(taskId) || this.disposed) return
+
       const now = new Date().toISOString()
       this.store.patchTask(taskId, {
         status: 'running',
         startedAt: task.startedAt ?? now,
         updatedAt: now,
         executionMode: 'REAL_AI',
+        errorCode: undefined,
+        userMessage: undefined,
+        technicalSummary: undefined,
       })
       deckEvents.emit({ type: 'task.started', taskId })
       this.store.persistSoon()
@@ -365,6 +396,9 @@ export class RealAIExecutionEngine implements ExecutionEngine {
       startedAt: now,
       provider: 'codex',
       mode: step.mode,
+      errorCode: undefined,
+      userMessage: undefined,
+      technicalSummary: undefined,
     })
     deckEvents.emit({
       type: 'pipeline.step.started',
@@ -383,7 +417,8 @@ export class RealAIExecutionEngine implements ExecutionEngine {
     if (!result.ok) {
       const failedAt = new Date().toISOString()
       const isVerify = (step.mode ?? result.run.mode) === 'verify'
-      this.store.patchStep(step.id, { status: 'failed', completedAt: failedAt })
+      const failure = executionFailure(result.run)
+      this.store.patchStep(step.id, { ...failure, status: 'failed', completedAt: failedAt })
       this.store.setAgentRuntime(step.agentId, {
         status: 'blocked',
         currentTaskId: task.id,
@@ -395,6 +430,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
         updatedAt: failedAt,
         progress: taskProgress(task.id, this.store.getSteps()),
         verificationFailed: isVerify,
+        ...failure,
       })
       deckEvents.emit({
         type: 'pipeline.step.failed',
@@ -540,6 +576,9 @@ export class RealAIExecutionEngine implements ExecutionEngine {
       status,
       startedAt: now,
       provider: step.provider ?? 'openai',
+      errorCode: undefined,
+      userMessage: undefined,
+      technicalSummary: undefined,
     })
     this.store.setAgentRuntime(step.agentId, {
       status: status === 'reviewing' ? 'reviewing' : 'working',
@@ -701,16 +740,15 @@ export class RealAIExecutionEngine implements ExecutionEngine {
       return true
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      const code = (err as { code?: string }).code
+      const failure = executionFailure(err)
+      const code = failure.errorCode
       const failedAt = new Date().toISOString()
-      const isSearchFail =
-        code === 'WEB_SEARCH_FAILED' ||
-        code === 'WEB_SEARCH_UNAVAILABLE' ||
-        /웹 검색 실패/.test(message)
+      const isSearchFail = isWebSearchError(code, message)
 
       this.store.patchStep(step.id, {
         status: isSearchFail ? 'blocked' : 'failed',
         completedAt: failedAt,
+        ...failure,
       })
       this.store.upsertAgentRun?.({
         ...run,
@@ -718,6 +756,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
         output: '',
         error: isSearchFail ? '웹 검색 실패' : message,
         completedAt: failedAt,
+        ...failure,
       })
       this.store.setAgentRuntime(step.agentId, {
         status: 'blocked',
@@ -729,6 +768,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
         status: 'blocked',
         updatedAt: failedAt,
         progress: taskProgress(task.id, this.store.getSteps()),
+        ...failure,
         webSearchFailure: isSearchFail
           ? { message: '웹 검색 실패', stepId: step.id, at: failedAt }
           : undefined,
@@ -789,7 +829,20 @@ export class RealAIExecutionEngine implements ExecutionEngine {
         stepOutputs,
       })
       finalResult = synth.output
-    } catch {
+    } catch (error) {
+      const failure = executionFailure(error)
+      if (isAgentInstructionError(failure.errorCode, failure.technicalSummary)) {
+        const failedAt = new Date().toISOString()
+        this.store.patchTask(task.id, { ...failure, status: 'blocked', updatedAt: failedAt })
+        this.store.upsertAgentRun?.({
+          id: `synthesis_${Date.now().toString(36)}`, taskId: task.id, stepId: `synthesis_${task.id}`,
+          agentId: 'reality-checker', status: 'failed', inputSummary: '최종 결과 합성', output: '',
+          startedAt: failedAt, completedAt: failedAt, error: failure.technicalSummary, ...failure,
+        })
+        deckEvents.emit({ type: 'task.failed', taskId: task.id })
+        this.store.persistSoon()
+        return
+      }
       // Keep concatenated fallback
     }
 

@@ -138,6 +138,10 @@ export interface SettingsBoard {
     agents: {
       total: number
       source: string
+      state?: 'REAL' | 'FALLBACK'
+      executableCount?: number
+      instructionErrors?: number
+      warning?: string | null
       codexAgentsDir: string | null
       agencySourceDir: string | null
       divisionMapped: number

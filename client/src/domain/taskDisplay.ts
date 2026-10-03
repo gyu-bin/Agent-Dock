@@ -106,7 +106,20 @@ export function formatWaitingDuration(iso?: string): string {
 }
 
 /** Friendly Korean for technical errors (default surface). */
-export function userFacingErrorMessage(raw?: string | null): string {
+export function isAgentInstructionError(code?: string, raw?: string | null): boolean {
+  return Boolean(code?.startsWith('AGENT_INSTRUCTION_') || code === 'AGENT_SOURCE_UNAVAILABLE' ||
+    (!code && /agent instructions? (?:not found|file|loading)|developer_instructions/i.test(raw ?? '')))
+}
+
+export function isWebSearchError(code?: string, raw?: string | null): boolean {
+  if (code) return /^(WEB_SEARCH_|SEARCH_PROVIDER_)/.test(code)
+  return /웹 검색 실패|웹 검색을 완료하지|\bweb search (?:failed|unavailable|failure)\b|\bsearch provider (?:failed|unavailable)\b/i.test(raw ?? '')
+}
+
+export function userFacingErrorMessage(raw?: string | null, code?: string, userMessage?: string): string {
+  if (isAgentInstructionError(code, raw)) return userMessage || '담당 에이전트의 실행 지침을 불러오지 못했습니다.'
+  if (isWebSearchError(code, raw)) return '웹 검색을 완료하지 못했습니다.'
+  if (userMessage) return userMessage
   if (!raw) return '일시적인 문제가 발생했습니다.'
   const t = raw.toLowerCase()
   if (t.includes('codex')) return 'Codex 서비스가 일시적으로 응답하지 않습니다.'
@@ -118,8 +131,6 @@ export function userFacingErrorMessage(raw?: string | null): string {
     return '로컬 세션이 만료되었습니다. 앱을 다시 시작해 주세요.'
   if (t.includes('network') || t.includes('fetch') || t.includes('econn'))
     return '네트워크 연결에 문제가 있습니다.'
-  if (t.includes('search') || t.includes('검색'))
-    return '웹 검색을 완료하지 못했습니다.'
   return '작업을 이어가지 못했습니다. 잠시 후 다시 시도해 주세요.'
 }
 

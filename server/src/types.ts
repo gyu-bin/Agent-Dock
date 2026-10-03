@@ -35,6 +35,10 @@ export interface AgentRecord {
   description: string
   status: AgentStatus
   enabled: boolean
+  executable?: boolean
+  instructionAvailable?: boolean
+  instructionErrorCode?: string
+  source?: { type: 'filesystem' | 'mock'; directory?: string; instructionPath?: string }
 }
 
 export interface AiProviderState {

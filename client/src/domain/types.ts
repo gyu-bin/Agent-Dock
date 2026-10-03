@@ -86,6 +86,9 @@ export interface Agent {
   currentTaskLabel?: string
   avatar?: string
   enabled: boolean
+  executable?: boolean
+  instructionAvailable?: boolean
+  source?: { type: 'filesystem' | 'bundled' | 'mock'; directory?: string; instructionPath?: string }
   /** Optional speech / thought for Office bubbles */
   speech?: string
 }
@@ -316,7 +319,13 @@ export interface AgentHandoff {
   createdAt: string
 }
 
-export interface PipelineStep {
+export interface ExecutionFailure {
+  errorCode?: string
+  userMessage?: string
+  technicalSummary?: string
+}
+
+export interface PipelineStep extends ExecutionFailure {
   id: string
   taskId: string
   agentId: string
@@ -337,7 +346,7 @@ export interface PipelineStep {
   completedAt?: string
 }
 
-export interface Task {
+export interface Task extends ExecutionFailure {
   id: string
   projectId: string
   title: string
@@ -404,7 +413,7 @@ export interface WebSearchSession {
   }>
 }
 
-export interface AgentRun {
+export interface AgentRun extends ExecutionFailure {
   id: string
   taskId: string
   stepId: string
@@ -476,7 +485,7 @@ export interface VerificationCommand {
   outputSnippet?: string
 }
 
-export interface CodexRun {
+export interface CodexRun extends ExecutionFailure {
   id: string
   taskId: string
   stepId: string
@@ -687,6 +696,10 @@ export interface SettingsBoard {
     agents: {
       total: number
       source: string
+      state?: string
+      executableCount?: number
+      instructionErrors?: number
+      warning?: string
       codexAgentsDir: string | null
       agencySourceDir: string | null
       divisionMapped: number

@@ -574,15 +574,7 @@ export async function executeCodexRun(
     throwCodexFailure(diag, failed, 0)
   }
 
-  const agent =
-    (await loadAgentInstructions(input.agentId)) ??
-    (await loadAgentInstructions('code-reviewer'))
-  if (!agent) {
-    throw Object.assign(
-      new Error(`Agent instructions not found for "${input.agentId}"`),
-      { status: 404, code: 'AGENT_MISSING' },
-    )
-  }
+  const agent = await loadAgentInstructions(input.agentId)
 
   const before = await snapshotProjectFiles(projectPath)
   const beforeContents =

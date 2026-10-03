@@ -1,6 +1,7 @@
 import type { AiProvider } from '../providers/aiProvider.js'
 import { loadAgentInstructions } from '../registry/loadAgentInstructions.js'
 import { loadAgentRegistry } from '../registry/loadAgents.js'
+import { AgentInstructionError } from '../registry/agentInstructionError.js'
 import {
   inferCodexMode,
   inferStepProvider,
@@ -210,17 +211,11 @@ export async function runOrchestrator(
   }
 
   const registry = await loadAgentRegistry()
-  const orch = await loadAgentInstructions('agents-orchestrator')
-  if (!orch) {
-    throw Object.assign(
-      new Error('agents-orchestrator.toml instructions not found'),
-      { status: 500 },
-    )
-  }
+  const orch = await loadAgentInstructions('agents-orchestrator', registry.resolvedSource)
 
   const candidates = shortlistCandidates(
     input.teamAgentIds,
-    registry.agents,
+    registry.agents.filter((agent) => agent.executable),
     input.userRequest,
   )
   const teamOnly = candidates.filter((c) => c.onTeam)
@@ -354,12 +349,6 @@ export async function runAgentStep(
   }
 
   const agent = await loadAgentInstructions(input.agentId)
-  if (!agent) {
-    throw Object.assign(
-      new Error(`Agent instructions not found for "${input.agentId}"`),
-      { status: 404 },
-    )
-  }
 
   const built = buildAgentContext({
     projectName: input.projectName,
@@ -513,17 +502,19 @@ export async function synthesizeFinalResult(
     })
   }
 
-  const reviewer =
-    (await loadAgentInstructions('reality-checker')) ??
-    (await loadAgentInstructions('agents-orchestrator'))
-  if (!reviewer) {
-    // Fallback: concatenate without extra call
-    const joined = input.stepOutputs
-      .map((s) => `## ${s.agentName}\n${s.output}`)
-      .join('\n\n')
-    return {
-      output: `# TASK COMPLETE\n\nWorkflow: ${input.workflow}\n\n${joined}`,
-      usage: { model: 'local-concat' },
+  // Preserve the existing explicit final-summary fallback, never substitute a
+  // different specialist for an assigned step or hide source/parse failures.
+  let reviewer
+  try { reviewer = await loadAgentInstructions('reality-checker') }
+  catch (error) {
+    if (!(error instanceof AgentInstructionError) || error.code !== 'AGENT_INSTRUCTION_FILE_NOT_FOUND') throw error
+    try { reviewer = await loadAgentInstructions('agents-orchestrator') }
+    catch (fallbackError) {
+      if (!(fallbackError instanceof AgentInstructionError) || fallbackError.code !== 'AGENT_INSTRUCTION_FILE_NOT_FOUND') throw fallbackError
+      return {
+        output: `# TASK COMPLETE\n\nWorkflow: ${input.workflow}\n\n${input.stepOutputs.map((s) => `## ${s.agentName}\n${s.output}`).join('\n\n')}`,
+        usage: { model: 'local-concat' },
+      }
     }
   }
 

@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import os from 'node:os'
 import TOML from '@iarna/toml'
+import { resolveAgentSource, type AgentSource } from './agentSource.js'
+import { AgentInstructionError } from './agentInstructionError.js'
 
 export interface AgentInstructions {
   id: string
@@ -17,33 +18,42 @@ interface TomlAgent {
   developer_instructions?: string
 }
 
-function agentsDir(): string {
-  return process.env.AGENT_DECK_AGENTS_DIR ?? path.join(os.homedir(), '.codex', 'agents')
-}
-
 /**
  * Server-side lookup for full agent persona.
  * Never include developer_instructions in list API responses.
  */
 export async function loadAgentInstructions(
   agentId: string,
-): Promise<AgentInstructions | null> {
+  sourceOrDirectory?: AgentSource | string,
+): Promise<AgentInstructions> {
+  const source = typeof sourceOrDirectory === 'object' ? sourceOrDirectory : await resolveAgentSource(sourceOrDirectory)
   const id = agentId.trim()
-  if (!id || id.includes('/') || id.includes('..')) return null
-  const filePath = path.join(agentsDir(), `${id}.toml`)
-  try {
-    const raw = await readFile(filePath, 'utf8')
-    const parsed = TOML.parse(raw) as TomlAgent
-    const developerInstructions = (parsed.developer_instructions ?? '').trim()
-    if (!developerInstructions) return null
-    return {
-      id,
-      name: parsed.name ?? id,
-      description: parsed.description ?? '',
-      developerInstructions,
-      filePath,
-    }
-  } catch {
-    return null
+  const filePath = path.join(source.directory, `${id}.toml`)
+  if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+    throw new AgentInstructionError('AGENT_INSTRUCTION_FILE_NOT_FOUND', id, source, source.directory)
   }
+  if (!source.available) throw new AgentInstructionError('AGENT_SOURCE_UNAVAILABLE', id, source, filePath)
+  let raw: string
+  try {
+    raw = await readFile(filePath, 'utf8')
+  } catch (error) {
+    const missing = error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT'
+    throw new AgentInstructionError(missing ? 'AGENT_INSTRUCTION_FILE_NOT_FOUND' : 'AGENT_INSTRUCTION_READ_FAILED', id, source, filePath, error)
+  }
+  let parsed: TomlAgent
+  try { parsed = TOML.parse(raw) as TomlAgent }
+  catch (error) { throw new AgentInstructionError('AGENT_INSTRUCTION_PARSE_FAILED', id, source, filePath, error) }
+  const developerInstructions = typeof parsed.developer_instructions === 'string' ? parsed.developer_instructions.trim() : ''
+  if (!developerInstructions) throw new AgentInstructionError('AGENT_INSTRUCTION_MISSING_FIELD', id, source, filePath)
+  return { id, name: typeof parsed.name === 'string' ? parsed.name : id, description: typeof parsed.description === 'string' ? parsed.description : '', developerInstructions, filePath }
+}
+
+export async function preflightAgentInstructions(agentIds: string[]) {
+  const source = await resolveAgentSource()
+  const agents = []
+  for (const agentId of [...new Set(agentIds)]) {
+    await loadAgentInstructions(agentId, source)
+    agents.push({ agentId, instructionAvailable: true })
+  }
+  return { ok: true, source, agents }
 }

@@ -137,6 +137,7 @@ export function matchAgentForRole(input: {
     let bestScore = 0
     for (const agent of pool) {
       if (input.usedIds.has(agent.id)) continue
+      if (agent.executable === false || agent.instructionAvailable === false) continue
       const s = scoreRole(agent, input.role)
       if (s > bestScore) {
         bestScore = s
@@ -147,8 +148,8 @@ export function matchAgentForRole(input: {
   }
   // Last resort: first unused team/registry agent
   return (
-    input.team.find((a) => !input.usedIds.has(a.id)) ??
-    input.registry.find((a) => !input.usedIds.has(a.id)) ??
+    input.team.find((a) => !input.usedIds.has(a.id) && a.executable !== false && a.instructionAvailable !== false) ??
+    input.registry.find((a) => !input.usedIds.has(a.id) && a.executable !== false && a.instructionAvailable !== false) ??
     null
   )
 }
@@ -305,8 +306,8 @@ export function resolveTemplateToSteps(input: {
     // Allow reuse for human / reviewer roles across steps
     const agentId =
       agent?.id ??
-      input.team[0]?.id ??
-      input.registry[0]?.id ??
+      input.team.find((a) => a.executable !== false && a.instructionAvailable !== false)?.id ??
+      input.registry.find((a) => a.executable !== false && a.instructionAvailable !== false)?.id ??
       'product-manager'
 
     if (agent && s.role !== 'human' && s.role !== 'reviewer') {

@@ -40,6 +40,31 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
+export interface ExecutionApiError extends Error {
+  code?: string
+  userMessage?: string
+  technicalSummary?: string
+  agentId?: string
+}
+
+function executionApiError(body: Record<string, unknown>, fallback: string): ExecutionApiError {
+  return Object.assign(new Error(typeof body.error === 'string' ? body.error : fallback), {
+    code: typeof body.code === 'string' ? body.code : undefined,
+    userMessage: typeof body.userMessage === 'string' ? body.userMessage : undefined,
+    technicalSummary: typeof body.technicalSummary === 'string' ? body.technicalSummary : undefined,
+    agentId: typeof body.agentId === 'string' ? body.agentId : undefined,
+  })
+}
+
+export async function preflightAgentInstructions(agentIds: string[]): Promise<void> {
+  const res = await apiFetch(`${API_BASE}/api/agents/preflight`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agentIds: [...new Set(agentIds)] }),
+  })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok || body.ok === false) throw executionApiError(body, 'Agent instruction preflight failed')
+}
+
 /** Default fetch options — credentials for HttpOnly session cookie. */
 function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   return fetch(input, {
@@ -272,11 +297,7 @@ export async function runAiStep(input: {
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    const err = new Error(
-      (body as { error?: string }).error ?? `Run step failed: ${res.status}`,
-    ) as Error & { code?: string }
-    err.code = (body as { code?: string }).code
-    throw err
+    throw executionApiError(body, `Run step failed: ${res.status}`)
   }
   return res.json()
 }
@@ -1279,9 +1300,7 @@ export async function synthesizeAiResult(input: {
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(
-      (body as { error?: string }).error ?? `Synthesize failed: ${res.status}`,
-    )
+    throw executionApiError(body, `Synthesize failed: ${res.status}`)
   }
   return res.json() as Promise<{
     output: string
@@ -1316,6 +1335,9 @@ export async function preflightCodex(input: {
   filesMayBeModified: boolean
   codex: { available: boolean; label: string; error?: string }
   error?: string
+  code?: string
+  userMessage?: string
+  technicalSummary?: string
 }> {
   const res = await apiFetch(`${API_BASE}/api/codex/preflight`, {
     method: 'POST',
@@ -1346,7 +1368,7 @@ export async function runCodexStep(input: {
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
     const code = (body as { code?: string }).code
-    const userKo = (body as { userMessageKo?: string }).userMessageKo
+    const userKo = (body as { userMessage?: string; userMessageKo?: string }).userMessage || (body as { userMessageKo?: string }).userMessageKo
     const fromRun = (body as { run?: CodexRun }).run?.userMessageKo
     const message =
       userKo ||
@@ -1358,10 +1380,14 @@ export async function runCodexStep(input: {
       run?: CodexRun
       code?: string
       userMessageKo?: string
+      userMessage?: string
+      technicalSummary?: string
     }
     err.run = (body as { run?: CodexRun }).run
     err.code = code
     err.userMessageKo = userKo || fromRun || message
+    err.userMessage = (body as { userMessage?: string }).userMessage
+    err.technicalSummary = (body as { technicalSummary?: string }).technicalSummary
     throw err
   }
   return body as { run: CodexRun; output: string }

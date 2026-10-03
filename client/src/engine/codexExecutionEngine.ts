@@ -1,6 +1,7 @@
 import type { CodexMode, CodexRun, PipelineStep, Task } from '../domain/types'
 import { inferCodexMode } from '../domain/providerRouting'
 import { cancelCodexRun, preflightCodex, runCodexStep } from '../api/client'
+import { executionFailure } from '../domain/executionFailure'
 import type { EngineStoreAccess } from './types'
 
 /**
@@ -87,7 +88,9 @@ export class CodexExecutionEngine {
         stepTask: step.label,
       })
       if (!pre.ok) {
-        throw new Error(pre.error ?? 'Codex preflight failed')
+        throw Object.assign(new Error(pre.error ?? 'Codex preflight failed'), {
+          code: pre.code, userMessage: pre.userMessage, technicalSummary: pre.technicalSummary,
+        })
       }
 
       const prevCompleted = this.store
@@ -176,6 +179,7 @@ export class CodexExecutionEngine {
         error: message,
         userMessageKo: message,
         activity: 'Failed',
+        ...executionFailure(err),
       }
       if (withRun.run) {
         Object.assign(failedRun, withRun.run, {

@@ -3,7 +3,7 @@
  *
  *   AGENT_DECK_SETTINGS_FILE=.tmp/s1-settings.json node --import tsx tools/s1-settings-fixture.mts
  */
-import { mkdir, rm, readFile } from 'node:fs/promises'
+import { mkdir, rm, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { JsonSettingsRepository } from '../server/src/persistence/settingsRepository.ts'
@@ -86,18 +86,42 @@ async function main() {
     )
   }
 
-  // TEST C — Agent Registry (expect filesystem 279 or mock fallback > 0)
+  // TEST C — Real instructions are healthy; display-only fallback is unhealthy.
   {
     const repo = new JsonSettingsRepository(FILE)
     const svc = new SettingsService(repo, mockAi(false), mockSearch)
+    const agentsDir = path.join(DIR, 'agents')
+    await mkdir(agentsDir)
+    await writeFile(path.join(agentsDir, 'research-synthesist.toml'),
+      'name = "Research Synthesist"\ndeveloper_instructions = "Fixture research persona"\n')
+    await svc.update({ agents: { codexAgentsDir: agentsDir } })
     const board = await svc.buildBoard()
     record(
       'TEST C agent registry',
-      board.runtime.agents.total > 0 &&
+      board.runtime.agents.source === 'filesystem' &&
+        board.runtime.agents.state === 'REAL' &&
+        board.runtime.agents.total === 1 &&
+        board.runtime.agents.executableCount === 1 &&
+        board.runtime.agents.instructionErrors === 0 &&
+        board.diagnostics.find((d) => d.id === 'agent-registry')?.ok === true &&
         board.status.find((s) => s.id === 'agents')?.value ===
-          String(board.runtime.agents.total),
-      `total=${board.runtime.agents.total} source=${board.runtime.agents.source}`,
+          'REAL · 1/1 실행 가능',
+      `total=${board.runtime.agents.total} source=${board.runtime.agents.source} executable=${board.runtime.agents.executableCount}`,
     )
+    await svc.update({ agents: { codexAgentsDir: path.join(DIR, 'not-installed') } })
+    const fallback = await svc.buildBoard()
+    record(
+      'TEST C fallback registry display-only',
+      fallback.runtime.agents.source === 'mock' &&
+        fallback.runtime.agents.state === 'FALLBACK' &&
+        fallback.runtime.agents.total > 0 &&
+        fallback.runtime.agents.executableCount === 0 &&
+        Boolean(fallback.runtime.agents.warning) &&
+        fallback.status.find((s) => s.id === 'agents')?.level === 'warn' &&
+        fallback.diagnostics.find((d) => d.id === 'agent-registry')?.ok === false,
+      `total=${fallback.runtime.agents.total} state=${fallback.runtime.agents.state} executable=${fallback.runtime.agents.executableCount}`,
+    )
+    await svc.update({ agents: { codexAgentsDir: null } })
   }
 
   // TEST D — Settings save / reload

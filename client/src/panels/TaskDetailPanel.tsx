@@ -18,6 +18,7 @@ import { artifactIcon } from '../domain/artifactUi'
 import { formatCost, formatTokens } from '../domain/usageUi'
 import {
   currentWorkerLabel,
+  isAgentInstructionError,
   userFacingErrorMessage,
   userFacingTaskStatus,
   userFacingWorkflowLabel,
@@ -115,10 +116,15 @@ export function TaskDetailPanel({
     ? userFacingTaskStatus(task, currentStep)
     : ''
   const worker = currentWorkerLabel(steps, agentName)
+  const failedRun = [...runs].reverse().find((r) => r.status === 'failed')
+  const failedCodexRun = [...codexRuns].reverse().find((r) => r.status === 'failed')
+  const failedStep = steps.find((s) => s.status === 'failed' || s.status === 'blocked')
+  const failure = task?.errorCode ? task : failedStep?.errorCode ? failedStep : failedRun?.errorCode ? failedRun : failedCodexRun
   const lastError =
-    runs.find((r) => r.status === 'failed')?.error ||
-    codexRuns.find((r) => r.status === 'failed')?.userMessageKo ||
-    codexRuns.find((r) => r.status === 'failed')?.error ||
+    task?.technicalSummary || failedStep?.technicalSummary ||
+    failedRun?.technicalSummary || failedRun?.error ||
+    failedCodexRun?.technicalSummary || failedCodexRun?.userMessageKo ||
+    failedCodexRun?.error ||
     task?.webSearchFailure?.message
 
   useEffect(() => {
@@ -528,7 +534,7 @@ export function TaskDetailPanel({
         {(task.status === 'failed' || task.status === 'blocked') && lastError ? (
           <section className={styles.pipeline}>
             <h3>문제 발생</h3>
-            <p className={styles.warn}>{userFacingErrorMessage(lastError)}</p>
+            <p className={styles.warn}>{userFacingErrorMessage(lastError, failure?.errorCode, failure?.userMessage)}</p>
             <div className={styles.actions}>
               <button type="button" className={styles.primary} onClick={() => retryTask(task.id)}>
                 {t('task.retry')}
@@ -536,6 +542,9 @@ export function TaskDetailPanel({
               <button type="button" onClick={() => setShowTechError((v) => !v)}>
                 {showTechError ? '상세 숨기기' : '상세 보기'}
               </button>
+              {isAgentInstructionError(failure?.errorCode, lastError) ? (
+                <button type="button" onClick={() => setNav('settings')}>설정 확인</button>
+              ) : null}
             </div>
             {showTechError ? <pre className={styles.resultPre}>{lastError}</pre> : null}
           </section>

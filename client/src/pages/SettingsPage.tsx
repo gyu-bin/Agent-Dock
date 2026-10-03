@@ -1058,7 +1058,12 @@ export function SettingsPage() {
                 </span>
               </div>
               <p className={styles.hint}>
-                <code>{runtime?.agents.codexAgentsDir ?? '—'}</code>
+                Source: {runtime?.agents.source ?? '—'} · State: {runtime?.agents.state ?? '—'}
+                <br />
+                Directory: <code>{runtime?.agents.codexAgentsDir ?? '—'}</code>
+                <br />
+                Executable: {runtime?.agents.executableCount ?? '—'} · Instruction errors: {runtime?.agents.instructionErrors ?? '—'}
+                {runtime?.agents.warning ? <><br />{runtime.agents.warning}</> : null}
               </p>
               <button
                 type="button"

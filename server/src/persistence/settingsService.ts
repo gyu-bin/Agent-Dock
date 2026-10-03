@@ -59,14 +59,6 @@ function envConfigured(name: string): boolean {
   return Boolean(process.env[name]?.trim())
 }
 
-function defaultCodexAgentsDir(settings: DeckSettings): string {
-  return (
-    settings.agents.codexAgentsDir?.trim() ||
-    process.env.AGENT_DECK_AGENTS_DIR?.trim() ||
-    path.join(os.homedir(), '.codex', 'agents')
-  )
-}
-
 function defaultAgencyDir(settings: DeckSettings): string {
   return (
     settings.agents.agencySourceDir?.trim() ||
@@ -225,9 +217,9 @@ export class SettingsService {
     const openaiConfigured = this.aiProvider.isConfigured()
     const openaiState = this.aiProvider.getState()
     const codex = await getCodexProviderState()
-    const agentsDir = defaultCodexAgentsDir(settings)
     const agencyDir = defaultAgencyDir(settings)
-    const registry = await loadAgentRegistry(agentsDir)
+    const registry = await loadAgentRegistry(settings.agents.codexAgentsDir)
+    const agentsDir = registry.resolvedSource.directory
     const division = await loadDivisionMap()
     const writable = await this.repo.isWritable()
     const openaiKey = envConfigured('OPENAI_API_KEY')
@@ -260,8 +252,8 @@ export class SettingsService {
       {
         id: 'agents',
         label: 'Agents',
-        level: registry.total > 0 ? 'ok' : 'warn',
-        value: String(registry.total),
+        level: registry.executableCount > 0 && registry.instructionErrors === 0 ? 'ok' : 'warn',
+        value: `${registry.state} · ${registry.executableCount}/${registry.total} 실행 가능`,
       },
       {
         id: 'persistence',
@@ -275,6 +267,9 @@ export class SettingsService {
       agentsDir,
       agencyDir,
       registryTotal: registry.total,
+      executableCount: registry.executableCount,
+      registryState: registry.state,
+      instructionErrors: registry.instructionErrors,
       divisionCount: division.agentCount,
       openaiConfigured,
       searchConfigured,
@@ -312,6 +307,10 @@ export class SettingsService {
         agents: {
           total: registry.total,
           source: registry.source,
+          state: registry.state,
+          executableCount: registry.executableCount,
+          instructionErrors: registry.instructionErrors,
+          warning: registry.warning ?? null,
           codexAgentsDir: agentsDir,
           agencySourceDir: agencyDir,
           divisionMapped: Math.min(registry.total, division.agentCount),
@@ -341,6 +340,9 @@ export class SettingsService {
     agentsDir: string
     agencyDir: string
     registryTotal: number
+    executableCount: number
+    registryState: string
+    instructionErrors: number
     divisionCount: number
     openaiConfigured: boolean
     searchConfigured: boolean
@@ -362,9 +364,9 @@ export class SettingsService {
       {
         id: 'agent-registry',
         label: 'Agent Registry',
-        ok: input.registryTotal > 0,
+        ok: input.executableCount > 0 && input.instructionErrors === 0,
         detail: agentsOk
-          ? `${input.registryTotal}개 로드`
+          ? `${input.registryState} · ${input.registryTotal}개 표시 / ${input.executableCount}개 실행 가능 / 지침 오류 ${input.instructionErrors}개`
           : `경로 확인 필요 (${input.agentsDir})`,
       },
       {

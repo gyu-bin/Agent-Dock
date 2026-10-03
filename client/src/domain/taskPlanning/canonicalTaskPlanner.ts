@@ -174,6 +174,13 @@ function toStepDef(s: ResolvedTemplateStep): StepDefLike & {
  * Request → Template → Caps → Agents → Tools → Safety → TaskPlan
  */
 export function planTask(input: TaskPlanningRequest): TaskPlan {
+  const knownUnavailable = new Set([...input.team, ...input.registry].filter((agent) => agent.executable === false || agent.instructionAvailable === false).map((agent) => agent.id))
+  const hasAvailabilityMetadata = [...input.team, ...input.registry].some((agent) => agent.executable !== undefined || agent.instructionAvailable !== undefined)
+  // Explicit mock runs may use display fixtures; real assignments require an executable source.
+  const planningAgents = (agents: Agent[]) => input.executionMode === 'MOCK'
+    ? agents.map((agent) => ({ ...agent, executable: undefined, instructionAvailable: undefined }))
+    : agents.filter((agent) => agent.executable !== false && agent.instructionAvailable !== false)
+  input = { ...input, team: planningAgents(input.team), registry: planningAgents(input.registry) }
   const hintLine = input.attachmentHints?.summary?.trim()
   const requestText = [input.request.trim(), hintLine].filter(Boolean).join('\n')
   const preferred =
@@ -221,6 +228,14 @@ export function planTask(input: TaskPlanningRequest): TaskPlan {
   })
   const beforeLen = stepDefs.length
   stepDefs = normalizeStepDefsWithSafety(stepDefs, safetyAgents)
+  const unavailableAssignment = input.executionMode !== 'MOCK' && stepDefs.some((step) => step.provider !== 'human' && (
+    knownUnavailable.has(step.agentId) ||
+    (hasAvailabilityMetadata && ![...input.team, ...input.registry].some((agent) => agent.id === step.agentId))
+  ))
+  if (unavailableAssignment) {
+    // Preserve the workflow as a whole; an unavailable safety assignment cannot be silently omitted.
+    stepDefs = []
+  }
   const hasImplement = resolved.steps.some(
     (s) => s.provider === 'codex' && s.mode === 'implement',
   )
@@ -339,7 +354,9 @@ export function planTask(input: TaskPlanningRequest): TaskPlan {
       chainKeys: hasImplement ? SAFETY_CHAIN.map((c) => c.key) : [],
     },
     preview: previewLabels(previewSteps),
-    rationale: selection.rationale,
+    rationale: unavailableAssignment
+      ? '담당 에이전트의 실행 지침을 불러오지 못했습니다. 설정에서 에이전트 경로를 확인해 주세요.'
+      : selection.rationale,
     source: { ...input.source },
     executionMode: input.executionMode,
   }

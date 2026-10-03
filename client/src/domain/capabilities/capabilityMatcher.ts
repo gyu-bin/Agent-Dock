@@ -56,6 +56,7 @@ export function matchAgentForCapabilities(
     for (const raw of pool) {
       if (used.has(raw.id)) continue
       const agent = raw as Agent
+      if (agent.executable === false || agent.instructionAvailable === false) continue
       const profile = deriveAgentCapabilities(agent)
       const { covered, missing, score: cov } = coverageOf(required, profile)
       if (required.length > 0 && covered.length === 0) continue

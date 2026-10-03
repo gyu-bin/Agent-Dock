@@ -94,6 +94,9 @@ export interface StoredVerificationCommand {
 }
 
 export interface StoredCodexRun {
+  errorCode?: string
+  userMessage?: string
+  technicalSummary?: string
   id: string
   taskId: string
   stepId: string
@@ -147,6 +150,9 @@ export interface StoredProject {
 }
 
 export interface StoredPipelineStep {
+  errorCode?: string
+  userMessage?: string
+  technicalSummary?: string
   id: string
   taskId: string
   agentId: string
@@ -166,6 +172,9 @@ export interface StoredPipelineStep {
 }
 
 export interface StoredTask {
+  errorCode?: string
+  userMessage?: string
+  technicalSummary?: string
   id: string
   projectId: string
   title: string
@@ -238,6 +247,9 @@ export interface StoredWebSearchSession {
 }
 
 export interface StoredAgentRun {
+  errorCode?: string
+  userMessage?: string
+  technicalSummary?: string
   id: string
   taskId: string
   stepId: string

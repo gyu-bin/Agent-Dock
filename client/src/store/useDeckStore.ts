@@ -646,6 +646,10 @@ function createDeckStore() {
             : undefined,
         })
         const preview = plan.preview
+        if (plan.steps.length === 0) {
+          get().appendChat({ role: 'assistant', content: plan.rationale })
+          return
+        }
         const templateMeta = getTemplateById(plan.workflowTemplateId)
         get().appendChat({
           role: 'assistant',
@@ -710,7 +714,10 @@ function createDeckStore() {
               }
             : undefined,
         })
-        if (plan.steps.length === 0) return null
+        if (plan.steps.length === 0) {
+          get().appendChat({ role: 'assistant', content: plan.rationale })
+          return null
+        }
 
         if (
           input.planFingerprint &&
@@ -829,12 +836,12 @@ function createDeckStore() {
       },
       retryTask: (taskId) => {
         const steps = get().pipelineSteps.filter((s) => s.taskId === taskId)
-        const failed = steps.find((s) => s.status === 'failed')
+        const failed = steps.find((s) => s.status === 'failed' || s.status === 'blocked')
         if (failed) {
           set((s) => ({
             pipelineSteps: s.pipelineSteps.map((st) =>
               st.id === failed.id
-                ? { ...st, status: 'waiting', completedAt: undefined }
+                ? { ...st, status: 'waiting', completedAt: undefined, errorCode: undefined, userMessage: undefined, technicalSummary: undefined }
                 : st,
             ),
             tasks: s.tasks.map((t) =>
@@ -844,6 +851,9 @@ function createDeckStore() {
                     status: 'paused',
                     simulateFailure: false,
                     verificationFailed: false,
+                    errorCode: undefined,
+                    userMessage: undefined,
+                    technicalSummary: undefined,
                     updatedAt: new Date().toISOString(),
                     progress: taskProgress(taskId, s.pipelineSteps),
                   }
@@ -888,6 +898,9 @@ function createDeckStore() {
                   status: 'queued' as const,
                   startedAt: undefined,
                   completedAt: undefined,
+                  errorCode: undefined,
+                  userMessage: undefined,
+                  technicalSummary: undefined,
                 }
               : st,
           ),
@@ -897,6 +910,9 @@ function createDeckStore() {
                   ...t,
                   status: 'paused' as const,
                   verificationFailed: false,
+                  errorCode: undefined,
+                  userMessage: undefined,
+                  technicalSummary: undefined,
                   updatedAt: now,
                 }
               : t,

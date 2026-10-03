@@ -6,6 +6,7 @@ import { allowedEmails, bearerFrom, cloudAuthConfig, verifyAccessToken } from '.
 import { usesCloudStore } from './storage/dataFs.js'
 
 import { loadAgentRegistry } from './registry/loadAgents.js'
+import { preflightAgentInstructions, loadAgentInstructions } from './registry/loadAgentInstructions.js'
 import { createAiProvider } from './providers/aiProvider.js'
 import { projectRepository } from './persistence/jsonStore.js'
 import { ProjectService } from './persistence/projectService.js'
@@ -304,8 +305,10 @@ function sendError(res: express.Response, err: unknown) {
       output?: string
       userMessageKo?: string
       diagnostics?: unknown
+      agentId?: string
     }
-    if (e.userMessage) payload.error = e.userMessage
+    if (e.userMessage) { payload.error = e.userMessage; payload.userMessage = e.userMessage }
+    if (e.agentId) payload.agentId = e.agentId
     if (e.category) payload.code = e.category
     if (e.code) payload.code = e.code
     if (e.technicalSummary) payload.technicalSummary = e.technicalSummary
@@ -453,8 +456,22 @@ app.get('/api/agents', async (_req, res) => {
     divisionMapSource: registry.divisionMapSource,
     divisionMapCount: registry.divisionMapCount,
     warning: registry.warning ?? null,
+    state: registry.state,
+    executableCount: registry.executableCount,
+    instructionErrors: registry.instructionErrors,
     provider: aiProvider.getState(),
   })
+})
+
+app.post('/api/agents/preflight', async (req, res) => {
+  try {
+    const agentIds = req.body?.agentIds
+    if (!Array.isArray(agentIds) || !agentIds.length || agentIds.length > 300 || !agentIds.every((id) => typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id))) {
+      res.status(400).json({ error: 'agentIds must be a non-empty array of agent IDs' })
+      return
+    }
+    res.json(await preflightAgentInstructions(agentIds))
+  } catch (error) { sendError(res, error) }
 })
 
 app.get('/api/provider', async (_req, res) => {
@@ -681,6 +698,9 @@ app.post('/api/ai/run-step', async (req, res) => {
       res.status(400).json({ error: 'agentId, stepTask, userRequest required' })
       return
     }
+
+    // Resolve the persona before any search/provider call, including direct API callers.
+    await loadAgentInstructions(agentId)
 
     const projectId = body.projectId ? String(body.projectId) : undefined
     const taskId = body.taskId ? String(body.taskId) : undefined
@@ -2924,7 +2944,7 @@ if (!isCloudRuntime()) {
     )
     void loadAgentRegistry().then((r) => {
       console.log(
-        `[agent-deck] registry: ${r.source} (${r.total} agents)` +
+        `[agent-deck] registry: ${r.source} state=${r.state} (${r.total} agents, ${r.executableCount} executable, ${r.instructionErrors} instruction errors)` +
           (r.agentsDir ? ` from ${r.agentsDir}` : ''),
       )
     })
