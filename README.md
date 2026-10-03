@@ -127,3 +127,7 @@ Vercel 환경변수: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE
 `AGENT_DECK_ALLOWED_EMAILS`, `CRON_SECRET`, `OPENAI_API_KEY` (필요 시 `BUFFER_API_KEY` 등).
 Supabase → Authentication → URL Configuration의 **Site URL**을 배포 주소로 맞춰야 로그인 링크가 앱으로 돌아옵니다.
 설정이 빠지면 서버는 모든 요청을 거부합니다(fail closed).
+
+### Direct SNS connections and work status
+
+See [work UI and direct SNS setup](docs/work-ui-and-social-connections.md) for service-specific OAuth configuration. Instagram, X, YouTube and Reddit account linking currently runs on the local server; automatic token refresh, cloud login and direct posting are not implemented for these four channels.

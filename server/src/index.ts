@@ -87,6 +87,7 @@ import {
 } from './mediaDelivery/index.js'
 import { createAttachmentService } from './attachments/index.js'
 import { isAttachmentError } from './attachments/index.js'
+import { DirectOAuthService, isDirectChannel } from './social/direct/directOAuth.js'
 import { credentialStore } from './credentials/index.js'
 import { assertNoTokenLeak } from './credentials/redact.js'
 import {
@@ -270,6 +271,7 @@ app.use((req, res, next) => {
     p === '/api/session/logout' ||
     p === '/api/auth/config' ||
     p === '/api/cron/routines' ||
+    (!isCloudRuntime() && req.method === 'GET' && /^\/api\/social\/(instagram|x|youtube|reddit)\/oauth\/callback$/.test(p)) ||
     (req.method === 'GET' && p === '/api/session/status')
   ) {
     next()
@@ -2122,6 +2124,27 @@ app.post('/api/social/buffer/publish', async (req, res) => {
     }
     sendError(res, err)
   }
+})
+
+const directOAuth = new DirectOAuthService(credentialStore)
+app.post('/api/social/:channel/oauth/start', async (req, res, next) => {
+  if (!isDirectChannel(req.params.channel)) { next(); return }
+  try { res.json(await directOAuth.start(req.params.channel, req.headers.origin)) } catch(error) { sendError(res,error) }
+})
+app.get('/api/social/:channel/oauth/callback', async (req,res,next) => {
+  if (!isDirectChannel(req.params.channel)) { next(); return }
+  res.setHeader('Cache-Control','no-store'); res.setHeader('Referrer-Policy','no-referrer')
+  try {
+    const result=await directOAuth.callback(req.params.channel,{state:typeof req.query.state==='string'?req.query.state:undefined,code:typeof req.query.code==='string'?req.query.code:undefined,error:typeof req.query.error==='string'?req.query.error:undefined})
+    res.redirect(`${result.returnOrigin}/?settings=sns&social=${result.connected?'connected':'denied'}`)
+  } catch {
+    const origin=process.env.AGENT_DECK_CLIENT_ORIGIN || 'http://127.0.0.1:5173'
+    res.redirect(`${origin}/?settings=sns&social=error`)
+  }
+})
+app.post('/api/social/:channel/disconnect',async(req,res,next)=>{
+  if(!isDirectChannel(req.params.channel)){next();return}
+  try{await directOAuth.disconnect(req.params.channel);res.json({ok:true,message:'Agent Deck의 로컬 연결을 해제했습니다. 원격 앱 권한은 해당 SNS 설정에서 해제해주세요.'})}catch(error){sendError(res,error)}
 })
 
 app.post('/api/social/threads/oauth/start', async (_req, res) => {

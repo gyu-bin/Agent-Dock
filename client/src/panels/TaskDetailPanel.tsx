@@ -229,9 +229,15 @@ export function TaskDetailPanel({
           ) : null}
         </header>
 
+        <div className={styles.progressOverview}>
+          <div><span>전체 진행률</span><strong>{task.progress}<small>%</small></strong></div>
+          <div className={styles.progressTrack} role="progressbar" aria-label="작업 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={task.progress}><span style={{ width: `${Math.max(0, Math.min(100, task.progress))}%` }} /></div>
+          <p>{steps.filter((step) => step.status === 'completed').length} / {steps.length} 단계 완료 <span>· {currentStep ? `${worker} · ${currentStep.label}` : statusLabel}</span></p>
+        </div>
+
         {/* ── Basic surface ── */}
-        <section className={styles.pipeline}>
-          <ul className={styles.fileList}>
+        <section className={styles.summary}>
+          <ul className={styles.summaryList}>
             <li>
               <strong>지금</strong> {statusLabel}
               {currentStep ? ` — ${currentStep.label}` : ''}
@@ -326,6 +332,7 @@ export function TaskDetailPanel({
                   <div>
                     <strong>{label}</strong>
                     <em>
+                      {step.provider !== 'human' ? `${agentName(step.agentId)} · ` : ''}
                       {step.status === 'completed'
                         ? '완료'
                         : needsApproval

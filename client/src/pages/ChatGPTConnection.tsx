@@ -55,8 +55,10 @@ export function ChatGPTConnection({onChange, onModels}: {onChange: () => Promise
     {status && !status.supported ? <p className={styles.hint}>Vercel에서는 이 로컬 로그인 방식을 사용할 수 없습니다. 이 컴퓨터에서 실행한 Agent Deck에서 연결해주세요. Vercel에서 AI를 실행하려면 OpenAI API 모드를 선택하고 별도 API 잔액을 준비해주세요.</p> : null}
     <div className={styles.modeRow}>
       <button className={styles.primary} disabled={!status?.supported || busy || status.loginPending} onClick={() => void signIn()}>Continue with ChatGPT</button>
+      {status?.planUsageEnabled ? <button className={styles.ghost} disabled={busy} onClick={() => { setBusy(true); void refresh().then(() => setMessage('계정에서 제공하는 모델 목록을 새로고침했습니다.')).catch(e => setMessage(e.message)).finally(() => setBusy(false)) }}>모델 목록 새로고침</button> : null}
       {status?.signedIn ? <><button className={styles.ghost} disabled={busy} onClick={() => void signIn(true)}>계정 변경</button><button className={styles.ghost} disabled={busy} onClick={() => void disconnect()}>연결 해제</button></> : null}
     </div>
+    {status?.planUsageEnabled ? <p className={styles.hint}>목록은 OpenAI가 현재 연결 계정에 제공한 모델만 표시합니다. GPT-6.1 Sol·GPT-6 Sol이 없으면 해당 계정의 플랜 연결 목록에서 아직 제공되지 않는 상태입니다. Codex에서 보이는 모델 목록은 별도입니다.</p> : null}
     {status?.lastError ? <p className={styles.error}>{status.lastError.message}</p> : null}
     {message ? <p className={styles.hint} role="status">{message}</p> : null}
   </section>

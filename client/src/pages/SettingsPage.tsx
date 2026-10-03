@@ -6,8 +6,6 @@ import {
   testOpenAIConnection,
   fetchImageToolStatus,
   fetchSocialConnectors,
-  startThreadsOAuth,
-  disconnectThreads,
   fetchMediaDeliveryStatus,
   fetchBufferStatus,
   refreshBufferStatus,
@@ -27,6 +25,7 @@ import {
   setToolAvailability,
 } from '../domain/capabilities'
 import styles from './SettingsPage.module.css'
+import { SocialConnections } from './SocialConnections'
 import { ChatGPTConnection } from './ChatGPTConnection'
 
 type SettingsSection =
@@ -64,7 +63,7 @@ export function SettingsPage() {
   const capabilityDiag = buildCapabilityDiagnosticsSummary(registry)
 
   const [chatgptModels, setChatgptModels] = useState<ChatGPTModel[]>([])
-  const [section, setSection] = useState<SettingsSection>('general')
+  const [section, setSection] = useState<SettingsSection>(() => new URLSearchParams(window.location.search).get('settings') === 'sns' ? 'sns' : 'general')
   const [board, setBoard] = useState<SettingsBoard | null>(null)
   const [draft, setDraft] = useState<DeckSettings | null>(null)
   const [imageTool, setImageTool] = useState<{
@@ -73,20 +72,6 @@ export function SettingsPage() {
     fastModel: string
     qualityModel: string
   } | null>(null)
-  const [socialConnectors, setSocialConnectors] = useState<
-    Array<{
-      channel: string
-      label: string
-      configured: boolean
-      available: boolean
-      state: string
-      connection?: {
-        status: string
-        username?: string
-        profileId?: string
-      }
-    }>
-  >([])
   const [snsBusy, setSnsBusy] = useState(false)
   const [mediaDeliveryStatus, setMediaDeliveryStatus] = useState<{
     configured: boolean
@@ -144,7 +129,6 @@ export function SettingsPage() {
         .catch(() => setImageTool(null))
       void fetchSocialConnectors()
         .then((soc) => {
-          setSocialConnectors(soc.connectors)
           setToolAvailability(
             'social-publisher',
             soc.socialPublishAvailable ? 'available' : 'unavailable',
@@ -154,7 +138,7 @@ export function SettingsPage() {
             soc.analyticsReadAvailable ? 'available' : 'unavailable',
           )
         })
-        .catch(() => setSocialConnectors([]))
+        .catch(() => undefined)
       void fetchMediaDeliveryStatus()
         .then(setMediaDeliveryStatus)
         .catch(() => setMediaDeliveryStatus(null))
@@ -663,130 +647,9 @@ export function SettingsPage() {
         ) : null}
 
         {section === 'sns' ? (
-          <section className={styles.card}>
-            <h2>SNS 연결</h2>
-            <p className={styles.hint}>
-              Threads만 OAuth 연결을 지원합니다. Instagram 등은 지원 예정입니다.
-            </p>
-            {(socialConnectors.length
-              ? socialConnectors
-              : [
-                  {
-                    channel: 'threads',
-                    label: 'Threads',
-                    configured: false,
-                    available: false,
-                    state: 'unconfigured',
-                  },
-                  {
-                    channel: 'instagram',
-                    label: 'Instagram',
-                    configured: false,
-                    available: false,
-                    state: 'unconfigured',
-                  },
-                  {
-                    channel: 'x',
-                    label: 'X',
-                    configured: false,
-                    available: false,
-                    state: 'unconfigured',
-                  },
-                  {
-                    channel: 'youtube',
-                    label: 'YouTube',
-                    configured: false,
-                    available: false,
-                    state: 'unconfigured',
-                  },
-                  {
-                    channel: 'reddit',
-                    label: 'Reddit',
-                    configured: false,
-                    available: false,
-                    state: 'unconfigured',
-                  },
-                ]
-            )
-              .filter((c) =>
-                ['threads', 'instagram', 'x', 'youtube', 'reddit'].includes(
-                  c.channel,
-                ),
-              )
-              .map((c) => {
-                const isThreads = c.channel === 'threads'
-                const connected = Boolean(c.available && c.connection?.status === 'connected') ||
-                  (isThreads && c.available)
-                const label =
-                  c.channel === 'threads'
-                    ? 'Threads'
-                    : c.channel === 'instagram'
-                      ? 'Instagram'
-                      : c.channel === 'x'
-                        ? 'X'
-                        : c.channel === 'youtube'
-                          ? 'YouTube'
-                          : 'Reddit'
-                return (
-                  <div className={styles.row} key={c.channel}>
-                    <span className={styles.label}>{label}</span>
-                    <span className={connected ? styles.ok : styles.off}>
-                      {connected
-                        ? `● 연결됨${c.connection?.username ? ` · @${c.connection.username}` : ''}`
-                        : c.connection?.status === 'expired'
-                          ? '○ 인증 만료'
-                          : '○ 연결 안 됨'}
-                    </span>
-                    {isThreads ? (
-                      connected ? (
-                        <button
-                          type="button"
-                          className={styles.mode}
-                          disabled={snsBusy}
-                          onClick={() => {
-                            setSnsBusy(true)
-                            void disconnectThreads()
-                              .then(() => reload())
-                              .finally(() => setSnsBusy(false))
-                          }}
-                        >
-                          연결 해제
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className={styles.primary}
-                          disabled={snsBusy}
-                          onClick={() => {
-                            setSnsBusy(true)
-                            void startThreadsOAuth()
-                              .then((r) => {
-                                window.location.href = r.authorizeUrl
-                              })
-                              .catch((err) => {
-                                setError(
-                                  err instanceof Error
-                                    ? err.message
-                                    : String(err),
-                                )
-                                setSnsBusy(false)
-                              })
-                          }}
-                        >
-                          연결
-                        </button>
-                      )
-                    ) : (
-                      <span className={styles.hintInline}>지원 예정</span>
-                    )}
-                  </div>
-                )
-              })}
-            <p className={styles.hint}>
-              THREADS_APP_ID / THREADS_APP_SECRET / THREADS_REDIRECT_URI 환경변수
-              필요. 토큰은 서버에만 저장됩니다.
-            </p>
-
+          <>
+          <SocialConnections />
+          <details className={styles.card}><summary>선택 설정 · Buffer와 미디어 전달</summary>
             <h3 style={{ marginTop: 20 }}>Buffer</h3>
             <p className={styles.hint}>
               승인된 마케팅 패키지를 Queue/예약으로 배포합니다. API Key는 서버
@@ -878,7 +741,8 @@ export function SettingsPage() {
               signed URL (MEDIA_DELIVERY_PROVIDER=s3-compatible). credential은
               서버 .env에만 둡니다.
             </p>
-          </section>
+          </details>
+          </>
         ) : null}
 
         {section === 'safety' ? (

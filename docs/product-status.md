@@ -18,7 +18,7 @@ Last updated: 2026-10-03 (local ChatGPT Plan integration)
 | Media Delivery (R2/S3) | **CONFIG REQUIRED** |
 | Threads Direct Connector | **CONFIG REQUIRED** (OAuth apps) |
 | Active pixel office | Reception removed; lounge/terrace/garden connected; map and browser checked |
-| SNS Direct Instagram/YouTube | **FUTURE-FROZEN** |
+| SNS direct account connection | **CONFIG REQUIRED / LOCAL** — Threads existing; four new OAuth flows fixture-tested, real app login pending; publishing unavailable for new four |
 | New Foundations | **FROZEN** — dogfood only |
 
 ## READY
@@ -44,7 +44,7 @@ Last updated: 2026-10-03 (local ChatGPT Plan integration)
 ## FUTURE-FROZEN
 
 - Additional Office V2 asset/map expansions
-- Direct Instagram / YouTube / TikTok connectors
+- Direct Instagram / X / YouTube / Reddit publishing and cloud OAuth; TikTok connector
 - Buffer Analytics full implementation
 - Vertical Video Tool
 - Shared package migration of `client/src/domain/taskPlanning` (server already dynamic-imports client planner; freeze until dogfood forces it)
@@ -62,3 +62,7 @@ Architecture freeze: do not add new Foundations until REAL PROJECT DOGFOOD feedb
 ## ChatGPT integration evidence
 
 OAuth A–D and provider E–J use synthetic tokens/streams. Typecheck/build and attachment/planning/usage/settings regressions passed. User completed actual account login, and one live plan inference succeeded (21 input / 12 output tokens). Original market-analysis workflow and live vision/file/search capabilities remain unverified; the one-request limit was respected. See [implementation report](chatgpt-plan-integration.md).
+
+## Work UI and office activity
+
+Advanced tasks layout repaired and redesigned; Home live work summary added; idle agents roam the connected lounge/garden with assignment precedence and reduced-motion support. See [verification and SNS setup](work-ui-and-social-connections.md).

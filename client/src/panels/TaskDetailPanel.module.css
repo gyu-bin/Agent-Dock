@@ -34,10 +34,38 @@
   height: 100%;
   background: transparent;
   box-shadow: none;
-  padding: var(--ad-space-5) var(--ad-space-8) var(--ad-space-10);
+  padding: 30px clamp(20px, 3vw, 48px) 48px;
   overflow: auto;
-  max-width: none;
+  max-width: 1180px;
+  margin: 0 auto;
 }
+
+.embeddedPanel .head { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--ad-border-soft); }
+.head > div { min-width: 0; }
+.head h2 { overflow-wrap: anywhere; }
+.progressOverview { padding: 20px; border: 1px solid var(--ad-border); border-radius: 14px; background: linear-gradient(120deg, var(--ad-control-active), var(--ad-surface-raised)); margin-bottom: 18px; }
+.progressOverview > div:first-child { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.progressOverview span { font-size: 12px; color: var(--ad-ink-soft); }
+.progressOverview strong { font-size: 25px; color: var(--ad-ink); }
+.progressOverview small { font-size: 12px; margin-left: 3px; font-weight: 500; color: var(--ad-ink-soft); }
+.progressTrack { height: 6px; border-radius: 6px; overflow: hidden; margin-top: 12px; background: var(--ad-border); }
+.progressTrack > span { display: block; height: 100%; background: var(--ad-primary); border-radius: inherit; }
+.progressOverview p { margin: 10px 0 0; font-size: 11px; line-height: 1.7; color: var(--ad-ink-soft); overflow-wrap: anywhere; }
+.summary { margin-bottom: 24px; }
+.summaryList { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.summaryList > li { padding: 14px 16px; border-radius: 10px; border: 1px solid var(--ad-border-soft); background: var(--ad-surface-raised); font-size: var(--ad-text-secondary); line-height: 1.7; overflow-wrap: anywhere; min-width: 0; }
+.summaryList > li:nth-child(1), .summaryList > li:nth-child(2), .summaryList > li:has(ul) { grid-column: 1 / -1; }
+.summaryList > li > strong { display: block; margin-bottom: 5px; color: var(--ad-ink-faint); font-size: 11px; font-weight: 600; }
+.summaryList > li:first-child { color: var(--ad-primary); }
+.embeddedPanel .pipeline > h3 { font-size: 13px; margin: 24px 0 12px; color: var(--ad-ink-soft); }
+.embeddedPanel .pipeline > ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.embeddedPanel .pipeline > ol > li { min-width: 0; padding: 14px; border-radius: 10px; }
+.pipeline > ol > li > div { min-width: 0; overflow-wrap: anywhere; }
+.pipeline .runList > li { display: block; padding: 12px 14px; border: 1px solid var(--ad-border-soft); border-radius: 10px; background: var(--ad-surface-raised); }
+.pipeline .runList .linkBtn { display: block; width: 100%; line-height: 1.7; overflow-wrap: anywhere; }
+.panel .summaryList { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 1100px) { .embeddedPanel .pipeline > ol { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 720px) { .embeddedPanel { padding: 20px 16px 32px; } .summaryList { grid-template-columns: minmax(0, 1fr); } .progressOverview { padding: 16px; } }
 
 .embeddedEmpty {
   display: flex;
@@ -122,7 +150,7 @@
   gap: 6px;
 }
 
-.pipeline li {
+.pipeline > ol > li {
   display: grid;
   grid-template-columns: 28px 1fr;
   gap: 8px;
@@ -132,23 +160,23 @@
   background: var(--ad-surface-raised);
 }
 
-.pipeline li[data-status='running'],
-.pipeline li[data-status='reviewing'] {
+.pipeline > ol > li[data-status='running'],
+.pipeline > ol > li[data-status='reviewing'] {
   border-color: color-mix(in srgb, var(--ad-primary) 35%, var(--ad-border));
   background: var(--ad-control-active);
 }
 
-.pipeline li[data-status='completed'] {
+.pipeline > ol > li[data-status='completed'] {
   opacity: 0.85;
 }
 
-.pipeline li[data-status='failed'],
-.pipeline li[data-status='blocked'] {
+.pipeline > ol > li[data-status='failed'],
+.pipeline > ol > li[data-status='blocked'] {
   border-color: color-mix(in srgb, var(--ad-danger) 35%, var(--ad-border));
   background: var(--ad-danger-soft);
 }
 
-.pipeline li[data-status='awaiting_approval'] {
+.pipeline > ol > li[data-status='awaiting_approval'] {
   border-color: color-mix(in srgb, var(--ad-warning) 40%, var(--ad-border));
   background: var(--ad-warning-soft);
 }
@@ -160,7 +188,7 @@
   place-items: center;
 }
 
-.pipeline li div {
+.pipeline > ol > li div {
   display: grid;
   gap: 2px;
 }

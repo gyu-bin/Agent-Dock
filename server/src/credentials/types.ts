@@ -3,9 +3,10 @@
  * or frontend responses. File-backed now; Keychain-swappable later.
  */
 
-export type CredentialProviderId = 'threads' | 'instagram' | 'x' | 'youtube'
+export type CredentialProviderId = 'threads' | 'instagram' | 'x' | 'youtube' | 'reddit'
 
 export interface CredentialSecret {
+  oauth?: { clientId: string; redirectUri: string; returnOrigin: string }
   accessToken: string
   /** Present when long-lived / refreshable */
   refreshToken?: string

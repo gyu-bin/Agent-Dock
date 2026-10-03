@@ -41,6 +41,7 @@ export function findPath(g: WalkGrid, from: Pt, to: Pt): Pt[] {
   const [sx, sy] = nearestOpen(g, ...cellOf(g, from))
   const [gx0, gy0] = cellOf(g, to)
   const [gx, gy] = nearestOpen(g, gx0, gy0)
+  if (blocked(g, sx, sy) || blocked(g, gx, gy)) return []
   const key = (x: number, y: number) => y * g.cols + x
   const start = key(sx, sy)
   const goal = key(gx, gy)
@@ -107,7 +108,8 @@ export function findPath(g: WalkGrid, from: Pt, to: Pt): Pt[] {
       }
     }
   }
-  if (!found) return [to]
+  // A missing route must never turn into a straight walk through furniture/walls.
+  if (!found) return []
   const cells: number[] = []
   for (let k: number | undefined = goal; k !== undefined && k !== start; k = came.get(k)) cells.push(k)
   cells.push(start)

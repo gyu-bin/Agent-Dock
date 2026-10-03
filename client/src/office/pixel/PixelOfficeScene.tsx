@@ -8,6 +8,7 @@ import officeMap from '../../../public/assets/pixel-office/office-map.json'
 import charManifest from '../../../public/assets/pixel-office/characters.json'
 import bubbleManifest from '../../../public/assets/pixel-office/bubbles.json'
 import { findPath, type Pt } from './pixelPath'
+import { advanceWalk, canWander, nextWanderRoute, wanderPause, wanderPoints, type Facing } from './pixelMovement'
 import { pickDefaultCrew, simulateCrew } from './defaultCrew'
 import './PixelOfficeScene.css'
 
@@ -18,19 +19,22 @@ const FW = charManifest.frameWidth
 const FH = charManifest.frameHeight
 const WALK_SPEED = 54 // map px per second
 
-type Facing = 'up' | 'down' | 'left' | 'right'
 type Waypoint = { x: number; y: number; pose: 'sit' | 'stand'; face: Facing }
 type Target = Waypoint & { key: string }
 
 const WAYPOINTS = officeMap.waypoints as unknown as Record<string, Waypoint>
 const ANIMS = charManifest.animations as unknown as Record<string, { row: number; frames: number }>
 const ACCESSORIES = charManifest.accessories as unknown as Record<string, string>
+const WANDER_POINTS = wanderPoints(officeMap)
 
 interface Runner {
   agent: Agent
   pos: Pt
   path: Pt[]
   target: Target
+  homeTarget: Target
+  wanderTrip: number
+  nextWanderAt: number
   facing: Facing
   moving: boolean
   look: Look
@@ -63,11 +67,6 @@ function targetFor(agent: Agent, assignmentKey: string | undefined, overflowInde
   if (wp) return { ...wp, key: assignmentKey! }
   const lobby = officeMap.lobby[overflowIndex % officeMap.lobby.length]
   return { x: lobby.x, y: lobby.y, pose: 'stand', face: 'down', key: `lobby.${overflowIndex}.${agent.id}` }
-}
-
-function facingToward(dx: number, dy: number, fallback: Facing): Facing {
-  if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return fallback
-  return Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down'
 }
 
 /** Integer device-pixel scaling keeps every art pixel the same size. */
@@ -231,6 +230,13 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
 
   const runners = useRef<Map<string, Runner>>(new Map())
   const [now, setNow] = useState(() => performance.now())
+  const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReducedMotion(preference.matches)
+    preference.addEventListener('change', update)
+    return () => preference.removeEventListener('change', update)
+  }, [])
   const [hovered, setHovered] = useState<string | null>(null)
   const viewport = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
@@ -265,28 +271,40 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
       seen.add(agent.id)
       const existing = map.get(agent.id)
       if (!existing) {
-        const startAtSeat = firstSync
+        const startAtSeat = firstSync || reducedMotion
         const pos = startAtSeat ? { x: target.x, y: target.y } : { ...officeMap.spawn }
+        const look = lookFor(agent)
+        const path = startAtSeat ? [] : findPath(officeMap, pos, target)
         map.set(agent.id, {
           agent,
           pos,
-          path: startAtSeat ? [] : findPath(officeMap, pos, target),
+          path,
           target,
+          homeTarget: target,
+          wanderTrip: 0,
+          nextWanderAt: performance.now() + wanderPause(look.seed, 0),
           facing: startAtSeat ? target.face : 'up',
-          moving: !startAtSeat,
-          look: lookFor(agent),
+          moving: path.length > 0,
+          look,
         })
         continue
       }
       existing.agent = agent
-      if (existing.target.key !== target.key) {
+      // Roster updates must not restart a leisure walk. A real task takes priority.
+      if (existing.homeTarget.key !== target.key || (!canWander(agent) && existing.target.key.startsWith('wander.')) || reducedMotion) {
+        existing.homeTarget = target
         existing.target = target
-        existing.path = findPath(officeMap, existing.pos, target)
-        existing.moving = true
+        existing.path = reducedMotion ? [] : findPath(officeMap, existing.pos, target)
+        existing.moving = existing.path.length > 0
+        existing.nextWanderAt = performance.now() + wanderPause(existing.look.seed, existing.wanderTrip)
+        if (reducedMotion) {
+          existing.pos = { x: target.x, y: target.y }
+          existing.facing = target.face
+        }
       }
     }
     for (const id of [...map.keys()]) if (!seen.has(id)) map.delete(id)
-  }, [agents, assignments])
+  }, [agents, assignments, reducedMotion])
 
   // movement loop
   useEffect(() => {
@@ -296,26 +314,19 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
       const dt = Math.min((t - last) / 1000, 0.05)
       last = t
       for (const r of runners.current.values()) {
-        if (!r.moving) continue
-        let budget = WALK_SPEED * dt
-        while (budget > 0 && r.path.length) {
-          const wp = r.path[0]
-          const dx = wp.x - r.pos.x
-          const dy = wp.y - r.pos.y
-          const dist = Math.hypot(dx, dy)
-          if (dist <= budget) {
-            r.pos = { x: wp.x, y: wp.y }
-            r.path.shift()
-            budget -= dist
-          } else {
-            r.facing = facingToward(dx, dy, r.facing)
-            r.pos = { x: r.pos.x + (dx / dist) * budget, y: r.pos.y + (dy / dist) * budget }
-            budget = 0
-          }
+        if (!reducedMotion && !r.moving && canWander(r.agent) && t >= r.nextWanderAt) {
+          const route = nextWanderRoute(officeMap, WANDER_POINTS, r.pos, r.look.seed, r.wanderTrip++)
+          if (route) {
+            r.target = { ...route.target, pose: 'stand', face: 'down', key: `wander.${r.wanderTrip}` }
+            r.path = route.path
+            r.moving = true
+          } else r.nextWanderAt = t + wanderPause(r.look.seed, r.wanderTrip)
         }
-        if (!r.path.length) {
+        if (!r.moving) continue
+        if (advanceWalk(r, dt, WALK_SPEED)) {
           r.moving = false
           r.facing = r.target.face
+          r.nextWanderAt = t + wanderPause(r.look.seed, r.wanderTrip)
         }
       }
       setNow(t)
@@ -323,7 +334,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [])
+  }, [reducedMotion])
 
   useLayoutEffect(() => {
     const el = viewport.current
@@ -498,7 +509,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
         ) : (
           <>
             <span>직원을 클릭하면 하는 일을 볼 수 있어요</span>
-            <span>대기 → 휴게실·가든</span>
+            <span>일이 없으면 휴게실·가든 산책</span>
             <span>작업 → 부서 자리</span>
             <span>리뷰 → 회의실</span>
             <span>검증 → 테스트룸</span>

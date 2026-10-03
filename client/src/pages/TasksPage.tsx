@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ListTodo } from 'lucide-react'
+import { ListTodo, Search, ArrowUpRight } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { EmptyState } from '../components/EmptyState'
 import { TaskStatus } from '../components/Status'
@@ -13,7 +13,7 @@ import {
   selectTasksForActive,
   useDeckStore,
 } from '../store/useDeckStore'
-import md from './MasterDetail.module.css'
+import md from './TasksPage.module.css'
 
 type TaskFilter = 'all' | 'active' | 'approval' | 'done' | 'failed'
 
@@ -55,10 +55,12 @@ export function TasksPage() {
   const setNav = useDeckStore((s) => s.setNav)
   const pipelineSteps = useDeckStore((s) => s.pipelineSteps)
   const [filter, setFilter] = useState<TaskFilter>('all')
+  const [search, setSearch] = useState('')
 
   const filtered = useMemo(
-    () => tasks.filter((t) => matchesFilter(t, filter)),
-    [tasks, filter],
+    () => tasks.filter((t) => matchesFilter(t, filter) &&
+      `${t.title} ${t.description ?? ''}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())),
+    [tasks, filter, search],
   )
 
   useEffect(() => {
@@ -88,9 +90,18 @@ export function TasksPage() {
     <div className={md.split}>
       <div className={md.listPane}>
         <header className={md.head}>
-          <h1>작업</h1>
-          <p>진행 · 승인 · 완료 · 실패를 한곳에서 관리합니다.</p>
+          <span className={md.eyebrow}>TEAM WORKSPACE</span>
+          <div className={md.heading}><h1>작업</h1><span>{tasks.length}</span></div>
+          <p>AI 팀의 진행 상황과 결과를 확인하세요.</p>
+          <div className={md.metrics}>
+            <div><strong>{tasks.filter((task) => matchesFilter(task, 'active')).length}</strong><span>진행 중</span></div>
+            <div><strong>{tasks.filter((task) => matchesFilter(task, 'approval')).length}</strong><span>승인 대기</span></div>
+            <div><strong>{tasks.filter((task) => matchesFilter(task, 'done')).length}</strong><span>완료</span></div>
+          </div>
+          <button type="button" className={md.newTask} onClick={() => setNav('home')}>새 작업 요청 <ArrowUpRight size={15} /></button>
         </header>
+
+        <label className={md.search}><Search size={16} /><input aria-label="작업 검색" placeholder="작업 검색" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
 
         <div className={md.filters}>
           {FILTERS.map((f) => (
@@ -99,6 +110,7 @@ export function TasksPage() {
               type="button"
               className={filter === f.id ? md.filterOn : md.filter}
               onClick={() => setFilter(f.id)}
+              aria-pressed={filter === f.id}
             >
               {f.label}
             </button>
@@ -108,8 +120,8 @@ export function TasksPage() {
         {filtered.length === 0 ? (
           <EmptyState
             icon={<ListTodo size={20} strokeWidth={1.5} />}
-            title="아직 작업이 없습니다"
-            description="홈에서 작업을 요청하면 여기에 표시됩니다."
+            title={tasks.length ? '조건에 맞는 작업이 없습니다' : '아직 작업이 없습니다'}
+            description={tasks.length ? '검색어나 상태 필터를 바꿔보세요.' : '홈에서 작업을 요청하면 여기에 표시됩니다.'}
             actionLabel="홈에서 작업 요청"
             onAction={() => setNav('home')}
           />
@@ -123,12 +135,14 @@ export function TasksPage() {
                     selectedTaskId === task.id ? md.rowOn : md.row
                   }
                   onClick={() => selectTask(task.id)}
+                  aria-current={selectedTaskId === task.id ? 'true' : undefined}
                 >
                   <TaskStatus
                     status={task.status}
                     label={statusFor(task)}
                   />
                   <strong>{task.title}</strong>
+                  <div className={md.progressRow}><span className={md.progress}><span style={{ width: `${Math.max(0, Math.min(100, task.progress))}%` }} /></span><span>{task.progress}%</span></div>
                   <span className={md.meta}>
                     {userFacingWorkflowLabel(task)} ·{' '}
                     {new Date(task.updatedAt).toLocaleString('ko-KR', {

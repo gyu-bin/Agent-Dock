@@ -1670,3 +1670,10 @@ export async function fetchChatGPTModels(): Promise<import('../domain/types').Ch
   if (!res.ok) throw executionApiError(await res.json().catch(() => ({})), 'ChatGPT 모델을 불러오지 못했습니다.')
   return (await res.json()).models
 }
+
+export async function directSocialAction(channel: 'instagram' | 'x' | 'youtube' | 'reddit', action: 'oauth/start' | 'disconnect'): Promise<{authorizeUrl?: string;message?: string}> {
+  const response=await apiFetch(`${API_BASE}/api/social/${channel}/${action}`, {method:'POST'})
+  const body=await response.json().catch(()=>({}))
+  if(!response.ok) throw executionApiError(body,'SNS 연결 요청을 완료하지 못했습니다.')
+  return body
+}

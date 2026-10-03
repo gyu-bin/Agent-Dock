@@ -9,6 +9,7 @@ import { LoginScreen } from '../auth/LoginScreen'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { PixelOfficeScene } from '../office/pixel/PixelOfficeScene'
+import { HomeWorkStatus } from '../components/HomeWorkStatus'
 import { AiChatPanel } from '../panels/AiChatPanel'
 import { ProjectWizard } from '../components/ProjectWizard'
 import { ManageTeamModal } from '../components/ManageTeamModal'
@@ -30,6 +31,9 @@ export function AppShell() {
   const theme = useDeckStore((s) => s.theme)
 
   const authStatus = useAuthStore((s) => s.status)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('settings') === 'sns') useDeckStore.getState().setNav('settings')
+  }, [])
   const isHome = activeNav === 'home'
 
   useEffect(() => {
@@ -94,6 +98,7 @@ export function AppShell() {
         {isHome ? (
           <div className={styles.workspace}>
             <section className={styles.officePane} aria-label="2D Office">
+              <div className={styles.officeScene}>
               {!hydrated ? (
                 <div className={styles.placeholderTab}>
                   <p>불러오는 중…</p>
@@ -103,6 +108,8 @@ export function AppShell() {
               ) : (
                 <PixelOfficeScene />
               )}
+              </div>
+              <HomeWorkStatus />
             </section>
             <AiChatPanel />
           </div>

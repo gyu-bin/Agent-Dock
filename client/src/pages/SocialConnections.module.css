@@ -1,0 +1,37 @@
+.section { color: var(--ad-ink); }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.eyebrow { font-size: 10px; letter-spacing: .14em; font-weight: 700; color: var(--ad-primary); }
+.header h2 { margin: 6px 0 8px; font-size: 24px; letter-spacing: -.03em; }
+.header p { margin: 0; font-size: 13px; line-height: 1.7; color: var(--ad-ink-soft); }
+.refresh { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; padding: 9px 12px; border: 1px solid var(--ad-border); border-radius: 8px; background: var(--ad-surface-raised); color: var(--ad-ink-soft); font-size: 12px; }
+.overview { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border: 1px solid var(--ad-border); border-radius: 10px; background: var(--ad-control-active); margin-bottom: 20px; color: var(--ad-primary); font-size: 12px; }
+.overview > span:last-child { margin-left: auto; color: var(--ad-ink-soft); font-size: 11px; }
+.overview strong { font-size: 15px; margin-right: 4px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr)); gap: 16px; }
+.card { min-width: 0; border: 1px solid var(--ad-border); border-radius: 14px; padding: 20px; background: var(--ad-surface-raised); }
+.cardHeading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.logo { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: var(--ad-control-hover); color: var(--ad-ink); font-size: 25px; font-weight: 700; }
+.logo[data-channel='instagram'] { color: #de698a; background: #db5c9214; }
+.logo[data-channel='youtube'] { color: #ed5454; background: #ed545412; font-size: 21px; }
+.logo[data-channel='reddit'] { color: #e87645; background: #e8764514; font-size: 21px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 4px 7px; font-size: 10px; color: var(--ad-ink-soft); background: var(--ad-control-hover); }
+.badge[data-connected='true'] { color: var(--ad-success); background: var(--ad-success-soft); }
+.card h3 { font-size: 17px; margin: 16px 0 5px; }
+.card > p { margin: 0; color: var(--ad-ink-soft); font-size: 12px; line-height: 1.6; }
+.account { margin: 16px 0; padding: 10px 0; border-top: 1px solid var(--ad-border-soft); border-bottom: 1px solid var(--ad-border-soft); font-size: 11px; line-height: 1.6; color: var(--ad-ink-soft); overflow-wrap: anywhere; }
+.actions { display: flex; gap: 8px; }
+.connect, .disconnect { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--ad-border); border-radius: 8px; height: 36px; padding: 0 12px; color: var(--ad-ink); background: var(--ad-control-hover); font: inherit; font-size: 12px; font-weight: 600; }
+.connect { flex: 1; color: white; border-color: var(--ad-primary); background: var(--ad-primary); }
+.connect:disabled { color: var(--ad-ink-faint); border-color: var(--ad-border); background: var(--ad-control-hover); cursor: not-allowed; }
+.section button:focus-visible, .section summary:focus-visible, .section a:focus-visible { outline: 2px solid var(--ad-primary); outline-offset: 3px; }
+.setup { margin-top: 14px; font-size: 11px; color: var(--ad-ink-soft); line-height: 1.7; }
+.setup summary { cursor: pointer; }
+.setup p { margin: 10px 0; }
+.setup code { font-size: 10px; overflow-wrap: anywhere; }
+.setup a { display: inline-flex; align-items: center; gap: 4px; color: var(--ad-primary); text-decoration: none; }
+.scopeNote { display: block; font-size: 10px; color: var(--ad-ink-faint); margin-top: 12px; line-height: 1.7; }
+.footer { margin: 20px 0 0; color: var(--ad-ink-faint); font-size: 11px; line-height: 1.7; }
+.error, .notice { border-radius: 8px; padding: 12px 14px; font-size: 12px; line-height: 1.7; }
+.error { color: var(--ad-danger); background: var(--ad-danger-soft); }
+.notice { color: var(--ad-success); background: var(--ad-success-soft); }
+@media (max-width: 720px) { .header { align-items: flex-start; gap: 10px; } .header h2 { font-size: 21px; } .header p { font-size: 12px; } .overview { flex-wrap: wrap; } .overview > span:last-child { width: 100%; margin: 0; } .card { padding: 17px; } }

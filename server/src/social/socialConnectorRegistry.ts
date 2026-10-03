@@ -11,6 +11,7 @@ import type {
   ConnectorCapability,
 } from './types.js'
 import type { CredentialRepository } from '../credentials/types.js'
+import { DirectAccountConnector, DIRECT_CHANNELS } from './direct/directOAuth.js'
 import { ThreadsConnector } from './threads/threadsConnector.js'
 
 const DEFAULT_CHANNELS: SocialChannel[] = [
@@ -111,7 +112,7 @@ export class SocialConnectorRegistry {
     const out: ConnectorState[] = []
     for (const c of this.listConnectors()) {
       if (
-        c instanceof ThreadsConnector &&
+        (c instanceof ThreadsConnector || c instanceof DirectAccountConnector) &&
         typeof c.getStateAsync === 'function'
       ) {
         out.push(await c.getStateAsync())
@@ -174,7 +175,7 @@ export class SocialConnectorRegistry {
   ): Promise<boolean> {
     const c = this.getConnector(channel)
     const s =
-      c instanceof ThreadsConnector
+      (c instanceof ThreadsConnector || c instanceof DirectAccountConnector)
         ? await c.getStateAsync()
         : c.getState()
     return (
@@ -193,6 +194,7 @@ export function createDefaultSocialRegistry(
   const registry = new SocialConnectorRegistry()
   if (credentials) {
     registry.useThreadsConnector(new ThreadsConnector(credentials))
+    for (const channel of DIRECT_CHANNELS) registry.register(new DirectAccountConnector(channel, credentials))
   }
   return registry
 }
