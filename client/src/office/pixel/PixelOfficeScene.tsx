@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { selectTeamAgents, useDeckStore } from '../../store/useDeckStore'
+import { selectActiveProject, selectTeamAgents, useDeckStore } from '../../store/useDeckStore'
 import type { Agent } from '../../domain/types'
 import { assignOfficeDestinations, assignmentForAgent } from '../v2/officeAssignmentPolicy'
 import { pickVariationIndex, resolveOfficeV2VisualRole, visualVariationSeed } from '../v2/visualRole'
-import officeMap from '../../../public/assets/pixel-office/office-map.json'
+import gameOfficeMap from '../../../public/assets/pixel-office/office-map.json'
+import appOfficeMap from '../../../public/assets/pixel-office/office-map.app.json'
+import type { OfficeLayout } from '../v2/workstationPolicy'
 import charManifest from '../../../public/assets/pixel-office/characters.json'
 import bubbleManifest from '../../../public/assets/pixel-office/bubbles.json'
 import { findPath, type Pt } from './pixelPath'
@@ -14,8 +16,16 @@ import { pickDefaultCrew, simulateCrew } from './defaultCrew'
 import './PixelOfficeScene.css'
 
 const BASE = '/assets/pixel-office'
-const MAP_W = officeMap.width
-const MAP_H = officeMap.height
+type OfficeMap = typeof gameOfficeMap
+const LAYOUTS: Record<OfficeLayout, { map: OfficeMap; suffix: string }> = {
+  game: { map: gameOfficeMap, suffix: '' },
+  app: { map: appOfficeMap as OfficeMap, suffix: '.app' },
+}
+// The scene is remounted per layout (key), so module-level layout state is switched once per mount.
+let layout: OfficeLayout = 'game'
+let officeMap: OfficeMap = gameOfficeMap
+const MAP_W = gameOfficeMap.width
+const MAP_H = gameOfficeMap.height
 const FW = charManifest.frameWidth
 const FH = charManifest.frameHeight
 const WALK_SPEED = 54 // map px per second
@@ -23,10 +33,29 @@ const WALK_SPEED = 54 // map px per second
 type Waypoint = { x: number; y: number; pose: 'sit' | 'stand'; face: Facing }
 type Target = Waypoint & { key: string }
 
-const WAYPOINTS = officeMap.waypoints as unknown as Record<string, Waypoint>
+let WAYPOINTS = officeMap.waypoints as unknown as Record<string, Waypoint>
 const ANIMS = charManifest.animations as unknown as Record<string, { row: number; frames: number }>
 const ACCESSORIES = charManifest.accessories as unknown as Record<string, string>
-const WANDER_POINTS = wanderPoints(officeMap)
+let WANDER_POINTS = wanderPoints(officeMap)
+
+function applyOfficeLayout(next: OfficeLayout) {
+  if (layout === next) return
+  layout = next
+  officeMap = LAYOUTS[next].map
+  WAYPOINTS = officeMap.waypoints as unknown as Record<string, Waypoint>
+  WANDER_POINTS = wanderPoints(officeMap)
+}
+
+/** Game projects get the game-dev room; app/web/SaaS projects get an app-dev room instead. */
+function layoutForProjectType(type: string | undefined): OfficeLayout {
+  return type === 'steam-game' || type === 'mobile-game' ? 'game' : 'app'
+}
+
+export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
+  const projectType = useDeckStore((s) => selectActiveProject(s)?.type)
+  const next = preview ? 'game' : layoutForProjectType(projectType)
+  return <OfficeScene key={next} preview={preview} layoutId={next} />
+}
 
 interface Runner {
   agent: Agent
@@ -216,7 +245,8 @@ const STATUS_KO: Record<Agent['status'], string> = {
   verifying: '검증 중', blocked: '막힘', offline: '오프라인',
 }
 
-export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
+function OfficeScene({ preview, layoutId }: { preview: boolean; layoutId: OfficeLayout }) {
+  applyOfficeLayout(layoutId)
   const teamRoster = useDeckStore(useShallow((s) => selectTeamAgents(s).slice(0, 30)))
   const runtime = useDeckStore((s) => s.agentRuntime)
   const recentTaskTitle = useDeckStore((s) => s.tasks.filter((t) => t.status === 'completed').sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))[0]?.title)
@@ -247,7 +277,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-  const assignments = useMemo(() => assignOfficeDestinations(agents, { offlineMode: 'hidden' }), [agents])
+  const assignments = useMemo(() => assignOfficeDestinations(agents, { offlineMode: 'hidden', layout: layoutId }), [agents, layoutId])
 
   const runners = useRef<Map<string, Runner>>(new Map())
   // Idle chatter: every ~9s two resting staff standing close together exchange a short line.
@@ -401,10 +431,10 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
         <div
           key={i}
           className="pxo-prop"
-          style={{ left: p.x, top: p.y, width: p.w, height: p.h, zIndex: p.z, backgroundPosition: `-${p.sx}px -${p.sy}px` }}
+          style={{ left: p.x, top: p.y, width: p.w, height: p.h, zIndex: p.z, backgroundPosition: `-${p.sx}px -${p.sy}px`, backgroundImage: `url(${BASE}/props${LAYOUTS[layoutId].suffix}.png)` }}
         />
       )),
-    [],
+    [layoutId],
   )
   const list = [...runners.current.values()]
   const counts = {
@@ -482,7 +512,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
       >
         <div className="pxo-frame" style={{ width: MAP_W * scale, height: MAP_H * scale, transform: `translate(${snapPx(offset.x)}px, ${snapPx(offset.y)}px)` }}>
           <div className="pxo-map" style={{ width: MAP_W, height: MAP_H, transform: `scale(${scale})` }}>
-            <img className="pxo-bg" src={`${BASE}/office-bg.png`} alt="" draggable={false} />
+            <img className="pxo-bg" src={`${BASE}/office-bg${LAYOUTS[layoutId].suffix}.png`} alt="" draggable={false} />
             {propEls}
             {list.map((r) => {
               const { row, col } = animationFor(r, now)

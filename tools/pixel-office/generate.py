@@ -26,6 +26,10 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 OUT = os.path.join(ROOT, 'client', 'public', 'assets', 'pixel-office')
 
 W, H = 768, 480
+# Layout variant: 'game' (default, game projects) or 'app' (app/web/SaaS projects: the
+# game-dev room becomes an app-dev room). Variant outputs carry a suffix: office-bg.app.png …
+VARIANT = os.environ.get('OFFICE_VARIANT', 'game')
+SUFFIX = '' if VARIANT == 'game' else f'.{VARIANT}'
 CELL = 8
 O = hx('3a2e3a')
 
@@ -47,7 +51,7 @@ ROOMS = {
     'garden': (496, BOT[0], 761, BOT[1]),
 }
 LABELS = [
-    ('product', '제품', 10, 7), ('gamedev', '게임 개발', 162, 7), ('design', '디자인', 315, 7),
+    ('product', '제품', 10, 7), ('gamedev', '게임 개발' if VARIANT == 'game' else '앱 개발', 162, 7), ('design', '디자인', 315, 7),
     ('research', '리서치', 467, 7), ('development', '엔지니어링', 620, 7),
     ('marketing', '마케팅', 10, 158), ('lounge', '휴게실', 518, 290), ('testing', '테스트', 588, 158),
     ('meeting', '회의실', 10, 318), ('garden', '가든', 650, 318),
@@ -70,7 +74,7 @@ GLASS = hx('bfe6f5'); GLASS_L = hx('e6f7fd')
 
 FLOORS = {
     'product': ('wood', hx('d9a066'), hx('c48a52'), hx('e8b47c')),
-    'gamedev': ('carpet', hx('6c6aa8'), hx('5d5b97'), hx('7d7bb8')),
+    'gamedev': ('carpet', hx('6c6aa8'), hx('5d5b97'), hx('7d7bb8')) if VARIANT == 'game' else ('tile', hx('d3e6e4'), hx('bcd6d3'), hx('e2efed')),
     'design': ('tile', hx('f5d9df'), hx('e8c2ca'), hx('fbe7eb')),
     'research': ('wood', hx('caa274'), hx('b38a5e'), hx('dcb689')),
     'development': ('tile', hx('cfd6df'), hx('b8c1cc'), hx('dde3ea')),
@@ -313,7 +317,7 @@ def wall_decor(c):
     # top band (face y 4..23)
     face = 6
     rooms = ['product', 'gamedev', 'design', 'research', 'development']
-    kinds = {'product': 'kanban', 'gamedev': None, 'design': 'palette', 'research': 'map', 'development': 'status'}
+    kinds = {'product': 'kanban', 'gamedev': None if VARIANT == 'game' else 'status', 'design': 'palette', 'research': 'map', 'development': 'status'}
     for rid in rooms:
         x0, _, x1, _ = ROOMS[rid]
         window(c, x1 - 40, face)
@@ -388,7 +392,8 @@ def main():
     # ---------------- top rooms: 2 rows x 3 slots
     room_plan = {
         'product': (['single', 'chart', None, 'single', 'laptop', None], ['bookshelf', 'plant+filing']),
-        'gamedev': (['game', 'game', None, 'dual', 'game', None], ['arcade', 'beanbag']),
+        'gamedev': (['game', 'game', None, 'dual', 'game', None], ['arcade', 'beanbag']) if VARIANT == 'game'
+        else (['laptop', 'single', None, 'dual', 'laptop', None], ['plant+filing', 'server+plant']),
         'design': (['art', 'art', 'art', 'laptop', 'art', None], ['easel']),
         'research': (['books', 'chart', None, 'books', 'single', None], ['bookshelf', 'globe']),
         'development': (['dual', 'dual', None, 'dual', 'dual', None], ['servers', 'server+plant']),
@@ -403,7 +408,7 @@ def main():
             rt = 30 if i < 3 else 84
             if kind:
                 put(f'desk:{kind}', P.desk, dx, rt, kind)
-                chair(dx + 9, rt + 31, 'pink' if rid == 'design' else ('purple' if rid == 'gamedev' else 'blue'))
+                chair(dx + 9, rt + 31, 'pink' if rid == 'design' else ('purple' if rid == 'gamedev' and VARIANT == 'game' else 'blue'))
                 n += 1
                 waypoints[f'{wp_prefix[rid]}.desk.{n}'] = dict(x=dx + 8, y=rt + 39, pose='sit', face='up')
             else:
@@ -584,13 +589,13 @@ def main():
     atlas = Canvas(atlas_w, cy + row_h + 1)
     for k, (x, y) in pos.items():
         atlas.blit(cache[k][0], x, y)
-    atlas.img.save(os.path.join(OUT, 'props.png'))
+    atlas.img.save(os.path.join(OUT, f'props{SUFFIX}.png'))
     for pr in prop_list:
         sx, sy = pos[pr['key']]
         im = cache[pr['key']][0]
         pr.update(sx=sx, sy=sy, w=im.w, h=im.h)
 
-    bg.img.save(os.path.join(OUT, 'office-bg.png'))
+    bg.img.save(os.path.join(OUT, f'office-bg{SUFFIX}.png'))
 
     # ---------------- walk grid
     cols, rows = W // CELL, H // CELL
@@ -647,8 +652,10 @@ def main():
         rooms={k: dict(x0=v[0], y0=v[1], x1=v[2], y1=v[3]) for k, v in ROOMS.items()},
         props=prop_list,
     )
-    with open(os.path.join(OUT, 'office-map.json'), 'w') as f:
+    with open(os.path.join(OUT, f'office-map{SUFFIX}.json'), 'w') as f:
         json.dump(office, f, separators=(',', ':'), ensure_ascii=False)
+    if VARIANT != 'game':
+        return  # characters/bubbles are shared with the default layout
 
     # ---------------- characters
     cdir = os.path.join(OUT, 'characters')

@@ -54,9 +54,19 @@ const DESK_CLAIM_STATUS: ReadonlySet<AgentStatus> = new Set([
   'blocked',
 ])
 
-export function workstationGroupForAgent(agent: Agent): WorkstationGroup {
-  const role = resolveOfficeV2VisualRole(agent)
-  return ROLE_TO_GROUP[role]
+/** Office layout: 'game' has a game-dev room; 'app' turns that room into an app-dev room. */
+export type OfficeLayout = 'game' | 'app'
+
+const APP_DEV_HINT = /mobile|ios|android|flutter|react-native|frontend|app-builder|swift|kotlin/
+
+export function workstationGroupForAgent(agent: Agent, layout: OfficeLayout = 'game'): WorkstationGroup {
+  const group = ROLE_TO_GROUP[resolveOfficeV2VisualRole(agent)]
+  if (layout === 'app') {
+    // Same desks (gamedev.desk.N), different room: app/mobile/frontend builders sit there.
+    if (group === 'game-development') return 'development'
+    if (group === 'development' && APP_DEV_HINT.test(`${agent.id} ${agent.name}`.toLowerCase())) return 'game-development'
+  }
+  return group
 }
 
 export interface WorkstationClaim {

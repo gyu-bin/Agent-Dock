@@ -43,6 +43,8 @@ export interface OfficeAssignmentOptions {
    * Spec allows either; Scene may choose later.
    */
   offlineMode?: 'reception' | 'hidden'
+  /** Office layout variant (which room the game-dev desks belong to). */
+  layout?: import('./workstationPolicy').OfficeLayout
 }
 
 /** Lounge sit/stand/talk pool — exits excluded (layout SoT). */
@@ -188,7 +190,7 @@ function deskPriority(status: AgentStatus): number {
  * Department desks for working/blocked only.
  * Reuses workstation capacity + waypoint id helpers.
  */
-function assignDepartmentDesks(agents: Agent[]): OfficeAssignment[] {
+function assignDepartmentDesks(agents: Agent[], layout: import('./workstationPolicy').OfficeLayout = 'game'): OfficeAssignment[] {
   const claimants = agents
     .slice()
     .sort((a, b) => {
@@ -210,7 +212,7 @@ function assignDepartmentDesks(agents: Agent[]): OfficeAssignment[] {
   const out: OfficeAssignment[] = []
 
   for (const agent of claimants) {
-    const group = workstationGroupForAgent(agent)
+    const group = workstationGroupForAgent(agent, layout)
     const cap = WORKSTATION_CAPACITY[group]
     used[group] += 1
     if (used[group] <= cap) {
@@ -268,7 +270,7 @@ export function assignOfficeDestinations(
       'lounge',
     ),
   )
-  assignments.push(...assignDepartmentDesks(byType.workstation))
+  assignments.push(...assignDepartmentDesks(byType.workstation, options.layout))
   assignments.push(
     ...assignPool(
       byType.meeting.map((a) => a.id),
