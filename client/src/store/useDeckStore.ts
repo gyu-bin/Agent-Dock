@@ -23,7 +23,9 @@ import {
   type AgentRuntime,
 } from '../domain/teamRuntime'
 import type { ProjectsSnapshot } from '../api/client'
+import { pickDefaultCrew } from '../office/pixel/defaultCrew'
 import {
+  createProject as createProjectApi,
   rollbackCodexSnapshot,
   saveWorkState,
   fetchProjectArtifacts,
@@ -144,7 +146,7 @@ interface DeckState {
 
   proposeWorkFromChat: (
     text: string,
-    opts?: { attachmentIds?: string[]; attachmentStagingId?: string },
+    opts?: { attachmentIds?: string[]; attachmentStagingId?: string; skipUserLine?: boolean },
   ) => void
   appendChat: (msg: Omit<ChatMessage, 'id' | 'createdAt'> & { id?: string }) => void
   createAndStartTask: (input: {
@@ -577,14 +579,41 @@ function createDeckStore() {
           (opts?.attachmentIds?.length
             ? `(첨부 ${opts.attachmentIds.length}개)`
             : '')
-        get().appendChat({ role: 'user', content: userLine })
+        if (!opts?.skipUserLine) get().appendChat({ role: 'user', content: userLine })
 
         if (!project) {
-          get().appendChat({
-            role: 'assistant',
-            content:
-              '활성 Project가 없습니다. 먼저 New Project로 팀을 만든 뒤 작업을 요청해 주세요.',
-          })
+          // No project yet: spin up a default workspace with the office's preview crew,
+          // then continue with the same request instead of refusing it.
+          const crew = pickDefaultCrew(state.registry).map((a) => a.id)
+          if (!crew.length) {
+            get().appendChat({
+              role: 'assistant',
+              content: '에이전트 레지스트리가 비어 있어 기본 작업공간을 만들 수 없습니다. 설정에서 에이전트 경로를 확인해 주세요.',
+            })
+            return
+          }
+          void (async () => {
+            try {
+              const snap = await createProjectApi({
+                name: '기본 작업공간',
+                type: 'custom',
+                agentIds: crew,
+                status: 'active',
+              })
+              get().applyProjectsSnapshot(snap)
+              if (!selectActiveProject(get())) throw new Error('기본 작업공간이 활성화되지 않았습니다.')
+              get().appendChat({
+                role: 'assistant',
+                content: `프로젝트가 없어 기본 직원 ${crew.length}명으로 「기본 작업공간」을 만들었어요. 이어서 요청을 정리할게요.`,
+              })
+              get().proposeWorkFromChat(text, { ...opts, skipUserLine: true })
+            } catch (err) {
+              get().appendChat({
+                role: 'assistant',
+                content: `기본 작업공간을 만들지 못했습니다: ${err instanceof Error ? err.message : String(err)}`,
+              })
+            }
+          })()
           return
         }
 

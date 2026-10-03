@@ -146,6 +146,55 @@ function animationFor(r: Runner, now: number): { row: number; col: number } {
   return { row: a.row, col: blink ? 1 : 0 }
 }
 
+const ROLE_KO: Record<string, string> = {
+  pm: 'PM · 기획', developer: '개발자', 'game-developer': '게임 개발자', designer: '디자이너',
+  researcher: '리서처', marketer: '마케터', qa: 'QA · 테스트', reviewer: '리뷰어',
+}
+
+function AgentCard({
+  runner,
+  preview,
+  onClose,
+  onOpenTask,
+}: {
+  runner: Runner
+  preview: boolean
+  onClose: () => void
+  onOpenTask: (taskId: string) => void
+}) {
+  const a = runner.agent
+  const role = ROLE_KO[resolveOfficeV2VisualRole(a)] ?? a.division
+  const busy = a.status === 'working' || a.status === 'reviewing' || a.status === 'verifying' || a.status === 'blocked'
+  let doing: string
+  if (preview) doing = '실제로 맡은 작업은 없어요. 지금 보이는 움직임은 미리보기 연출이에요.'
+  else if (a.currentTaskLabel) doing = a.currentTaskLabel
+  else if (busy) doing = '작업 단계 정보를 아직 받지 못했어요.'
+  else doing = '맡은 작업 없이 대기 중이에요.'
+  return (
+    <aside className="pxo-card" aria-label={`${a.name} 정보`} onPointerDown={(e) => e.stopPropagation()}>
+      <header>
+        <div>
+          <b>{a.name}</b>
+          <span>{role}</span>
+        </div>
+        <button type="button" className="pxo-card-close" onClick={onClose} aria-label="닫기">×</button>
+      </header>
+      <dl>
+        <dt>상태</dt>
+        <dd><i className={`pxo-dot is-${a.status}`} />{STATUS_KO[a.status]}{preview ? ' (미리보기)' : ''}</dd>
+        <dt>하는 일</dt>
+        <dd>{doing}</dd>
+        {a.speech && !preview ? (<><dt>메모</dt><dd>{a.speech}</dd></>) : null}
+        {a.description ? (<><dt>전문 분야</dt><dd className="pxo-desc">{a.description}</dd></>) : null}
+      </dl>
+      {!preview && a.currentTaskId ? (
+        <button type="button" className="pxo-card-cta" onClick={() => onOpenTask(a.currentTaskId!)}>작업 상세 보기</button>
+      ) : null}
+      {preview ? <p className="pxo-card-note">오른쪽 채팅에 일을 시키면 이 직원들로 기본 작업공간이 만들어지고 실제로 일하기 시작해요.</p> : null}
+    </aside>
+  )
+}
+
 const STATUS_KO: Record<Agent['status'], string> = {
   idle: '대기', waiting: '대기', working: '작업 중', reviewing: '리뷰 중',
   verifying: '검증 중', blocked: '막힘', offline: '오프라인',
@@ -170,6 +219,14 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
   const agents = useMemo(() => roster.filter((a) => a.enabled !== false), [roster])
   const selectAgent = useDeckStore((s) => s.selectAgent)
   const selectedAgentId = useDeckStore((s) => s.selectedAgentId)
+  const selectTask = useDeckStore((s) => s.selectTask)
+  const setNav = useDeckStore((s) => s.setNav)
+  const [pinned, setPinned] = useState<string | null>(null)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setPinned(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const assignments = useMemo(() => assignOfficeDestinations(agents), [agents])
 
   const runners = useRef<Map<string, Runner>>(new Map())
@@ -307,8 +364,9 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
     idle: agents.filter((a) => a.status === 'idle' || a.status === 'waiting').length,
     blocked: agents.filter((a) => a.status === 'blocked').length,
   }
-  const focusId = hovered ?? selectedAgentId
+  const focusId = hovered ?? pinned ?? selectedAgentId
   const focus = focusId ? runners.current.get(focusId) : undefined
+  const card = pinned ? runners.current.get(pinned) : undefined
 
   return (
     <div className="pxo-scene">
@@ -391,7 +449,10 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
                   className={`pxo-char${focusId === r.agent.id ? ' is-focus' : ''}`}
                   style={{ left, top, width: FW, height: FH, zIndex: Math.round(r.pos.y) + 1 }}
                   aria-label={`${r.agent.name} · ${STATUS_KO[r.agent.status]}`}
-                  onClick={() => (preview ? undefined : selectAgent(r.agent.id))}
+                  onClick={() => {
+                    setPinned((p) => (p === r.agent.id ? null : r.agent.id))
+                    if (!preview) selectAgent(r.agent.id)
+                  }}
                   onMouseEnter={() => setHovered(r.agent.id)}
                   onMouseLeave={() => setHovered((h) => (h === r.agent.id ? null : h))}
                 >
@@ -419,19 +480,36 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
                 style={{ left: focus.pos.x * scale, top: (focus.pos.y - FH - 3) * scale }}
               >
                 <b>{focus.agent.name}</b>
-                <em>{focus.agent.currentTaskLabel || focus.agent.speech || STATUS_KO[focus.agent.status]}</em>
+                <em>{preview ? `${STATUS_KO[focus.agent.status]} · 미리보기` : focus.agent.currentTaskLabel || focus.agent.speech || STATUS_KO[focus.agent.status]}</em>
               </span>
             ) : null}
           </div>
         </div>
+        {card ? (
+          <AgentCard
+            runner={card}
+            preview={preview}
+            onClose={() => setPinned(null)}
+            onOpenTask={(taskId) => {
+              selectTask(taskId)
+              setNav('tasks')
+            }}
+          />
+        ) : null}
       </div>
 
       <footer className="pxo-footer">
-        <span>대기 → 휴게실·가든</span>
-        <span>작업 → 부서 자리</span>
-        <span>리뷰 → 회의실</span>
-        <span>검증 → 테스트룸</span>
-        <span>오프라인 → 리셉션</span>
+        {preview ? (
+          <span className="pxo-hint">지금 움직임은 미리보기예요. 오른쪽 채팅에 일을 시키면 이 직원들이 실제로 일을 시작해요.</span>
+        ) : (
+          <>
+            <span>직원을 클릭하면 하는 일을 볼 수 있어요</span>
+            <span>대기 → 휴게실·가든</span>
+            <span>작업 → 부서 자리</span>
+            <span>리뷰 → 회의실</span>
+            <span>검증 → 테스트룸</span>
+          </>
+        )}
       </footer>
     </div>
   )
