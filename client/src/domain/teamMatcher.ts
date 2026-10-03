@@ -34,6 +34,14 @@ export function matchPresetToRegistry(
   const matches: PresetMatch[] = []
 
   for (const role of preset.roles) {
+    const preferred = (role.preferredAgentIds ?? [])
+      .map((id) => registry.find((a) => a.id === id && !used.has(a.id) && a.executable !== false && a.instructionAvailable !== false))
+      .find(Boolean)
+    if (preferred) {
+      used.add(preferred.id)
+      matches.push({ role, agent: preferred })
+      continue
+    }
     let best: Agent | null = null
     let bestScore = 0
     for (const agent of registry) {
