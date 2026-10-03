@@ -10,6 +10,7 @@ import {
   MessageSquare,
   ChevronDown,
   ChevronUp,
+  Trash2,
 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { fetchProjectArtifacts, fetchTaskUsage, fetchTaskAttachments, type WorkAttachmentDto } from '../api/client'
@@ -62,6 +63,7 @@ export function TaskDetailPanel({
   const resumeTask = useDeckStore((s) => s.resumeTask)
   const cancelTask = useDeckStore((s) => s.cancelTask)
   const retryTask = useDeckStore((s) => s.retryTask)
+  const deleteTask = useDeckStore((s) => s.deleteTask)
   const retryFailedStep = useDeckStore((s) => s.retryFailedStep)
   const retryFromPreviousStep = useDeckStore((s) => s.retryFromPreviousStep)
   const retryWebSearch = useDeckStore((s) => s.retryWebSearch)
@@ -655,6 +657,19 @@ export function TaskDetailPanel({
           task.status === 'interrupted' ? (
             <button type="button" className={styles.danger} onClick={() => cancelTask(task.id)}>
               <Ban size={14} /> {t('task.cancel')}
+            </button>
+          ) : null}
+          {['completed', 'failed', 'cancelled', 'rejected', 'interrupted'].includes(task.status) ? (
+            <button
+              type="button"
+              className={styles.danger}
+              onClick={() => {
+                if (window.confirm('이 작업과 단계 기록을 삭제할까요? 결과물(아티팩트)은 남아요.')) {
+                  void deleteTask(task.id).catch((err) => window.alert(err instanceof Error ? err.message : String(err)))
+                }
+              }}
+            >
+              <Trash2 size={14} /> 작업 삭제
             </button>
           ) : null}
         </div>

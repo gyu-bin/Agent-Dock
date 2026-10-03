@@ -26,12 +26,15 @@ import type { ProjectsSnapshot } from '../api/client'
 import { pickDefaultCrew } from '../office/pixel/defaultCrew'
 import {
   createProject as createProjectApi,
+  deleteTask as deleteTaskApi,
+  fetchProjects,
   rollbackCodexSnapshot,
   saveWorkState,
   fetchProjectArtifacts,
   createArtifact,
   acquireExecutionLock,
   releaseExecutionLock,
+  getExecutionLockState,
   setWorkStateRevision,
   bindAttachmentsToTask,
 } from '../api/client'
@@ -140,6 +143,10 @@ interface DeckState {
     total: number
   }) => void
   applyProjectsSnapshot: (snap: ProjectsSnapshot) => void
+  /** Boot-only: mark running tasks whose owning tab is gone (no live lock) as interrupted. */
+  recoverAbandonedRuns: () => Promise<number>
+  /** Delete a finished task; an in-flight task is cancelled first. */
+  deleteTask: (taskId: string) => Promise<void>
   setAgentRuntime: (agentId: string, patch: AgentRuntime) => void
   upsertAgentRun: (run: AgentRun) => void
   upsertCodexRun: (run: CodexRun) => void
@@ -192,16 +199,51 @@ function createDeckStore() {
   const pendingStarts = new Map<string, symbol>()
 
   const store = create<DeckState>((set, get) => {
-    const persist = () => {
-      const { tasks, pipelineSteps, agentRuns, codexRuns } = get()
-      void saveWorkState({ tasks, pipelineSteps, agentRuns, codexRuns }).catch(
-        (err) => console.error('[persist]', err),
-      )
+    // Saves are serialized: overlapping PUTs would carry the same expectedRevision
+    // and the later one would 409, silently dropping a state transition.
+    let saving: Promise<void> | null = null
+    let dirty = false
+    const persist = (): Promise<void> => {
+      if (saving) {
+        dirty = true
+        return saving
+      }
+      saving = (async () => {
+        do {
+          dirty = false
+          const { tasks, pipelineSteps, agentRuns, codexRuns } = get()
+          try {
+            await saveWorkState({ tasks, pipelineSteps, agentRuns, codexRuns })
+          } catch (err) {
+            console.error('[persist]', err)
+            if ((err as { code?: string }).code === 'PERSISTENCE_CONFLICT') {
+              // Another writer bumped the revision: pick up the latest revision and retry once.
+              try {
+                await fetchProjects()
+                const latest = get()
+                await saveWorkState({ tasks: latest.tasks, pipelineSteps: latest.pipelineSteps, agentRuns: latest.agentRuns, codexRuns: latest.codexRuns })
+              } catch (retryErr) {
+                console.error('[persist] retry failed', retryErr)
+              }
+            }
+          }
+        } while (dirty)
+      })().finally(() => {
+        saving = null
+      })
+      return saving
     }
 
     const persistSoon = () => {
       if (persistTimer) clearTimeout(persistTimer)
-      persistTimer = setTimeout(persist, 400)
+      persistTimer = setTimeout(() => void persist(), 400)
+    }
+
+    /** Critical transitions (step/task start, complete, fail, cancel) are saved immediately. */
+    const persistNow = () => {
+      if (persistTimer) clearTimeout(persistTimer)
+      persistTimer = null
+      return persist()
     }
 
     const storeAccess = () => ({
@@ -246,6 +288,27 @@ function createDeckStore() {
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : `tab_${Date.now().toString(36)}`
+
+    // Execution ownership: this tab runs the task and proves it is alive by
+    // refreshing the server lock every 10s; on any terminal transition it releases it.
+    const heartbeats = new Map<string, ReturnType<typeof setInterval>>()
+    const startHeartbeat = (projectId: string, taskId: string) => {
+      const prev = heartbeats.get(taskId)
+      if (prev) clearInterval(prev)
+      heartbeats.set(
+        taskId,
+        setInterval(() => {
+          void acquireExecutionLock({ projectId, taskId, clientId: CLIENT_ID }).catch(() => undefined)
+        }, 10_000),
+      )
+    }
+    const stopHeartbeat = (taskId: string) => {
+      const timer = heartbeats.get(taskId)
+      if (timer) clearInterval(timer)
+      heartbeats.delete(taskId)
+      const task = get().tasks.find((t) => t.id === taskId)
+      if (task) void releaseExecutionLock({ projectId: task.projectId, clientId: CLIENT_ID, taskId })
+    }
 
     const engines: Partial<Record<ExecutionMode, ExecutionEngine>> = {}
 
@@ -301,6 +364,12 @@ function createDeckStore() {
     if (!eventsWired) {
       eventsWired = true
       deckEvents.subscribe((ev) => {
+        if (ev.type === 'task.completed' || ev.type === 'task.failed' || ev.type === 'task.cancelled' || ev.type === 'task.paused') {
+          stopHeartbeat(ev.taskId)
+        }
+        if (ev.type.startsWith('task.') || ev.type.startsWith('pipeline.step.')) {
+          void persistNow()
+        }
         if (ev.type === 'task.completed') {
           const task = get().tasks.find((t) => t.id === ev.taskId)
           if (!task?.finalResult && task?.executionMode !== 'REAL_AI') return
@@ -463,56 +532,12 @@ function createDeckStore() {
             nextRuntime = keep
           }
 
-          let tasks = (snap.tasks ?? state.tasks).map((t) =>
-            t.status === 'running' || t.status === 'verifying'
-              ? { ...t, status: 'interrupted' as const }
-              : t,
-          )
-          let pipelineSteps = (snap.pipelineSteps ?? state.pipelineSteps).map(
-            (s) =>
-              s.status === 'running' || s.status === 'reviewing'
-                ? { ...s, status: 'waiting' as const }
-                : s,
-          )
-          let agentRuns = snap.agentRuns ?? state.agentRuns
-          let codexRuns = snap.codexRuns ?? state.codexRuns
-
-          if (snap.tasks)
-            tasks = snap.tasks.map((t) =>
-              t.status === 'running' || t.status === 'verifying'
-                ? { ...t, status: 'interrupted' as const }
-                : t,
-            )
-          if (snap.pipelineSteps)
-            pipelineSteps = snap.pipelineSteps.map((s) =>
-              s.status === 'running' || s.status === 'reviewing'
-                ? { ...s, status: 'waiting' as const }
-                : s,
-            )
-          if (snap.agentRuns) {
-            agentRuns = snap.agentRuns.map((r) =>
-              r.status === 'running'
-                ? {
-                    ...r,
-                    status: 'failed' as const,
-                    error: r.error ?? 'Interrupted by refresh',
-                    completedAt: r.completedAt ?? new Date().toISOString(),
-                  }
-                : r,
-            )
-          }
-          if (snap.codexRuns) {
-            codexRuns = snap.codexRuns.map((r) =>
-              r.status === 'running' || r.status === 'queued'
-                ? {
-                    ...r,
-                    status: 'cancelled' as const,
-                    error: r.error ?? 'Interrupted by refresh',
-                    completedAt: r.completedAt ?? new Date().toISOString(),
-                  }
-                : r,
-            )
-          }
+          // Hydration shows server state as-is. Recovering runs abandoned by a
+          // closed/reloaded tab is a separate, boot-only step (recoverAbandonedRuns).
+          const tasks = snap.tasks ?? state.tasks
+          const pipelineSteps = snap.pipelineSteps ?? state.pipelineSteps
+          const agentRuns = snap.agentRuns ?? state.agentRuns
+          const codexRuns = snap.codexRuns ?? state.codexRuns
 
           return {
             projects: snap.projects,
@@ -526,6 +551,51 @@ function createDeckStore() {
             codexRuns,
           }
         }),
+
+      deleteTask: async (taskId) => {
+        const task = get().tasks.find((t) => t.id === taskId)
+        if (!task) return
+        const terminal = ['completed', 'failed', 'cancelled', 'rejected', 'interrupted']
+        if (!terminal.includes(task.status)) get().cancelTask(taskId)
+        // The server only deletes terminal tasks: make sure it has the latest status first.
+        await persistNow()
+        const snap = await deleteTaskApi(task.projectId, taskId)
+        if (get().selectedTaskId === taskId) set({ selectedTaskId: null })
+        get().applyProjectsSnapshot(snap)
+      },
+
+      recoverAbandonedRuns: async () => {
+        const running = get().tasks.filter((t) => t.status === 'running' || t.status === 'verifying')
+        if (!running.length) return 0
+        const abandoned = new Set<string>()
+        for (const projectId of new Set(running.map((t) => t.projectId))) {
+          const lock = await getExecutionLockState(projectId).catch(() => ({ taskId: null, alive: false }))
+          for (const t of running) {
+            if (t.projectId !== projectId) continue
+            if (!(lock.alive && lock.taskId === t.id)) abandoned.add(t.id)
+          }
+        }
+        if (!abandoned.size) return 0
+        const at = new Date().toISOString()
+        set((s) => ({
+          tasks: s.tasks.map((t) => (abandoned.has(t.id) ? { ...t, status: 'interrupted' as const, updatedAt: at } : t)),
+          pipelineSteps: s.pipelineSteps.map((st) =>
+            abandoned.has(st.taskId) && (st.status === 'running' || st.status === 'reviewing') ? { ...st, status: 'waiting' as const } : st,
+          ),
+          agentRuns: s.agentRuns.map((r) =>
+            abandoned.has(r.taskId) && r.status === 'running'
+              ? { ...r, status: 'failed' as const, error: r.error ?? 'Interrupted: the tab running this task was closed or reloaded', completedAt: r.completedAt ?? at }
+              : r,
+          ),
+          codexRuns: s.codexRuns.map((r) =>
+            abandoned.has(r.taskId) && (r.status === 'running' || r.status === 'queued')
+              ? { ...r, status: 'cancelled' as const, error: r.error ?? 'Interrupted: the tab running this task was closed or reloaded', completedAt: r.completedAt ?? at }
+              : r,
+          ),
+        }))
+        await persistNow()
+        return abandoned.size
+      },
 
       setAgentRuntime: (agentId, patch) =>
         set((state) => ({
@@ -831,6 +901,7 @@ function createDeckStore() {
             })
             return
           }
+          startHeartbeat(task.projectId, taskId)
           ensureEngineForTask(taskId).execute(taskId)
         })().catch(() => {
           if (pendingStarts.get(taskId) !== attempt) return

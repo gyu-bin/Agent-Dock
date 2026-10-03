@@ -65,6 +65,10 @@ export function AppShell() {
         })
         store.setAiProvider(provider)
         store.applyProjectsSnapshot(projects)
+        // Boot-only recovery: a task left "running" by a closed/reloaded tab has no
+        // live execution lock any more — mark it interrupted so it can be resumed.
+        const recovered = await store.recoverAbandonedRuns().catch(() => 0)
+        if (recovered) console.info(`[AgentDeck] recovered ${recovered} abandoned run(s) as interrupted`)
       } catch (err) {
         console.error('[AgentDeck] hydrate failed', err)
         if (!cancelled) {

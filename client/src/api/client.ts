@@ -134,6 +134,18 @@ export async function fetchProjects(): Promise<ProjectsSnapshot> {
   return snap
 }
 
+/** Delete a finished task (completed/failed/cancelled/rejected/interrupted) and its steps/runs. */
+export async function deleteTask(projectId: string, taskId: string): Promise<ProjectsSnapshot> {
+  const res = await apiFetch(`${API_BASE}/api/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(body.error ?? `Delete failed: ${res.status}`)
+  }
+  const snap = (await res.json()) as ProjectsSnapshot
+  if (typeof snap.revision === 'number') setWorkStateRevision(snap.revision)
+  return snap
+}
+
 export async function createProject(input: {
   sourceType?: 'local' | 'github'
   repository?: string
@@ -1510,6 +1522,14 @@ export async function acquireExecutionLock(input: {
   }
   if (!res.ok) return { ok: false, error: `Lock failed: ${res.status}` }
   return { ok: true }
+}
+
+/** Whether a project's execution lock is held by a live tab (heartbeat within TTL). */
+export async function getExecutionLockState(projectId: string): Promise<{ taskId: string | null; alive: boolean }> {
+  const res = await apiFetch(`${API_BASE}/api/execution/lock?projectId=${encodeURIComponent(projectId)}`)
+  if (!res.ok) return { taskId: null, alive: false }
+  const body = (await res.json().catch(() => ({}))) as { lock?: { taskId?: string } | null; alive?: boolean }
+  return { taskId: body.lock?.taskId ?? null, alive: body.alive === true }
 }
 
 export async function releaseExecutionLock(input: {

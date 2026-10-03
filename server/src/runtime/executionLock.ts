@@ -7,8 +7,18 @@ export interface ExecutionLockHolder {
   acquiredAt: string
 }
 
-/** Single-user MVP: one active execution lock per project. */
+/**
+ * Single-user MVP: one active execution lock per project.
+ * The browser tab that runs a task is the execution owner; it refreshes the lock
+ * every ~10s (heartbeat). A lock without a heartbeat for LOCK_TTL_MS is dead
+ * (tab closed/reloaded) and may be taken over or recovered.
+ */
+export const LOCK_TTL_MS = 45_000
 const locks = new Map<string, ExecutionLockHolder>()
+
+export function isLockAlive(holder: ExecutionLockHolder | null, now = Date.now()): boolean {
+  return Boolean(holder) && now - Date.parse(holder!.acquiredAt) < LOCK_TTL_MS
+}
 
 export function tryAcquireExecutionLock(input: {
   projectId: string
@@ -19,7 +29,7 @@ export function tryAcquireExecutionLock(input: {
   if (
     existing &&
     existing.clientId !== input.clientId &&
-    Date.now() - Date.parse(existing.acquiredAt) < 30 * 60_000
+    isLockAlive(existing)
   ) {
     throw hardenError(
       'EXECUTION_LOCK',

@@ -168,6 +168,29 @@ export class ProjectService {
   }
 
   /**
+   * Delete one finished task with its steps and runs. In-flight tasks must be
+   * cancelled first so a live execution never loses its records mid-run.
+   */
+  async removeTask(projectId: string, taskId: string): Promise<ProjectStoreSnapshot> {
+    return this.enqueue(async () => {
+      const snap = this.normalize(await this.repo.load())
+      const task = snap.tasks.find((t) => t.id === taskId && t.projectId === projectId)
+      if (!task) throw Object.assign(new Error('작업을 찾을 수 없습니다.'), { status: 404, code: 'TASK_NOT_FOUND' })
+      const terminal = ['completed', 'failed', 'cancelled', 'rejected', 'interrupted']
+      if (!terminal.includes(task.status)) {
+        throw Object.assign(new Error('진행 중인 작업은 먼저 중단한 뒤 삭제할 수 있습니다.'), { status: 409, code: 'TASK_NOT_TERMINAL' })
+      }
+      snap.tasks = snap.tasks.filter((t) => t.id !== taskId)
+      snap.pipelineSteps = snap.pipelineSteps.filter((s) => s.taskId !== taskId)
+      snap.agentRuns = snap.agentRuns.filter((r) => r.taskId !== taskId)
+      snap.codexRuns = (snap.codexRuns ?? []).filter((r) => r.taskId !== taskId)
+      snap.revision = (snap.revision ?? 0) + 1
+      await this.repo.save(snap)
+      return snap
+    })
+  }
+
+  /**
    * Recover interrupted work after refresh/restart.
    * Never marks running work as completed.
    */

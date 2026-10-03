@@ -129,6 +129,7 @@ import {
   tryAcquireExecutionLock,
   releaseExecutionLock,
   getExecutionLock,
+  isLockAlive,
 } from './runtime/executionLock.js'
 import { hardenError } from './runtime/hardenErrors.js'
 
@@ -468,6 +469,17 @@ app.post('/api/execution/lock', (req, res) => {
   } catch (err) {
     sendError(res, err)
   }
+})
+
+/** Is a task still owned by a live tab? Used for boot recovery after a reload. */
+app.get('/api/execution/lock', (req, res) => {
+  const projectId = String(req.query.projectId ?? '').trim()
+  if (!projectId) {
+    res.status(400).json({ error: 'projectId required' })
+    return
+  }
+  const lock = getExecutionLock(projectId)
+  res.json({ lock, alive: isLockAlive(lock) })
 })
 
 app.delete('/api/execution/lock', (req, res) => {
@@ -1113,6 +1125,16 @@ app.post('/api/projects/active', async (req, res) => {
     if (id) await ownedProject(String(id), res)
     const snap = await projects.setActive(id ? String(id) : null)
     res.json(projectView(snap,res))
+  } catch (err) {
+    sendError(res, err)
+  }
+})
+
+app.delete('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
+  try {
+    await ownedProject(req.params.projectId, res)
+    const snap = await projects.removeTask(req.params.projectId, req.params.taskId)
+    res.json(projectView(snap, res))
   } catch (err) {
     sendError(res, err)
   }
