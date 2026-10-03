@@ -7,6 +7,7 @@ import type {
   SearchPlan,
   TaskWebSearchSession,
   WebSearchProvider,
+  WebSearchResult,
   WebSource,
 } from './types.js'
 
@@ -78,26 +79,41 @@ export async function runWebSearchPipeline(
   const allSources: WebSource[] = []
   const maxTotal = input.maxTotalSources ?? 12
 
-  for (const query of plan.queries) {
-    if (allSources.length >= maxTotal) break
-    const cached = getCachedSearch(input.taskId, query)
-    if (cached) {
-      results.push(cached)
-      allSources.push(...cached.sources)
-      continue
+  // Queries run concurrently (max 3 at a time). One slow or failed query must not sink the
+  // whole research step: it is skipped, and the step fails only when no query returns sources.
+  const failures: unknown[] = []
+  const settled: Array<WebSearchResult | null> = new Array(plan.queries.length).fill(null)
+  let next = 0
+  const worker = async () => {
+    while (next < plan.queries.length) {
+      const i = next++
+      const query = plan.queries[i]
+      const cached = getCachedSearch(input.taskId, query)
+      if (cached) {
+        settled[i] = cached
+        continue
+      }
+      try {
+        const result = await search.search({ query, currentDate, taskId: input.taskId, maxSources: 6 })
+        setCachedSearch(input.taskId, result)
+        settled[i] = result
+      } catch (err) {
+        // A user cancel (AbortError) stops everything; a per-request timeout (TimeoutError) only skips this query.
+        if ((err as { name?: string }).name === 'AbortError') throw err
+        failures.push(err)
+        console.warn(`[web-search] query skipped (${err instanceof Error ? err.message : String(err)}): "${query.slice(0, 80)}"`)
+      }
     }
-    const result = await search.search({
-      query,
-      currentDate,
-      taskId: input.taskId,
-      maxSources: 6,
-    })
-    setCachedSearch(input.taskId, result)
+  }
+  await Promise.all(Array.from({ length: Math.min(3, plan.queries.length) }, worker))
+  for (const result of settled) {
+    if (!result) continue
     results.push(result)
     allSources.push(...result.sources)
   }
 
   const sources = dedupeSources(allSources).slice(0, maxTotal)
+  if (sources.length === 0 && failures.length) throw failures[0]
   if (sources.length === 0) {
     throw Object.assign(
       new Error('웹 검색 실패: 유효한 출처가 없습니다.'),

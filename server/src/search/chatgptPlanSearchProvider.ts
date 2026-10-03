@@ -18,8 +18,9 @@ export class ChatGPTPlanSearchProvider implements WebSearchProvider {
         reason = 'ChatGPT Plan web search returned no sources'
       } catch (error) {
         const code = (error as { code?: string }).code
-        if (code !== 'CHATGPT_UNSUPPORTED_CAPABILITY' && code !== 'CHATGPT_PLAN_UNAVAILABLE') throw error
-        reason = `ChatGPT Plan web search unavailable (${code})`
+        const timedOut = (error as { name?: string }).name === 'TimeoutError' && !request.signal?.aborted
+        if (!timedOut && code !== 'CHATGPT_UNSUPPORTED_CAPABILITY' && code !== 'CHATGPT_PLAN_UNAVAILABLE') throw error
+        reason = timedOut ? 'ChatGPT Plan web search timed out' : `ChatGPT Plan web search unavailable (${code})`
       }
     }
     // Degraded path: never silent. The note travels with the result so the UI/agents can flag it.
