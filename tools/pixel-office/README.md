@@ -32,6 +32,8 @@ python3 tools/pixel-office/generate.py
 - 작업/막힘 → 부서 자리 (`{product|gamedev|design|research|development|marketing|testing}.desk.N`)
 - 리뷰 → 회의실 (`meeting.seat.N`)
 - 검증 → 테스트룸 (`testing.desk.N`)
-- 오프라인 → 리셉션 (`reception.spawn`, 초과 인원은 로비)
+- 오프라인 → 오피스에서 숨김
+
+리셉션은 제거했습니다. 중앙 휴게실 남쪽은 넓게 열린 테라스로 이어지고, 테라스와 가든 사이에 벽이나 유리문 없이 이동할 수 있습니다. 기존 리셉션 책상과 의자는 배치하지 않습니다.
 
 waypoint id를 바꾸면 정책 파일의 목록과 함께 맞춰야 합니다.

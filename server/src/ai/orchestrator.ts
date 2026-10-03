@@ -1,4 +1,4 @@
-import type { AiProvider } from '../providers/aiProvider.js'
+import { requireConfigured, type AiProvider } from '../providers/aiProvider.js'
 import { loadAgentInstructions } from '../registry/loadAgentInstructions.js'
 import { loadAgentRegistry } from '../registry/loadAgents.js'
 import { AgentInstructionError } from '../registry/agentInstructionError.js'
@@ -203,12 +203,7 @@ export async function runOrchestrator(
   provider: AiProvider,
   input: OrchestrateInput,
 ): Promise<{ plan: RoutePlan; usage: { model: string; inputTokens?: number; outputTokens?: number } }> {
-  if (!provider.isConfigured()) {
-    throw Object.assign(
-      new Error('OPENAI_API_KEY is not configured. Cannot run Real AI orchestrator.'),
-      { status: 503 },
-    )
-  }
+  requireConfigured(provider)
 
   const registry = await loadAgentRegistry()
   const orch = await loadAgentInstructions('agents-orchestrator', registry.resolvedSource)
@@ -324,6 +319,7 @@ export async function runAgentStep(
     modelProfileId?: string
     attachmentsBlock?: string
     attachmentImageDataUrls?: Array<{ mimeType: string; dataUrl: string }>
+    attachmentFiles?: Array<{ filename: string; fileData: string }>
     includedAttachmentIds?: string[]
     visionCapable?: boolean
   },
@@ -341,12 +337,7 @@ export async function runAgentStep(
   }
   webSearchSources?: typeof input.webSearchSources
 }> {
-  if (!provider.isConfigured()) {
-    throw Object.assign(
-      new Error('OPENAI_API_KEY is not configured. Real AI execution unavailable.'),
-      { status: 503 },
-    )
-  }
+  requireConfigured(provider)
 
   const agent = await loadAgentInstructions(input.agentId)
 
@@ -410,15 +401,18 @@ ${searchRules}
 
   const userText = assembleUserPrompt(built)
   const images = input.attachmentImageDataUrls ?? []
+  const files = input.attachmentFiles ?? []
   const visionCapable = input.visionCapable !== false
+  if (images.length && !visionCapable) throw Object.assign(new Error('선택한 모델은 이미지 첨부 분석을 지원하지 않습니다.'), { status: 400, code: 'CHATGPT_UNSUPPORTED_CAPABILITY' })
   const userContent =
-    images.length > 0 && visionCapable
+    (images.length > 0 && visionCapable) || files.length > 0
       ? ([
           { type: 'text' as const, text: userText },
           ...images.map((img) => ({
             type: 'image_url' as const,
             image_url: { url: img.dataUrl, detail: 'auto' as const },
           })),
+          ...files.map(file => ({ type: 'file' as const, file: { filename: file.filename, file_data: file.fileData } })),
         ] as import('../providers/aiProvider.js').ChatContentPart[])
       : userText
 
@@ -449,7 +443,7 @@ ${searchRules}
   } catch (err) {
     // If we have real search sources but chat fails (e.g. quota), still return
     // a sources-only research digest — never invent URLs or claim live LLM analysis.
-    if (input.webSearchSources && input.webSearchSources.length > 0) {
+    if (provider.getState().authMode !== 'chatgpt-plan' && input.webSearchSources && input.webSearchSources.length > 0) {
       const lines = [
         '## 요약',
         'LLM 응답을 받지 못해, Web Search Provider가 반환한 출처만으로 요약을 구성했습니다. 모델 기억으로 최신 사실을 채우지 않았습니다.',
@@ -496,11 +490,7 @@ export async function synthesizeFinalResult(
     stepOutputs: Array<{ agentId: string; agentName: string; task: string; output: string }>
   },
 ): Promise<{ output: string; usage: { model: string; inputTokens?: number; outputTokens?: number } }> {
-  if (!provider.isConfigured()) {
-    throw Object.assign(new Error('OPENAI_API_KEY is not configured'), {
-      status: 503,
-    })
-  }
+  requireConfigured(provider)
 
   // Preserve the existing explicit final-summary fallback, never substitute a
   // different specialist for an assigned step or hide source/parse failures.

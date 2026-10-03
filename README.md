@@ -55,6 +55,22 @@ OPENAI_API_KEY=sk-...
 # BUFFER_API_KEY=
 ```
 
+## ChatGPT 플랜 연결
+
+로컬 앱에서 **설정 → AI → Continue with ChatGPT**를 직접 눌러 로그인하고 플랜 사용을 승인합니다.
+일반 채팅·분석의 기본 인증 방식은 **ChatGPT Plan**입니다. 모델 목록은 연결한 계정에서 받아옵니다.
+로그인 여부와 실제 플랜 요청 성공은 별개입니다. 계정 정책과 플랜 한도에 따라 요청이 제한될 수 있습니다.
+
+**OpenAI API · 별도 결제**는 설정에서 명시적으로 선택할 때만 사용합니다. API 키는 `.env`에 저장하고 앱을 다시 시작합니다.
+ChatGPT 플랜 실패 후 API 키로 자동 전환하지 않습니다. 이미지 생성은 별도 API 이미지 설정과 잔액이 필요합니다.
+Codex 구현 작업은 기존 로컬 Codex CLI 로그인으로 실행합니다.
+
+현재 공식 OSS 로그인은 **로컬 앱 전용**입니다. Vercel의 원격 서버에서는 로그인 버튼이 비활성화되며,
+Vercel에서 AI를 실행하려면 API 모드를 명시적으로 선택해야 합니다. 로컬 로그인 정보는 Vercel로 복사하지 않습니다.
+연결 해제는 로컬 토큰을 지우며, 서버가 원격 해제를 지원하지 않으면 ChatGPT 설정에서 연결 앱도 해제해야 합니다.
+
+검증 범위와 제한: [ChatGPT 플랜 연동 보고](docs/chatgpt-plan-integration.md), [인증 보안](docs/chatgpt-oauth-security.md).
+
 ## AI 실행 모드
 
 | 상태 | 의미 |

@@ -227,7 +227,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-  const assignments = useMemo(() => assignOfficeDestinations(agents), [agents])
+  const assignments = useMemo(() => assignOfficeDestinations(agents, { offlineMode: 'hidden' }), [agents])
 
   const runners = useRef<Map<string, Runner>>(new Map())
   const [now, setNow] = useState(() => performance.now())
@@ -256,17 +256,11 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
     const map = runners.current
     const seen = new Set<string>()
     let overflow = 0
-    let receptionTaken = false
     const firstSync = map.size === 0
     for (const agent of agents) {
       const a = assignmentForAgent(assignments, agent.id)
       if (a?.destinationType === 'hidden') continue
-      let useKey = a && !a.overflow ? a.waypointId : undefined
-      // a single reception seat: extra offline agents wait in the lobby
-      if (useKey === 'reception.spawn') {
-        if (receptionTaken) useKey = undefined
-        receptionTaken = true
-      }
+      const useKey = a && !a.overflow ? a.waypointId : undefined
       const target = targetFor(agent, useKey, useKey ? 0 : overflow++)
       seen.add(agent.id)
       const existing = map.get(agent.id)

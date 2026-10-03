@@ -2,6 +2,7 @@ import type { AiProviderState } from '../types.js'
 
 export type ChatContentPart =
   | { type: 'text'; text: string }
+  | { type: 'file'; file: { filename: string; file_data: string } }
   | {
       type: 'image_url'
       image_url: { url: string; detail?: 'auto' | 'low' | 'high' }
@@ -14,6 +15,9 @@ export interface ChatMessage {
 }
 
 export interface ChatUsage {
+  provider?: 'openai' | 'openai-chatgpt-plan'
+  authMode?: 'api-key' | 'chatgpt-plan'
+  costBasis?: 'plan-included'
   model: string
   inputTokens?: number
   outputTokens?: number
@@ -45,6 +49,14 @@ export interface AiProvider {
   }): Promise<ChatResult>
 }
 
+export function requireConfigured(provider: AiProvider): void {
+  if (provider.isConfigured()) return
+  const state = provider.getState()
+  const code = state.configurationErrorCode ?? (state.authMode === 'chatgpt-plan' ? 'CHATGPT_SIGNIN_REQUIRED' : 'OPENAI_API_KEY_REQUIRED')
+  const message = code === 'CHATGPT_PLAN_PERMISSION_REQUIRED' ? 'Agent Deck에서 ChatGPT 플랜 사용을 허용해주세요.' : code === 'CHATGPT_LOCAL_ONLY' ? 'ChatGPT 플랜 연결은 로컬 Agent Deck에서 사용할 수 있습니다.' : code === 'AI_PROVIDER_DISABLED' ? '설정에서 AI 기능을 켜주세요.' : state.authMode === 'chatgpt-plan' ? 'ChatGPT 연결이 필요합니다.' : 'OpenAI API Key 설정이 필요합니다.'
+  throw Object.assign(new Error(message), { code, status: 503 })
+}
+
 export class MockAiProvider implements AiProvider {
   getState(): AiProviderState {
     return {
@@ -65,12 +77,14 @@ export class MockAiProvider implements AiProvider {
 }
 
 export class UnconfiguredAiProvider implements AiProvider {
+  constructor(private authMode: 'chatgpt-plan' | 'api-key' = 'api-key') {}
   getState(): AiProviderState {
     return {
       mode: 'not-configured',
-      label: 'OpenAI · Not configured',
+      label: this.authMode === 'chatgpt-plan' ? 'ChatGPT 연결 필요' : 'OpenAI API · Not configured',
       configured: false,
-      providerName: 'openai',
+      providerName: this.authMode === 'chatgpt-plan' ? 'openai-chatgpt-plan' : 'openai',
+      authMode: this.authMode,
     }
   }
   isConfigured(): boolean {
@@ -78,8 +92,8 @@ export class UnconfiguredAiProvider implements AiProvider {
   }
   async chat(): Promise<ChatResult> {
     throw Object.assign(
-      new Error('OPENAI_API_KEY is not configured. Real AI execution unavailable.'),
-      { status: 503 },
+      new Error(this.authMode === 'chatgpt-plan' ? 'ChatGPT 연결이 필요합니다.' : 'OpenAI API Key 설정이 필요합니다.'),
+      { status: 503, code: this.authMode === 'chatgpt-plan' ? 'CHATGPT_SIGNIN_REQUIRED' : 'OPENAI_API_KEY_REQUIRED' },
     )
   }
 }
@@ -102,6 +116,7 @@ export class OpenAIProvider implements AiProvider {
       label: 'OpenAI · Configured',
       configured: true,
       providerName: 'openai',
+      authMode: 'api-key',
       model: this.model,
     }
   }
@@ -177,6 +192,8 @@ export class OpenAIProvider implements AiProvider {
     return {
       content,
       usage: {
+        provider: 'openai',
+        authMode: 'api-key',
         model: data.model ?? model,
         inputTokens: data.usage?.prompt_tokens ?? data.usage?.input_tokens,
         outputTokens:
@@ -194,9 +211,9 @@ function supportsCustomTemperature(model: string): boolean {
   return true
 }
 
-export function createAiProvider(): AiProvider {
+export function createAiProvider(authMode: 'chatgpt-plan' | 'api-key' = 'chatgpt-plan'): AiProvider {
   const key = process.env.OPENAI_API_KEY?.trim()
-  if (key) return new OpenAIProvider(key)
+  if (key && authMode === 'api-key') return new OpenAIProvider(key)
   // Prefer explicit not-configured over pretending Real AI works
-  return new UnconfiguredAiProvider()
+  return new UnconfiguredAiProvider(authMode)
 }

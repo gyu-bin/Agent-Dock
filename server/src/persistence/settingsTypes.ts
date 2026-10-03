@@ -59,6 +59,7 @@ export interface BudgetDefaults {
 export interface DeckSettings {
   version: 1
   openai: {
+    authMode: 'chatgpt-plan' | 'api-key'
     enabled: boolean
     /** Preferred model id (non-secret). Runtime still uses env until restart. */
     model: string
@@ -112,7 +113,9 @@ export interface SettingsBoard {
   settings: DeckSettings
   status: SystemStatusItem[]
   runtime: {
+    chatgpt?: Awaited<ReturnType<typeof import('../chatgpt/chatgptAuthService.js').chatgptAuthService.getStatus>>
     openai: {
+      authMode?: 'chatgpt-plan' | 'api-key'
       configured: boolean
       enabled: boolean
       model: string | null
@@ -170,6 +173,7 @@ export function defaultSettings(): DeckSettings {
   return {
     version: 1,
     openai: {
+      authMode: 'chatgpt-plan',
       enabled: true,
       model: 'gpt-4o-mini',
     },

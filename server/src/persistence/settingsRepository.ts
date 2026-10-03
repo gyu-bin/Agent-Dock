@@ -51,6 +51,7 @@ function migrate(raw: unknown): DeckSettings {
   return {
     version: 1,
     openai: {
+      authMode: openai.authMode === 'api-key' ? 'api-key' : 'chatgpt-plan',
       enabled: openai.enabled !== false,
       model:
         typeof openai.model === 'string' && openai.model.trim()

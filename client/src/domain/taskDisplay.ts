@@ -117,6 +117,14 @@ export function isWebSearchError(code?: string, raw?: string | null): boolean {
 }
 
 export function userFacingErrorMessage(raw?: string | null, code?: string, userMessage?: string): string {
+  const planMessages: Record<string, string> = {
+    CHATGPT_SIGNIN_REQUIRED: '설정 → AI에서 ChatGPT에 로그인해주세요.',
+    CHATGPT_PLAN_PERMISSION_REQUIRED: 'ChatGPT 플랜 사용 권한을 승인해주세요.',
+    CHATGPT_PLAN_LIMIT_REACHED: 'ChatGPT 플랜 사용 한도에 도달했습니다. 사용량이 회복된 후 다시 시도해주세요.',
+    CHATGPT_SESSION_EXPIRED: 'ChatGPT 연결이 만료되었습니다. 다시 로그인해주세요.',
+    CHATGPT_UNSUPPORTED_CAPABILITY: '이 모델에서 요청한 기능을 지원하지 않습니다.',
+  }
+  if (code && planMessages[code]) return userMessage || planMessages[code]
   if (isAgentInstructionError(code, raw)) return userMessage || '담당 에이전트의 실행 지침을 불러오지 못했습니다.'
   if (isWebSearchError(code, raw)) return '웹 검색을 완료하지 못했습니다.'
   if (userMessage) return userMessage

@@ -3,11 +3,14 @@ import express from 'express'
 import cors from 'cors'
 import { isCloudRuntime } from './loadEnv.js'
 import { allowedEmails, bearerFrom, cloudAuthConfig, verifyAccessToken } from './runtime/cloudAuth.js'
-import { usesCloudStore } from './storage/dataFs.js'
+import { usesCloudStore, readFile } from './storage/dataFs.js'
 
 import { loadAgentRegistry } from './registry/loadAgents.js'
 import { preflightAgentInstructions, loadAgentInstructions } from './registry/loadAgentInstructions.js'
-import { createAiProvider } from './providers/aiProvider.js'
+import { SelectedAiProvider, planProvider } from './providers/selectedAiProvider.js'
+import { chatgptAuthService } from './chatgpt/chatgptAuthService.js'
+import { ChatGPTPlanSearchProvider } from './search/chatgptPlanSearchProvider.js'
+import { spawn } from 'node:child_process'
 import { projectRepository } from './persistence/jsonStore.js'
 import { ProjectService } from './persistence/projectService.js'
 import { artifactRepository } from './persistence/artifactRepository.js'
@@ -129,8 +132,14 @@ import { hardenError } from './runtime/hardenErrors.js'
 const PORT = Number(process.env.PORT ?? 8787)
 const HOST = process.env.AGENT_DECK_HOST ?? '127.0.0.1'
 const app = express()
-const aiProvider = createAiProvider()
-const webSearchProvider = createWebSearchProvider()
+const aiProvider = new SelectedAiProvider()
+await aiProvider.refresh()
+const chatgptSearch = new ChatGPTPlanSearchProvider(planProvider, () => aiProvider.isConfigured())
+const webSearchProvider = {
+  id: 'selected-auth-search', label: 'Web Search',
+  isAvailable: () => createWebSearchProvider(aiProvider.getState().authMode === 'api-key').isAvailable(),
+  search: (request: import('./search/types.js').WebSearchRequest) => aiProvider.getState().authMode === 'api-key' ? createWebSearchProvider(true).search(request) : chatgptSearch.search(request),
+}
 const projects = new ProjectService(projectRepository)
 const artifacts = new ArtifactService(artifactRepository)
 const knowledge = new KnowledgeService(knowledgeRepository)
@@ -282,6 +291,10 @@ app.use((req, res, next) => {
   next()
 })
 
+app.use('/api/ai', async (_req, res, next) => {
+  try { await aiProvider.refresh(); next() } catch (error) { sendError(res, error) }
+})
+
 function hydrateSearchFromSnapshot(snap: {
   tasks: Array<{ id: string; webSearchSessions?: unknown[] }>
 }) {
@@ -306,11 +319,15 @@ function sendError(res: express.Response, err: unknown) {
       userMessageKo?: string
       diagnostics?: unknown
       agentId?: string
+      upstreamCode?: string
+      requestId?: string
     }
     if (e.userMessage) { payload.error = e.userMessage; payload.userMessage = e.userMessage }
     if (e.agentId) payload.agentId = e.agentId
     if (e.category) payload.code = e.category
     if (e.code) payload.code = e.code
+    if (e.upstreamCode) payload.upstreamCode = e.upstreamCode
+    if (e.requestId) payload.requestId = e.requestId
     if (e.technicalSummary) payload.technicalSummary = e.technicalSummary
     if (e.run) payload.run = e.run
     if (e.output) payload.output = e.output
@@ -475,6 +492,7 @@ app.post('/api/agents/preflight', async (req, res) => {
 })
 
 app.get('/api/provider', async (_req, res) => {
+  await aiProvider.refresh()
   const ai = aiProvider.getState()
   const codex = await getCodexProviderState()
   res.json({ ...ai, codex })
@@ -482,8 +500,31 @@ app.get('/api/provider', async (_req, res) => {
 
 /* ─── Phase S1 Settings Control Center ─── */
 
+app.get('/api/chatgpt/status', async (_req, res) => {
+  try { await aiProvider.refresh(); res.json(await chatgptAuthService.getStatus()) } catch (error) { sendError(res, error) }
+})
+app.post('/api/chatgpt/signin', async (req, res) => {
+  try {
+    const attempt = await chatgptAuthService.startSignIn({ newAccount: req.body?.newAccount === true })
+    const command = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'rundll32' : 'xdg-open'
+    const args = process.platform === 'win32' ? ['url.dll,FileProtocolHandler', attempt.authorizationUrl] : [attempt.authorizationUrl]
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(command, args, { stdio: 'ignore' })
+      child.once('error', reject); child.once('exit', code => code === 0 ? resolve() : reject(new Error('시스템 브라우저를 열 수 없습니다.')))
+    }).catch(async () => { await chatgptAuthService.cancelSignIn(); throw Object.assign(new Error('시스템 브라우저를 열 수 없습니다. 로컬 데스크톱에서 다시 시도해주세요.'), { status: 503, code: 'CHATGPT_BROWSER_UNAVAILABLE' }) })
+    res.json({ attemptId: attempt.attemptId, browserOpened: true })
+  } catch (error) { sendError(res, error) }
+})
+app.post('/api/chatgpt/disconnect', async (_req, res) => {
+  try { const result = await chatgptAuthService.disconnect(); planProvider.clearCatalog(); await aiProvider.refresh(); res.json(result) } catch (error) { sendError(res, error) }
+})
+app.get('/api/chatgpt/models', async (_req, res) => {
+  try { const status = await chatgptAuthService.getStatus(); res.json({ models: await planProvider.catalog(status.account ? `${status.account.subject}:${status.account.clientId}` : '', true) }) } catch (error) { sendError(res, error) }
+})
+
 app.get('/api/settings', async (_req, res) => {
   try {
+    await aiProvider.refresh()
     const board = await settings.buildBoard()
     assertNoSecretsInPayload(board)
     res.json(board)
@@ -495,6 +536,7 @@ app.get('/api/settings', async (_req, res) => {
 app.patch('/api/settings', async (req, res) => {
   try {
     const result = await settings.update(req.body ?? {})
+    await aiProvider.refresh()
     assertNoSecretsInPayload(result.settings)
     const board = await settings.buildBoard()
     assertNoSecretsInPayload(board)
@@ -803,6 +845,20 @@ app.post('/api/ai/run-step', async (req, res) => {
       purpose: body.purpose ? String(body.purpose) : undefined,
     })
 
+    const resolvedAttachments = projectId && taskId ? await attachmentService.resolveForTask(projectId, taskId) : []
+    const attachmentImageDataUrls: Array<{ mimeType: string; dataUrl: string }> = []
+    const attachmentFiles: Array<{ filename: string; fileData: string }> = []
+    for (const attachment of resolvedAttachments) {
+      const mimeType = String(attachment.metadata.mimeType ?? 'application/octet-stream')
+      if (attachment.imageRef) {
+        const bytes = await readFile(attachment.imageRef)
+        attachmentImageDataUrls.push({ mimeType, dataUrl: `data:${mimeType};base64,${bytes.toString('base64')}` })
+      } else if (attachment.contentKind === 'document' && attachment.fileRef && aiProvider.getState().authMode === 'chatgpt-plan') {
+        const bytes = await readFile(attachment.fileRef)
+        attachmentFiles.push({ filename: String(attachment.metadata.name ?? 'attachment.pdf'), fileData: `data:${mimeType};base64,${bytes.toString('base64')}` })
+      }
+    }
+
     const result = await runAgentStep(aiProvider, {
       agentId,
       stepTask,
@@ -824,6 +880,10 @@ app.post('/api/ai/run-step', async (req, res) => {
       knowledgeItems,
       model: resolvedModel.model,
       modelProfileId: resolvedModel.profileId,
+      attachmentsBlock: attachmentService.formatContext(resolvedAttachments),
+      includedAttachmentIds: resolvedAttachments.map(attachment => attachment.id),
+      attachmentImageDataUrls,
+      attachmentFiles,
     })
     res.json({
       ...result,

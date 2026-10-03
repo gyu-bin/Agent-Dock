@@ -5,6 +5,7 @@
  */
 
 export type ExecutionProvider =
+  | 'openai-chatgpt-plan'
   | 'openai'
   | 'openai-image'
   | 'threads'
@@ -36,6 +37,8 @@ export type ObservabilityErrorCategory =
 export type ExecutionSourceKind = 'agent-run' | 'codex-run' | 'web-search' | 'manual'
 
 export interface ExecutionRecord {
+  authMode?: 'chatgpt-plan' | 'api-key'
+  costBasis?: 'plan-included'
   id: string
   projectId: string
   taskId: string

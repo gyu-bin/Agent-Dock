@@ -1472,7 +1472,7 @@ export function ProjectsPage() {
                       key: keyof typeof resolved
                       label: string
                     }> = [
-                      { key: 'openai', label: 'OpenAI' },
+                      { key: 'openai', label: aiProvider.authMode === 'api-key' ? 'OpenAI API' : 'ChatGPT Plan' },
                       { key: 'codex', label: 'Codex' },
                       { key: 'webSearch', label: 'Web Search' },
                       { key: 'image', label: 'Image' },
@@ -1510,7 +1510,7 @@ export function ProjectsPage() {
                   ) : null}
                   {!toolRuntime.openai ? (
                     <p className={styles.muted}>
-                      Provider unavailable — OPENAI_API_KEY가 필요합니다.
+                      {aiProvider.authMode === 'api-key' ? 'OpenAI API 키와 API 잔액을 확인해주세요.' : '설정 → AI에서 ChatGPT에 로그인해주세요.'}
                     </p>
                   ) : null}
                 </section>

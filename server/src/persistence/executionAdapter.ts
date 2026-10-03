@@ -56,7 +56,7 @@ export function fromAgentRun(
   run: StoredAgentRun,
   opts?: { provider?: 'openai' | 'mock'; operation?: string },
 ): ExecutionRecord {
-  const provider = opts?.provider ?? (run.model === 'mock' ? 'mock' : 'openai')
+  const provider = run.provider ?? opts?.provider ?? (run.model === 'mock' ? 'mock' : 'openai')
   const cost = applyCostToRecord({
     provider,
     model: run.model,
@@ -72,6 +72,8 @@ export function fromAgentRun(
     provider,
     model: run.model,
     operation: opts?.operation ?? 'agent.step',
+    authMode: run.authMode,
+    costBasis: run.costBasis,
     status: mapAgentStatus(run.status),
     startedAt: run.startedAt,
     completedAt: run.completedAt,

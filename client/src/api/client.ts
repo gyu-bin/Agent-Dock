@@ -240,7 +240,7 @@ export async function orchestrateAi(input: {
   preferredAgentId?: string
 }): Promise<{
   plan: RoutePlan
-  usage: { model: string; inputTokens?: number; outputTokens?: number }
+  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
 }> {
   const res = await apiFetch(`${API_BASE}/api/ai/orchestrate`, {
     method: 'POST',
@@ -255,7 +255,7 @@ export async function orchestrateAi(input: {
   }
   return res.json() as Promise<{
     plan: RoutePlan
-    usage: { model: string; inputTokens?: number; outputTokens?: number }
+    usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
   }>
 }
 
@@ -278,7 +278,7 @@ export async function runAiStep(input: {
 }): Promise<{
   output: string
   inputSummary: string
-  usage: { model: string; inputTokens?: number; outputTokens?: number }
+  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
   contextMeta?: {
     estimatedChars: number
     includedArtifactIds: string[]
@@ -1291,7 +1291,7 @@ export async function synthesizeAiResult(input: {
   }>
 }): Promise<{
   output: string
-  usage: { model: string; inputTokens?: number; outputTokens?: number }
+  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
 }> {
   const res = await apiFetch(`${API_BASE}/api/ai/synthesize`, {
     method: 'POST',
@@ -1304,7 +1304,7 @@ export async function synthesizeAiResult(input: {
   }
   return res.json() as Promise<{
     output: string
-    usage: { model: string; inputTokens?: number; outputTokens?: number }
+    usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
   }>
 }
 
@@ -1649,4 +1649,24 @@ export async function testOpenAIConnection(): Promise<{
   })
   if (!res.ok) throw new Error(`OpenAI test failed: ${res.status}`)
   return res.json()
+}
+
+export async function fetchChatGPTStatus(): Promise<import('../domain/types').ChatGPTAuthStatus> {
+  const res = await apiFetch('/api/chatgpt/status')
+  if (!res.ok) throw executionApiError(await res.json().catch(() => ({})), 'ChatGPT 상태를 확인하지 못했습니다.')
+  return res.json()
+}
+export async function startChatGPTSignIn(newAccount = false): Promise<void> {
+  const res = await apiFetch('/api/chatgpt/signin', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({newAccount}) })
+  if (!res.ok) throw executionApiError(await res.json().catch(() => ({})), 'ChatGPT 로그인을 시작하지 못했습니다.')
+}
+export async function disconnectChatGPT(): Promise<{message?: string}> {
+  const res = await apiFetch('/api/chatgpt/disconnect', {method:'POST'})
+  if (!res.ok) throw executionApiError(await res.json().catch(() => ({})), 'ChatGPT 연결을 해제하지 못했습니다.')
+  return res.json()
+}
+export async function fetchChatGPTModels(): Promise<import('../domain/types').ChatGPTModel[]> {
+  const res = await apiFetch('/api/chatgpt/models')
+  if (!res.ok) throw executionApiError(await res.json().catch(() => ({})), 'ChatGPT 모델을 불러오지 못했습니다.')
+  return (await res.json()).models
 }

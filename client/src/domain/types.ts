@@ -204,6 +204,7 @@ export interface KnowledgeConflictCandidate {
 
 export type ExecutionProvider =
   | 'openai'
+  | 'openai-chatgpt-plan'
   | 'openai-image'
   | 'threads'
   | 'media-delivery'
@@ -253,6 +254,8 @@ export interface ExecutionRecord {
   outputTokens?: number
   estimatedCost?: number
   costUnknown?: boolean
+  authMode?: 'chatgpt-plan' | 'api-key'
+  costBasis?: 'plan-included'
   errorCategory?: ObservabilityErrorCategory
   userMessage?: string
   technicalSummary?: string
@@ -414,6 +417,9 @@ export interface WebSearchSession {
 }
 
 export interface AgentRun extends ExecutionFailure {
+  provider?: 'openai' | 'openai-chatgpt-plan'
+  authMode?: 'chatgpt-plan' | 'api-key'
+  costBasis?: 'plan-included'
   id: string
   taskId: string
   stepId: string
@@ -577,13 +583,24 @@ export interface ChatMessage {
   }
 }
 
-export type AiProviderMode = 'mock' | 'not-configured' | 'openai'
+export type AiProviderMode = 'mock' | 'not-configured' | 'openai' | 'chatgpt-plan'
+
+export interface ChatGPTAuthStatus {
+  supported: boolean
+  signedIn: boolean
+  planUsageEnabled: boolean
+  account?: { subject: string; email?: string; name?: string; picture?: string; clientId: string }
+  loginPending: boolean
+  lastError?: { code: string; message: string }
+}
+export interface ChatGPTModel { slug: string; displayName: string; visibility: 'list' }
 
 export interface AiProviderState {
   mode: AiProviderMode
   label: string
   configured: boolean
-  providerName: 'none' | 'openai'
+  providerName: 'none' | 'openai' | 'openai-chatgpt-plan'
+  authMode?: 'chatgpt-plan' | 'api-key'
   model?: string
   codex?: {
     available: boolean
@@ -620,7 +637,7 @@ export type SearchFailPolicy = 'block-step' | 'allow-continue-without'
 
 export interface DeckSettings {
   version: 1
-  openai: { enabled: boolean; model: string }
+  openai: { enabled: boolean; model: string; authMode: 'chatgpt-plan' | 'api-key' }
   modelProfiles: Record<ModelProfileId, ModelProfile>
   codex: { enabled: boolean; binaryPath?: string }
   webSearch: {
@@ -670,7 +687,9 @@ export interface SettingsBoard {
   settings: DeckSettings
   status: SystemStatusItem[]
   runtime: {
+    chatgpt?: ChatGPTAuthStatus
     openai: {
+      authMode?: 'chatgpt-plan' | 'api-key'
       configured: boolean
       enabled: boolean
       model: string | null

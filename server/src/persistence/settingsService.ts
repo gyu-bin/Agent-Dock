@@ -17,9 +17,10 @@ import type {
   SystemStatusItem,
 } from './settingsTypes.js'
 import { defaultSettings } from './settingsTypes.js'
+import { chatgptAuthService } from '../chatgpt/chatgptAuthService.js'
 
 export interface SettingsPatch {
-  openai?: { enabled?: boolean; model?: string }
+  openai?: { enabled?: boolean; model?: string; authMode?: 'chatgpt-plan' | 'api-key' }
   modelProfiles?: Partial<
     Record<ModelProfileId, { model?: string; roles?: string[] }>
   >
@@ -78,6 +79,7 @@ export function applySettingsPatch(
   const next: DeckSettings = structuredClone(current)
 
   if (patch.openai) {
+    if (patch.openai.authMode === 'api-key' || patch.openai.authMode === 'chatgpt-plan') next.openai.authMode = patch.openai.authMode
     if (typeof patch.openai.enabled === 'boolean')
       next.openai.enabled = patch.openai.enabled
     if (typeof patch.openai.model === 'string' && patch.openai.model.trim())
@@ -233,7 +235,7 @@ export class SettingsService {
     const status: SystemStatusItem[] = [
       {
         id: 'openai',
-        label: 'OpenAI',
+        label: openaiState.authMode === 'chatgpt-plan' ? 'ChatGPT Plan' : 'OpenAI API',
         level: openaiConfigured && settings.openai.enabled ? 'ok' : 'off',
         value: openaiConfigured ? '설정됨' : '미설정',
       },
@@ -281,10 +283,12 @@ export class SettingsService {
       settings,
       status,
       runtime: {
+        chatgpt: await chatgptAuthService.getStatus(),
         openai: {
+          authMode: settings.openai.authMode,
           configured: openaiConfigured,
           enabled: settings.openai.enabled,
-          model: settings.openai.model || openaiState.model || null,
+          model: openaiState.authMode === 'chatgpt-plan' ? openaiState.model || null : settings.openai.model || openaiState.model || null,
           label: openaiState.label,
           apiKeyConfigured: openaiKey,
         },

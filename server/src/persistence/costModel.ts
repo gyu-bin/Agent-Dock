@@ -16,6 +16,7 @@ export function estimateExecutionCost(input: {
   inputTokens?: number
   outputTokens?: number
 }): CostEstimate {
+  if (input.provider === 'openai-chatgpt-plan') return { kind: 'unknown' }
   const hasTokens =
     (input.inputTokens != null && input.inputTokens > 0) ||
     (input.outputTokens != null && input.outputTokens > 0)

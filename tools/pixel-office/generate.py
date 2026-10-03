@@ -43,23 +43,23 @@ ROOMS = {
     'lounge': (190, MID[0], 577, MID[1]),
     'testing': (584, MID[0], 761, MID[1]),
     'meeting': (6, BOT[0], 247, BOT[1]),
-    'reception': (254, BOT[0], 495, BOT[1]),
-    'garden': (502, BOT[0], 761, BOT[1]),
+    'terrace': (254, BOT[0], 495, BOT[1]),
+    'garden': (496, BOT[0], 761, BOT[1]),
 }
 LABELS = [
     ('product', '제품', 10, 7), ('gamedev', '게임 개발', 162, 7), ('design', '디자인', 315, 7),
     ('research', '리서치', 467, 7), ('development', '엔지니어링', 620, 7),
     ('marketing', '마케팅', 10, 158), ('lounge', '휴게실', 518, 290), ('testing', '테스트', 588, 158),
-    ('meeting', '회의실', 10, 318), ('reception', '리셉션', 258, 318), ('garden', '가든', 506, 318),
+    ('meeting', '회의실', 10, 318), ('garden', '가든', 650, 318),
 ]
 H_WALLS = [  # (cap_y, [door gaps x0..x1])
     (152, [(70, 101), (200, 231), (368, 399), (520, 551), (720, 751)]),
-    (312, [(30, 61), (200, 231), (360, 391), (700, 731)]),
+    (312, [(30, 61), (200, 231), (254, 577), (700, 731)]),
 ]
 V_WALLS = [  # (x, y0, y1, [door gaps y0..y1], style)
     (152, 0, 155, [], 'wall'), (305, 0, 155, [], 'wall'), (457, 0, 155, [], 'wall'), (610, 0, 155, [], 'wall'),
     (184, 152, 315, [(280, 303)], 'wall'), (578, 152, 315, [(280, 303)], 'wall'),
-    (248, 312, 479, [], 'wall'), (496, 312, 479, [(400, 431)], 'glass'),
+    (248, 312, 479, [], 'wall'),
 ]
 ENTRANCE = (360, 391)
 
@@ -78,7 +78,7 @@ FLOORS = {
     'lounge': ('herring', hx('e7c99a'), hx('d4b07c'), hx('f1d9b0')),
     'testing': ('tile', hx('d9e7dc'), hx('c3d6c8'), hx('e6f0e8')),
     'meeting': ('carpet', hx('5f86b8'), hx('5378a8'), hx('6f95c4')),
-    'reception': ('marble', hx('f1ece2'), hx('e1d9c9'), hx('fbf8f1')),
+    'terrace': ('herring', hx('e7c99a'), hx('d4b07c'), hx('f1d9b0')),
     'garden': ('grass', hx('7cc35f'), hx('68ad50'), hx('93d675')),
 }
 
@@ -173,8 +173,9 @@ def draw_walls(c, blocked):
             mark(blocked, s0, cap_y, s1 - s0 + 1, 20)
         for g0, g1 in gaps:
             # threshold + door frame posts
-            c.rect(g0, cap_y + 17, g1 - g0 + 1, 3, hx('b89a7a'))
-            c.hline(g0, cap_y + 17, g1 - g0 + 1, hx('d8c3a5'))
+            if g1 - g0 < 64:
+                c.rect(g0, cap_y + 17, g1 - g0 + 1, 3, hx('b89a7a'))
+                c.hline(g0, cap_y + 17, g1 - g0 + 1, hx('d8c3a5'))
             for px_ in (g0 - 2, g1 + 1):
                 c.rect(px_, cap_y, 2, 20, CAP); c.vline(px_, cap_y, 20, CAP_L)
     # vertical walls
@@ -328,9 +329,8 @@ def wall_decor(c):
     board(c, 600, 157, 40, 12, 'qa'); clock(c, 660, 163)
     # bottom band (face 316..331)
     tv(c, 80, 317, 92, 13)
-    logo(c, 404, 317)
-    window(c, 560, 317, 34, 12); window(c, 640, 317, 34, 12)
-    ivy(c, 502, 760, 316)
+    window(c, 640, 317, 34, 12)
+    ivy(c, 580, 698, 316); ivy(c, 734, 760, 316)
 
 
 # ------------------------------------------------------------------ helpers
@@ -364,13 +364,14 @@ def main():
     for cap_y, gaps in H_WALLS:
         below = MID if cap_y == 152 else BOT
         for g0, g1 in gaps:
-            rid = next(r for r, (a, b, cc, d) in ROOMS.items() if b == below[0] and a <= g0 and g1 <= cc)
-            sub = FLOORS[rid]
-            bg.rect(g0, cap_y, g1 - g0 + 1, 20, sub[1])
+            # Wide openings may span both the lounge terrace and garden.
+            for xx in range(g0, g1 + 1):
+                rid = next(r for r, (a, b, cc, d) in ROOMS.items() if b == below[0] and a <= xx <= cc)
+                bg.rect(xx, cap_y, 1, 20, FLOORS[rid][1])
     for x, y0, y1, gaps, _ in V_WALLS:
         for g0, g1 in gaps:
-            bg.rect(x, g0, 6, g1 - g0 + 1, FLOORS['lounge'][1] if x in (184, 578) else FLOORS['reception'][1])
-    bg.rect(ENTRANCE[0], 474, ENTRANCE[1] - ENTRANCE[0] + 1, 6, FLOORS['reception'][1])
+            bg.rect(x, g0, 6, g1 - g0 + 1, FLOORS['lounge'][1])
+    bg.rect(ENTRANCE[0], 474, ENTRANCE[1] - ENTRANCE[0] + 1, 6, FLOORS['terrace'][1])
     draw_walls(bg, blocked)
     wall_decor(bg)
 
@@ -503,10 +504,7 @@ def main():
     put('plant:large', P.plant, 226, 446, 'large', 14)
     put('water_cooler', P.water_cooler, 228, 340)
 
-    # ---------------- reception
-    put('reception_desk', P.reception_desk, 268, 366)
-    chair(299, 352, 'blue')
-    waypoints['reception.spawn'] = dict(x=306, y=380, pose='stand', face='down')
+    # ---------------- open lounge terrace (formerly reception)
     put('sofa_small:blue', P.lounge_sofa_small, 430, 420, hx('6aa0f0'), hx('3f69c2'))
     put('plant:large', P.plant, 474, 430, 'large', 15)
     put('plant:large', P.plant, 258, 440, 'large', 16)
@@ -517,8 +515,8 @@ def main():
     # ---------------- garden
     g = ROOMS['garden']
     rnd = random.Random(42)
-    # stone path: glass door → east → north to testing door
-    for x in range(502, 724, 9):
+    # Stone path leads directly from the open lounge terrace into the garden.
+    for x in range(496, 724, 9):
         for k in range(2):
             yy = 408 + k * 8 + rnd.randint(0, 1)
             bg.ellipse(x + 4, yy + 3, 3, 2, hx('cfc8bb')); bg.p(x + 3, yy + 2, hx('e8e2d6'))
@@ -623,6 +621,12 @@ def main():
             if 0 <= nx < cols and 0 <= ny < rows and (nx, ny) not in seen and grid[ny][nx] == '0':
                 seen.add((nx, ny)); dq.append((nx, ny))
     problems = []
+    open_count = sum(row.count('0') for row in grid)
+    if len(seen) != open_count:
+        problems.append(f'disconnected walk cells: {open_count - len(seen)}')
+    for x, y in [(376, 314), (376, 330), (492, 410), (500, 410), (516, 410)]:
+        if cell_of(x, y - 2) not in seen:
+            problems.append(f'lounge/garden connection at {x},{y}')
     for wid, wp in {**waypoints, **{f'lobby.{i}': dict(x=p['x'], y=p['y']) for i, p in enumerate(lobby)}}.items():
         c0 = cell_of(wp['x'], wp['y'] - 2)
         near = [c0] + [(c0[0] + dx, c0[1] + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
@@ -633,7 +637,7 @@ def main():
         + [f'lounge.stand.{i}' for i in range(1, 10)] + ['lounge.talk.1', 'lounge.talk.2'] + [f'meeting.seat.{i}' for i in range(1, 9)] \
         + [f'testing.desk.{i}' for i in range(1, 6)] + [f'product.desk.{i}' for i in range(1, 5)] + [f'design.desk.{i}' for i in range(1, 6)] \
         + [f'development.desk.{i}' for i in range(1, 5)] + [f'gamedev.desk.{i}' for i in range(1, 5)] + [f'research.desk.{i}' for i in range(1, 5)] \
-        + [f'marketing.desk.{i}' for i in range(1, 5)] + ['reception.spawn']
+        + [f'marketing.desk.{i}' for i in range(1, 5)]
     missing = [r for r in required if r not in waypoints]
 
     office = dict(
@@ -664,6 +668,7 @@ def main():
 
     print(f'props: {len(prop_list)} placements, {len(cache)} unique sprites')
     print(f'waypoints: {len(waypoints)}  missing required: {missing}')
+    print(f'walkable cells: {open_count}; connected: {len(seen)}')
     print(f'unreachable: {problems}')
     return 1 if (missing or problems) else 0
 

@@ -1,6 +1,6 @@
 # Agent Deck — Product Status
 
-Last updated: 2026-09-23 (Project-first Consolidation)
+Last updated: 2026-10-03 (local ChatGPT Plan integration)
 
 ## Summary
 
@@ -11,12 +11,13 @@ Last updated: 2026-09-23 (Project-first Consolidation)
 | Canonical Task Planner | **READY** (Preview SoT unified) |
 | Goals / Routines / Scheduler | **READY** (config: cron triggers) |
 | Marketing + Buffer Queue | **CONFIG REQUIRED** (`BUFFER_API_KEY`) |
-| OpenAI / Real AI | **CONFIG REQUIRED** (`OPENAI_API_KEY`) |
+| ChatGPT Plan / Real AI | **LOCAL VERIFIED** — user OAuth and one live Responses request passed |
+| OpenAI API | **OPTIONAL / CONFIG REQUIRED** — explicit mode, separate API billing |
 | Codex | **CONFIG REQUIRED** (`CODEX_BIN` / login) |
 | Image Generation | **CONFIG REQUIRED** (OpenAI Image) |
 | Media Delivery (R2/S3) | **CONFIG REQUIRED** |
 | Threads Direct Connector | **CONFIG REQUIRED** (OAuth apps) |
-| Office V2 polish | **FUTURE-FROZEN** |
+| Active pixel office | Reception removed; lounge/terrace/garden connected; map and browser checked |
 | SNS Direct Instagram/YouTube | **FUTURE-FROZEN** |
 | New Foundations | **FROZEN** — dogfood only |
 
@@ -32,7 +33,8 @@ Last updated: 2026-09-23 (Project-first Consolidation)
 
 ## CONFIG REQUIRED
 
-- `OPENAI_API_KEY` — Real AI Mode
+- Local ChatGPT login + plan permission — default Real AI
+- `OPENAI_API_KEY` — explicitly selected API mode and image generation
 - Codex CLI path / auth
 - Web search provider keys (if enabled in Settings)
 - `BUFFER_API_KEY` — Buffer distribution
@@ -41,7 +43,7 @@ Last updated: 2026-09-23 (Project-first Consolidation)
 
 ## FUTURE-FROZEN
 
-- Office V2 asset/map expansions
+- Additional Office V2 asset/map expansions
 - Direct Instagram / YouTube / TikTok connectors
 - Buffer Analytics full implementation
 - Vertical Video Tool
@@ -56,3 +58,7 @@ Last updated: 2026-09-23 (Project-first Consolidation)
 5. Approve only when Safety asks  
 
 Architecture freeze: do not add new Foundations until REAL PROJECT DOGFOOD feedback.
+
+## ChatGPT integration evidence
+
+OAuth A–D and provider E–J use synthetic tokens/streams. Typecheck/build and attachment/planning/usage/settings regressions passed. User completed actual account login, and one live plan inference succeeded (21 input / 12 output tokens). Original market-analysis workflow and live vision/file/search capabilities remain unverified; the one-request limit was respected. See [implementation report](chatgpt-plan-integration.md).

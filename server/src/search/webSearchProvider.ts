@@ -148,7 +148,7 @@ type ResponsesPayload = {
   }>
 }
 
-function extractSourcesFromResponses(
+export function extractSourcesFromResponses(
   data: ResponsesPayload,
   max: number,
 ): WebSource[] {
@@ -201,7 +201,7 @@ function extractSourcesFromResponses(
   return dedupeSources(collected).slice(0, max)
 }
 
-export function createWebSearchProvider(): WebSearchProvider {
+export function createWebSearchProvider(allowApiBilling = false): WebSearchProvider {
   if (process.env.WEB_SEARCH_FORCE_FAIL === '1') {
     return new FailingWebSearchProvider()
   }
@@ -215,7 +215,7 @@ export function createWebSearchProvider(): WebSearchProvider {
   const steam = new SteamStoreWebSearchProvider()
   const ddg = new DuckDuckGoHtmlWebSearchProvider()
   const fallback = new FallbackWebSearchProvider(steam, ddg)
-  if (key) {
+  if (key && allowApiBilling) {
     const primary = new OpenAIResponsesWebSearchProvider(key)
     return new FallbackWebSearchProvider(primary, fallback)
   }

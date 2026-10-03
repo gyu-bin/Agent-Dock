@@ -44,7 +44,7 @@ export function aggregateExecutions(
     if (r.costUnknown) agg.hasUnknownCost = true
     else if (typeof r.estimatedCost === 'number') knownCostSum += r.estimatedCost
 
-    if (r.provider === 'openai' || r.provider === 'openai-image')
+    if (r.provider === 'openai' || r.provider === 'openai-image' || r.provider === 'openai-chatgpt-plan')
       agg.openaiCalls += 1
     else if (r.provider === 'codex') agg.codexRuns += 1
     else if (r.provider === 'web-search') agg.webSearches += 1

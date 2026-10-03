@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   fetchSettingsBoard,
+  fetchProvider,
   patchSettings,
   testOpenAIConnection,
   fetchImageToolStatus,
@@ -13,6 +14,7 @@ import {
 } from '../api/client'
 import type {
   DeckSettings,
+  ChatGPTModel,
   DiagnosticCheck,
   ModelProfileId,
   SettingsBoard,
@@ -25,6 +27,7 @@ import {
   setToolAvailability,
 } from '../domain/capabilities'
 import styles from './SettingsPage.module.css'
+import { ChatGPTConnection } from './ChatGPTConnection'
 
 type SettingsSection =
   | 'general'
@@ -60,6 +63,7 @@ export function SettingsPage() {
   const registry = useDeckStore((s) => s.registry)
   const capabilityDiag = buildCapabilityDiagnosticsSummary(registry)
 
+  const [chatgptModels, setChatgptModels] = useState<ChatGPTModel[]>([])
   const [section, setSection] = useState<SettingsSection>('general')
   const [board, setBoard] = useState<SettingsBoard | null>(null)
   const [draft, setDraft] = useState<DeckSettings | null>(null)
@@ -109,6 +113,20 @@ export function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [testMsg, setTestMsg] = useState<string | null>(null)
 
+  const receiveModels = useCallback((models: ChatGPTModel[]) => {
+    setChatgptModels(models)
+    if (!models.length) return
+    setDraft(d => {
+      if (!d || d.openai.authMode === 'api-key') return d
+      const available = (model: string) => models.some(m => m.slug === model) ? model : models[0].slug
+      return {...d, openai: {...d.openai, model: available(d.openai.model)}, modelProfiles: {
+        FAST: {...d.modelProfiles.FAST, model: available(d.modelProfiles.FAST.model)},
+        STANDARD: {...d.modelProfiles.STANDARD, model: available(d.modelProfiles.STANDARD.model)},
+        REASONING: {...d.modelProfiles.REASONING, model: available(d.modelProfiles.REASONING.model)},
+      }}
+    })
+  }, [])
+
   const reload = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -144,19 +162,7 @@ export function SettingsPage() {
         .then(setBufferStatus)
         .catch(() => setBufferStatus(null))
       setDraft(b.settings)
-      setAiProvider({
-        mode: b.runtime.openai.configured ? 'openai' : 'not-configured',
-        configured: b.runtime.openai.configured,
-        label: b.runtime.openai.label,
-        model: b.runtime.openai.model ?? undefined,
-        providerName: 'openai',
-        codex: {
-          available: b.runtime.codex.available,
-          binary: b.runtime.codex.binary,
-          label: b.runtime.codex.label,
-          version: b.runtime.codex.version,
-        },
-      })
+      setAiProvider(await fetchProvider())
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -182,6 +188,7 @@ export function SettingsPage() {
       const b = await patchSettings(patch)
       setBoard(b)
       setDraft(b.settings)
+      setAiProvider(await fetchProvider())
       if (b.rejectedSafety?.length) {
         setMsg(
           `저장됨 — 필수 Safety(${b.rejectedSafety.join(', ')})는 끌 수 없어 유지했습니다.`,
@@ -326,8 +333,15 @@ export function SettingsPage() {
 
         {section === 'ai' ? (
           <>
+            <ChatGPTConnection onChange={reload} onModels={receiveModels} />
             <section className={styles.card}>
-              <h2>AI 서비스</h2>
+              <h2>AI 실행 방식</h2>
+              <div className={styles.modeRow}>
+                <button className={s?.openai.authMode !== 'api-key' ? styles.modeOn : styles.mode} disabled={saving} onClick={() => void save({openai: {authMode: 'chatgpt-plan'}})}>ChatGPT Plan</button>
+                <button className={s?.openai.authMode === 'api-key' ? styles.modeOn : styles.mode} disabled={saving} onClick={() => void save({openai: {authMode: 'api-key'}})}>OpenAI API · 별도 결제</button>
+              </div>
+              <p className={styles.hint}>선택한 방식만 사용합니다. ChatGPT 플랜 한도에 도달해도 API로 자동 전환하지 않습니다.</p>
+
               <div className={styles.row}>
                 <span className={styles.label}>상태</span>
                 {runtime?.openai.configured ? (
@@ -362,6 +376,7 @@ export function SettingsPage() {
                   </div>
                 </>
               ) : null}
+              <details open={s?.openai.authMode === 'api-key'}><summary>고급 · OpenAI API 설정 (별도 API 결제)</summary>
               <div className={styles.row}>
                 <span className={styles.label}>API Key</span>
                 <span
@@ -374,9 +389,13 @@ export function SettingsPage() {
                     : 'Not configured'}
                 </span>
               </div>
+              </details>
               <label className={styles.field}>
                 Model
-                <input
+                {s?.openai.authMode !== 'api-key' ? <select value={s?.openai.model ?? ''} disabled={!chatgptModels.length} onChange={e => setDraft(d => d ? {...d, openai: {...d.openai, model: e.target.value}} : d)}>
+                  <option value="">모델을 선택해주세요</option>
+                  {chatgptModels.map(model => <option key={model.slug} value={model.slug}>{model.displayName}</option>)}
+                </select> : (                <input
                   value={s?.openai.model ?? ''}
                   onChange={(e) =>
                     setDraft((d) =>
@@ -388,7 +407,8 @@ export function SettingsPage() {
                         : d,
                     )
                   }
-                />
+                />)}
+
               </label>
               <div className={styles.modeRow}>
                 <button
@@ -420,6 +440,7 @@ export function SettingsPage() {
                 <button
                   type="button"
                   className={styles.ghost}
+                  disabled={s?.openai.authMode !== 'api-key'}
                   onClick={() => void onTestOpenAI()}
                 >
                   연결 테스트
@@ -462,7 +483,10 @@ export function SettingsPage() {
                       </div>
                       <label className={styles.field}>
                         Model ID
-                        <input
+                        {s?.openai.authMode !== 'api-key' ? <select value={p.model} disabled={!chatgptModels.length} onChange={e => setDraft(d => d ? {...d, modelProfiles: {...d.modelProfiles, [id]: {...d.modelProfiles[id], model: e.target.value}}} : d)}>
+                          <option value="">모델을 선택해주세요</option>
+                          {chatgptModels.map(model => <option key={model.slug} value={model.slug}>{model.displayName}</option>)}
+                        </select> : (                        <input
                           value={p.model}
                           onChange={(e) =>
                             setDraft((d) => {
@@ -479,7 +503,8 @@ export function SettingsPage() {
                               }
                             })
                           }
-                        />
+                        />)}
+
                       </label>
                     </div>
                   )

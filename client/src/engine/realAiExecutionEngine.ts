@@ -11,7 +11,7 @@ import {
   type EngineStoreAccess,
   type ExecutionEngine,
 } from './types'
-import { preflightAgentInstructions, runAiStep, synthesizeAiResult } from '../api/client'
+import { fetchProvider, preflightAgentInstructions, runAiStep, synthesizeAiResult } from '../api/client'
 import { executionFailure } from '../domain/executionFailure'
 import { isAgentInstructionError, isWebSearchError } from '../domain/taskDisplay'
 import {
@@ -599,7 +599,12 @@ export class RealAIExecutionEngine implements ExecutionEngine {
     })
 
     const runId = `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+    const selectedProvider = await fetchProvider().catch(() => undefined)
+    const planMode = selectedProvider?.authMode !== 'api-key'
     const run: AgentRun = {
+      provider: planMode ? 'openai-chatgpt-plan' : 'openai',
+      authMode: planMode ? 'chatgpt-plan' : 'api-key',
+      ...(planMode ? { costBasis: 'plan-included' as const } : {}),
       id: runId,
       taskId: task.id,
       stepId: step.id,
@@ -663,6 +668,9 @@ export class RealAIExecutionEngine implements ExecutionEngine {
         inputSummary: result.inputSummary,
         completedAt,
         model: result.usage.model,
+        provider: result.usage.provider,
+        authMode: result.usage.authMode,
+        costBasis: result.usage.costBasis,
         inputTokens: result.usage.inputTokens,
         outputTokens: result.usage.outputTokens,
       })

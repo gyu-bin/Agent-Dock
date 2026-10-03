@@ -5,7 +5,8 @@ import type {
 } from './types'
 
 export const PROVIDER_LABEL: Record<ExecutionProvider, string> = {
-  openai: 'OpenAI',
+  openai: 'OpenAI API',
+  'openai-chatgpt-plan': 'ChatGPT Plan',
   'openai-image': 'OpenAI Image',
   threads: 'Threads',
   'media-delivery': 'Media Delivery',
@@ -29,7 +30,8 @@ export const PROVIDER_FILTERS: Array<{
   label: string
 }> = [
   { id: 'all', label: '전체 프로바이더' },
-  { id: 'openai', label: 'OpenAI' },
+  { id: 'openai', label: 'OpenAI API' },
+  { id: 'openai-chatgpt-plan', label: 'ChatGPT Plan' },
   { id: 'openai-image', label: 'OpenAI Image' },
   { id: 'threads', label: 'Threads' },
   { id: 'media-delivery', label: 'Media Delivery' },
@@ -61,7 +63,9 @@ export function formatCost(agg: Pick<UsageAggregation, 'estimatedCost' | 'hasUnk
 export function formatRecordCost(r: {
   estimatedCost?: number
   costUnknown?: boolean
+  costBasis?: 'plan-included'
 }): string {
+  if (r.costBasis === 'plan-included') return 'ChatGPT 플랜 사용량'
   if (r.costUnknown) return 'Unknown'
   if (r.estimatedCost == null) return '—'
   if (r.estimatedCost === 0) return '$0'
