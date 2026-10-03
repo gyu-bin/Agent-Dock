@@ -74,11 +74,20 @@ function facingToward(dx: number, dy: number, fallback: Facing): Facing {
 type ViewMode = 'fill' | 'fit'
 const VIEW_KEY = 'agent-deck-office-view'
 
-/** fill = cover the pane (pan to see the rest), fit = whole office visible. */
+/**
+ * fill = cover the pane (pan to see the rest), fit = whole office visible.
+ * When it costs little (≤12% size change) the scale is snapped so one art pixel
+ * is a whole number of device pixels and every dot renders at the same size.
+ * Fill rounds up (still covers), fit rounds down (still fits).
+ */
 function viewScale(mode: ViewMode, width: number, height: number): number {
   if (!width || !height) return 1
-  const s = mode === 'fill' ? Math.max(width / MAP_W, height / MAP_H) : Math.min(width / MAP_W, height / MAP_H)
-  return Math.max(0.5, Math.min(4, Math.floor(s * 100) / 100))
+  const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1))
+  const raw = mode === 'fill' ? Math.max(width / MAP_W, height / MAP_H) : Math.min(width / MAP_W, height / MAP_H)
+  const snapped = (mode === 'fill' ? Math.ceil(raw * dpr) : Math.floor(raw * dpr)) / dpr
+  // On low-DPR screens a whole-pixel step can be big (2.4 → 3); keep size over crispness then.
+  const chosen = snapped > 0 && Math.abs(snapped - raw) / raw <= 0.12 ? snapped : Math.floor(raw * 100) / 100
+  return Math.max(0.5, Math.min(6, chosen))
 }
 
 function clampOffset(o: Pt, scale: number, w: number, h: number): Pt {
@@ -88,6 +97,12 @@ function clampOffset(o: Pt, scale: number, w: number, h: number): Pt {
     x: fw <= w ? (w - fw) / 2 : Math.min(0, Math.max(w - fw, o.x)),
     y: fh <= h ? (h - fh) / 2 : Math.min(0, Math.max(h - fh, o.y)),
   }
+}
+
+/** Align to the device pixel grid so the snapped scale stays crisp after panning. */
+function snapPx(v: number): number {
+  const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1))
+  return Math.round(v * dpr) / dpr
 }
 
 function readViewMode(): ViewMode {
@@ -357,7 +372,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
           setPan({ x: offset.x - e.deltaX, y: offset.y - e.deltaY })
         }}
       >
-        <div className="pxo-frame" style={{ width: MAP_W * scale, height: MAP_H * scale, transform: `translate(${Math.round(offset.x)}px, ${Math.round(offset.y)}px)` }}>
+        <div className="pxo-frame" style={{ width: MAP_W * scale, height: MAP_H * scale, transform: `translate(${snapPx(offset.x)}px, ${snapPx(offset.y)}px)` }}>
           <div className="pxo-map" style={{ width: MAP_W, height: MAP_H, transform: `scale(${scale})` }}>
             <img className="pxo-bg" src={`${BASE}/office-bg.png`} alt="" draggable={false} />
             {propEls}
