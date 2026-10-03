@@ -5,12 +5,16 @@
   "buildCommand": "npm run build -w client",
   "outputDirectory": "client/dist",
   "functions": {
-    "api/[...path].ts": {
+    "api/index.ts": {
       "maxDuration": 60,
       "includeFiles": "{shared/**,server/src/**}"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api?__vpath=$1"
+    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
