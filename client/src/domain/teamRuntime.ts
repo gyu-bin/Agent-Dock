@@ -12,7 +12,13 @@ export function mergeTeamAgents(
 ): Agent[] {
   if (!project) return []
   const byId = new Map(registry.map((a) => [a.id, a]))
-  return project.agentIds
+  // Specialists pulled in by a task (e.g. research-synthesist for market research) are not
+  // on the project team, but while they hold a task they must appear in the office.
+  const team = new Set(project.agentIds)
+  const guests = Object.entries(runtime)
+    .filter(([id, r]) => !team.has(id) && byId.has(id) && r && (r.currentTaskId || !['idle', 'waiting', 'offline'].includes(r.status)))
+    .map(([id]) => id)
+  return [...project.agentIds, ...guests]
     .map((id) => {
       const base = byId.get(id)
       if (!base) return null

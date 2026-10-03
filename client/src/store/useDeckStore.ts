@@ -529,6 +529,10 @@ function createDeckStore() {
             for (const id of active.agentIds) {
               keep[id] = state.agentRuntime[id] ?? { status: 'idle' }
             }
+            // Keep specialists outside the team while they still hold a task.
+            for (const [id, r] of Object.entries(state.agentRuntime)) {
+              if (!keep[id] && r && (r.currentTaskId || !['idle', 'waiting', 'offline'].includes(r.status))) keep[id] = r
+            }
             nextRuntime = keep
           }
 
@@ -1488,10 +1492,30 @@ let teamCache: Agent[] = []
 
 export function selectTeamAgents(state: DeckState): Agent[] {
   const project = selectActiveProject(state)
-  const runtimeKey = Object.keys(state.agentRuntime)
+  // Persisted step state is the source of truth for who is busy; the in-memory runtime
+  // only adds detail (speech). Without this, a reload or a lost runtime update shows
+  // the whole office idle while a step is actually running.
+  const runtime = { ...state.agentRuntime }
+  if (project) {
+    const liveTasks = new Map(
+      state.tasks
+        .filter((t) => t.projectId === project.id && ['running', 'verifying'].includes(t.status))
+        .map((t) => [t.id, t]),
+    )
+    for (const step of state.pipelineSteps) {
+      if (!liveTasks.has(step.taskId) || !step.agentId) continue
+      const status = step.status === 'running' ? 'working' : step.status === 'reviewing' ? 'reviewing' : null
+      if (!status) continue
+      const cur = runtime[step.agentId]
+      if (!cur || cur.status === 'idle' || cur.status === 'waiting') {
+        runtime[step.agentId] = { ...cur, status, currentTaskId: step.taskId, currentTaskLabel: step.label }
+      }
+    }
+  }
+  const runtimeKey = Object.keys(runtime)
     .sort()
     .map((id) => {
-      const r = state.agentRuntime[id]
+      const r = runtime[id]
       return `${id}:${r?.status ?? ''}:${r?.currentTaskLabel ?? ''}:${r?.speech ?? ''}`
     })
     .join('|')
@@ -1504,7 +1528,7 @@ export function selectTeamAgents(state: DeckState): Agent[] {
   ].join('::')
   if (key === teamCacheKey) return teamCache
   teamCacheKey = key
-  teamCache = mergeTeamAgents(state.registry, project, state.agentRuntime)
+  teamCache = mergeTeamAgents(state.registry, project, runtime)
   return teamCache
 }
 
