@@ -1,0 +1,51 @@
+.pxo-scene {
+  --pxo-ink: #1d2a44;
+  --pxo-muted: #6a7891;
+  --pxo-card: #ffffff;
+  --pxo-line: #e1e6ef;
+  height: 100%;
+  overflow: auto;
+  padding: 18px 20px 14px;
+  color: var(--pxo-ink);
+  background: linear-gradient(160deg, #f7f4ee 0%, #eef1f6 100%);
+}
+.pxo-toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; align-items: flex-end; margin: 0 auto 12px; max-width: 1160px; }
+.pxo-kicker { font-size: 10px; letter-spacing: .18em; font-weight: 800; color: #b07a3c; }
+.pxo-toolbar h1 { margin: 2px 0 0; font-size: 22px; letter-spacing: -.01em; }
+.pxo-stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pxo-stats li { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; background: var(--pxo-card); border: 1px solid var(--pxo-line); font-size: 12px; color: var(--pxo-muted); font-variant-numeric: tabular-nums; }
+.pxo-stats li b { color: var(--pxo-ink); font-size: 14px; }
+.pxo-stats i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.pxo-stats .is-working i { background: #3f7be0; }
+.pxo-stats .is-meeting i { background: #8e6ad8; }
+.pxo-stats .is-verify i { background: #2f9a5a; }
+.pxo-stats .is-idle i { background: #d6a23a; }
+.pxo-stats .is-blocked i { background: #e04848; }
+.pxo-stats .is-blocked { color: #c03a3a; border-color: #f2c4c4; }
+
+.pxo-viewport { max-width: 1160px; margin: 0 auto; display: flex; justify-content: center; }
+.pxo-frame { position: relative; border-radius: 6px; box-shadow: 0 0 0 4px #3b302c, 0 0 0 7px #a98b6d33, 0 16px 34px #2a1f1a33; background: #3b302c; overflow: hidden; }
+.pxo-map { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; }
+.pxo-bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; user-select: none; pointer-events: none; }
+.pxo-prop { position: absolute; background-image: url('/assets/pixel-office/props.png'); background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
+
+.pxo-char { position: absolute; width: 16px; height: 24px; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; }
+.pxo-char:focus-visible { outline: 1px solid #ffd54a; outline-offset: 1px; }
+.pxo-layer { position: absolute; inset: 0; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
+.pxo-shadow { position: absolute; left: 3px; bottom: -1px; width: 10px; height: 3px; border-radius: 50%; background: #2a1d1a40; }
+.pxo-char.is-focus .pxo-shadow { background: #ffd54a99; }
+.pxo-bubble { position: absolute; left: 9px; top: -9px; width: 12px; height: 12px; background-image: url('/assets/pixel-office/bubbles.png'); background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; animation: pxo-pop .18s steps(2) both; }
+@keyframes pxo-pop { from { transform: translateY(2px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.pxo-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.pxo-label { position: absolute; padding: 2px 7px 3px; border-radius: 3px; background: #2f2626e6; color: #fff3df; font-size: 11px; font-weight: 700; line-height: 1.25; letter-spacing: .02em; box-shadow: 0 2px 0 #1c1515; white-space: nowrap; }
+.pxo-label.room-garden { background: #2f5a34e6; }
+.pxo-nametag { position: absolute; transform: translate(-50%, -100%); display: grid; gap: 1px; padding: 4px 8px; border-radius: 4px; background: #1d2a44f2; color: #fff; font-size: 11px; line-height: 1.3; white-space: nowrap; box-shadow: 0 3px 8px #0003; }
+.pxo-nametag b { font-weight: 700; }
+.pxo-nametag em { font-style: normal; color: #b9c8e6; font-size: 10px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+
+.pxo-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; max-width: 1160px; margin: 10px auto 0; color: var(--pxo-muted); font-size: 11px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pxo-bubble { animation: none; }
+}

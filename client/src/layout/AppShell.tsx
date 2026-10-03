@@ -6,7 +6,7 @@ import {
 import { fetchRegistry, fetchProjects, fetchProvider, bootstrapSession } from '../api/client'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
-import { OfficeV2Scene } from '../office/v2/OfficeV2Scene'
+import { PixelOfficeScene } from '../office/pixel/PixelOfficeScene'
 import { EmptyOffice } from '../office/EmptyOffice'
 import { AiChatPanel } from '../panels/AiChatPanel'
 import { ProjectWizard } from '../components/ProjectWizard'
@@ -94,7 +94,7 @@ export function AppShell() {
               ) : !project ? (
                 <EmptyOffice />
               ) : (
-                <OfficeV2Scene />
+                <PixelOfficeScene />
               )}
             </section>
             <AiChatPanel />

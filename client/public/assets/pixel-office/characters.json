@@ -1,0 +1,91 @@
+{
+ "frameWidth": 16,
+ "frameHeight": 24,
+ "columns": 4,
+ "animations": {
+  "idle-down": {
+   "row": 0,
+   "frames": 2
+  },
+  "idle-up": {
+   "row": 1,
+   "frames": 2
+  },
+  "idle-left": {
+   "row": 2,
+   "frames": 2
+  },
+  "idle-right": {
+   "row": 3,
+   "frames": 2
+  },
+  "walk-down": {
+   "row": 4,
+   "frames": 4
+  },
+  "walk-up": {
+   "row": 5,
+   "frames": 4
+  },
+  "walk-left": {
+   "row": 6,
+   "frames": 4
+  },
+  "walk-right": {
+   "row": 7,
+   "frames": 4
+  },
+  "sit-down": {
+   "row": 8,
+   "frames": 2
+  },
+  "sit-up": {
+   "row": 9,
+   "frames": 2
+  },
+  "sit-left": {
+   "row": 10,
+   "frames": 2
+  },
+  "sit-right": {
+   "row": 11,
+   "frames": 2
+  }
+ },
+ "skins": [
+  "light",
+  "tan",
+  "deep"
+ ],
+ "hairStyles": [
+  "short",
+  "spiky",
+  "long",
+  "bun"
+ ],
+ "hairColors": [
+  "black",
+  "espresso",
+  "brown",
+  "blond",
+  "ginger",
+  "rose"
+ ],
+ "roles": [
+  "pm",
+  "developer",
+  "game-developer",
+  "designer",
+  "researcher",
+  "marketer",
+  "qa",
+  "reviewer"
+ ],
+ "accessories": {
+  "game-developer": "headphones",
+  "researcher": "glasses",
+  "reviewer": "glasses",
+  "marketer": "headset",
+  "designer": "beret"
+ }
+}
