@@ -71,10 +71,31 @@ function facingToward(dx: number, dy: number, fallback: Facing): Facing {
 }
 
 /** Integer device-pixel scaling keeps every art pixel the same size. */
-function crispScale(containerWidth: number): number {
-  const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1))
-  const raw = Math.floor((containerWidth / MAP_W) * dpr) / dpr
-  return Math.max(1 / dpr, Math.min(raw, 3))
+type ViewMode = 'fill' | 'fit'
+const VIEW_KEY = 'agent-deck-office-view'
+
+/** fill = cover the pane (pan to see the rest), fit = whole office visible. */
+function viewScale(mode: ViewMode, width: number, height: number): number {
+  if (!width || !height) return 1
+  const s = mode === 'fill' ? Math.max(width / MAP_W, height / MAP_H) : Math.min(width / MAP_W, height / MAP_H)
+  return Math.max(0.5, Math.min(4, Math.floor(s * 100) / 100))
+}
+
+function clampOffset(o: Pt, scale: number, w: number, h: number): Pt {
+  const fw = MAP_W * scale
+  const fh = MAP_H * scale
+  return {
+    x: fw <= w ? (w - fw) / 2 : Math.min(0, Math.max(w - fw, o.x)),
+    y: fh <= h ? (h - fh) / 2 : Math.min(0, Math.max(h - fh, o.y)),
+  }
+}
+
+function readViewMode(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'fit' ? 'fit' : 'fill'
+  } catch {
+    return 'fill'
+  }
 }
 
 type Bubble = (typeof bubbleManifest.names)[number]
@@ -140,7 +161,23 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
   const [now, setNow] = useState(() => performance.now())
   const [hovered, setHovered] = useState<string | null>(null)
   const viewport = useRef<HTMLDivElement>(null)
-  const [scale, setScale] = useState(1)
+  const [box, setBox] = useState({ w: 0, h: 0 })
+  const [mode, setMode] = useState<ViewMode>(readViewMode)
+  const scale = viewScale(mode, box.w, box.h)
+  // pan offset in screen px; null = not yet centred for this scale
+  const [pan, setPan] = useState<Pt | null>(null)
+  const drag = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean } | null>(null)
+  const justDragged = useRef(false)
+  const offset = clampOffset(pan ?? { x: box.w / 2 - (MAP_W / 2) * scale, y: box.h / 2 - (MAP_H / 2) * scale }, scale, box.w, box.h)
+  const changeMode = (next: ViewMode) => {
+    setMode(next)
+    setPan(null)
+    try {
+      localStorage.setItem(VIEW_KEY, next)
+    } catch {
+      /* per-viewer convenience only */
+    }
+  }
 
   // sync roster → runners (place on first sight, walk on change)
   useEffect(() => {
@@ -225,7 +262,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
   useLayoutEffect(() => {
     const el = viewport.current
     if (!el) return
-    const update = () => setScale(crispScale(el.clientWidth))
+    const update = () => setBox({ w: el.clientWidth, h: el.clientHeight })
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
@@ -271,6 +308,10 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
               <button type="button" onClick={openWizard}>새 프로젝트로 내 팀 꾸리기</button>
             </li>
           ) : null}
+          <li className="pxo-view" role="group" aria-label="보기 방식">
+            <button type="button" aria-pressed={mode === 'fill'} onClick={() => changeMode('fill')}>꽉 채우기</button>
+            <button type="button" aria-pressed={mode === 'fit'} onClick={() => changeMode('fit')}>전체 보기</button>
+          </li>
           <li><b>{agents.length}</b>명 출근</li>
           <li className="is-working"><i />작업 {counts.working}</li>
           <li className="is-meeting"><i />회의 {counts.meeting}</li>
@@ -280,8 +321,43 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
         </ul>
       </header>
 
-      <div className="pxo-viewport" ref={viewport}>
-        <div className="pxo-frame" style={{ width: MAP_W * scale, height: MAP_H * scale }}>
+      <div
+        className={`pxo-viewport is-${mode}`}
+        ref={viewport}
+        onPointerDown={(e) => {
+          if (e.button !== 0) return
+          drag.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y, moved: false }
+        }}
+        onPointerMove={(e) => {
+          const d = drag.current
+          if (!d) return
+          const dx = e.clientX - d.x
+          const dy = e.clientY - d.y
+          if (!d.moved && Math.hypot(dx, dy) < 4) return
+          if (!d.moved) {
+            d.moved = true
+            e.currentTarget.setPointerCapture(e.pointerId)
+          }
+          setPan({ x: d.ox + dx, y: d.oy + dy })
+        }}
+        onPointerUp={(e) => {
+          if (drag.current?.moved) {
+            e.currentTarget.releasePointerCapture(e.pointerId)
+            justDragged.current = true
+            window.setTimeout(() => (justDragged.current = false), 0)
+          }
+          drag.current = null
+        }}
+        onClickCapture={(e) => {
+          // a drag that just ended should not click the character underneath
+          if (justDragged.current) e.stopPropagation()
+        }}
+        onWheel={(e) => {
+          if (mode !== 'fill') return
+          setPan({ x: offset.x - e.deltaX, y: offset.y - e.deltaY })
+        }}
+      >
+        <div className="pxo-frame" style={{ width: MAP_W * scale, height: MAP_H * scale, transform: `translate(${Math.round(offset.x)}px, ${Math.round(offset.y)}px)` }}>
           <div className="pxo-map" style={{ width: MAP_W, height: MAP_H, transform: `scale(${scale})` }}>
             <img className="pxo-bg" src={`${BASE}/office-bg.png`} alt="" draggable={false} />
             {propEls}
@@ -318,7 +394,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
           </div>
           <div className="pxo-overlay">
             {officeMap.labels.map((l) => (
-              <span key={l.id} className={`pxo-label room-${l.id}`} style={{ left: l.x * scale, top: l.y * scale }}>
+              <span key={l.id} className={`pxo-label room-${l.id}`} style={{ left: l.x * scale, top: l.y * scale, fontSize: Math.round(Math.min(15, Math.max(11, 8 * scale))) }}>
                 {l.text}
               </span>
             ))}
