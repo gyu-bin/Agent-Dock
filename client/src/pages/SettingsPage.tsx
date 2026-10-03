@@ -317,8 +317,37 @@ export function SettingsPage() {
 
         {section === 'ai' ? (
           <>
-            <ChatGPTConnection onChange={reload} onModels={receiveModels} />
             <section className={styles.card}>
+              <h2>AI 엔진</h2>
+              <div className={styles.modeRow}>
+                <button className={s?.engine !== 'claude' ? styles.modeOn : styles.mode} disabled={saving} onClick={() => void save({engine: 'gpt'})}>GPT</button>
+                <button className={s?.engine === 'claude' ? styles.modeOn : styles.mode} disabled={saving} onClick={() => void save({engine: 'claude'})}>Claude</button>
+              </div>
+              <p className={styles.hint}>에이전트 단계를 어떤 모델로 실행할지 고릅니다. 웹 검색은 ChatGPT 플랜이 연결돼 있으면 그대로 쓰고, 아니면 일반 검색을 씁니다.</p>
+              {s?.engine === 'claude' ? (
+                <>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Claude API 키</span>
+                    {runtime?.anthropic?.apiKeyConfigured ? (
+                      <span className={styles.ok}>● 설정됨</span>
+                    ) : (
+                      <span className={styles.off}>○ AgentDeck 폴더의 .env에 ANTHROPIC_API_KEY=… 를 넣고 서버를 다시 시작하세요</span>
+                    )}
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.label}>모델</span>
+                    <select value={s?.anthropic?.model ?? 'claude-sonnet-5-5'} disabled={saving} onChange={(e) => void save({anthropic: {model: e.target.value}})}>
+                      <option value="claude-opus-5-5">Claude Opus 5.5 · 가장 깊이 있음</option>
+                      <option value="claude-sonnet-5-5">Claude Sonnet 5.5 · 균형 (기본)</option>
+                      <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 · 빠르고 저렴</option>
+                    </select>
+                  </div>
+                  <p className={styles.hint}>Claude API는 Anthropic 콘솔에서 발급한 키로 쓴 만큼 별도 결제됩니다. 구독(Claude Pro/Max) 로그인으로는 연결할 수 없습니다.</p>
+                </>
+              ) : null}
+            </section>
+            <ChatGPTConnection onChange={reload} onModels={receiveModels} />
+            <section className={styles.card} hidden={s?.engine === 'claude'}>
               <h2>AI 실행 방식</h2>
               <div className={styles.modeRow}>
                 <button className={s?.openai.authMode !== 'api-key' ? styles.modeOn : styles.mode} disabled={saving} onClick={() => void save({openai: {authMode: 'chatgpt-plan'}})}>ChatGPT Plan</button>

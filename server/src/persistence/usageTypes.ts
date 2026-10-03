@@ -7,6 +7,7 @@
 export type ExecutionProvider =
   | 'openai-chatgpt-plan'
   | 'openai'
+  | 'anthropic'
   | 'openai-image'
   | 'threads'
   | 'media-delivery'

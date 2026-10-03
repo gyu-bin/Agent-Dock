@@ -217,6 +217,7 @@ export interface KnowledgeConflictCandidate {
 export type ExecutionProvider =
   | 'openai'
   | 'openai-chatgpt-plan'
+  | 'anthropic'
   | 'openai-image'
   | 'threads'
   | 'media-delivery'
@@ -429,7 +430,7 @@ export interface WebSearchSession {
 }
 
 export interface AgentRun extends ExecutionFailure {
-  provider?: 'openai' | 'openai-chatgpt-plan'
+  provider?: 'openai' | 'openai-chatgpt-plan' | 'anthropic'
   authMode?: 'chatgpt-plan' | 'api-key'
   costBasis?: 'plan-included'
   id: string
@@ -597,7 +598,7 @@ export interface ChatMessage {
   }
 }
 
-export type AiProviderMode = 'mock' | 'not-configured' | 'openai' | 'chatgpt-plan'
+export type AiProviderMode = 'mock' | 'not-configured' | 'openai' | 'chatgpt-plan' | 'anthropic'
 
 export interface ChatGPTAuthStatus {
   supported: boolean
@@ -613,7 +614,7 @@ export interface AiProviderState {
   mode: AiProviderMode
   label: string
   configured: boolean
-  providerName: 'none' | 'openai' | 'openai-chatgpt-plan'
+  providerName: 'none' | 'openai' | 'openai-chatgpt-plan' | 'anthropic'
   authMode?: 'chatgpt-plan' | 'api-key'
   model?: string
   codex?: {
@@ -652,6 +653,8 @@ export type SearchFailPolicy = 'block-step' | 'allow-continue-without'
 export interface DeckSettings {
   version: 1
   openai: { enabled: boolean; model: string; authMode: 'chatgpt-plan' | 'api-key' }
+  engine?: 'gpt' | 'claude'
+  anthropic?: { model: string }
   modelProfiles: Record<ModelProfileId, ModelProfile>
   codex: { enabled: boolean; binaryPath?: string }
   webSearch: {
@@ -708,6 +711,11 @@ export interface SettingsBoard {
       enabled: boolean
       model: string | null
       label: string
+      apiKeyConfigured: boolean
+    }
+    anthropic?: {
+      engine: 'gpt' | 'claude'
+      model: string
       apiKeyConfigured: boolean
     }
     codex: {

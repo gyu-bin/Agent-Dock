@@ -21,6 +21,8 @@ import { chatgptAuthService } from '../chatgpt/chatgptAuthService.js'
 
 export interface SettingsPatch {
   openai?: { enabled?: boolean; model?: string; authMode?: 'chatgpt-plan' | 'api-key' }
+  engine?: 'gpt' | 'claude'
+  anthropic?: { model?: string }
   modelProfiles?: Partial<
     Record<ModelProfileId, { model?: string; roles?: string[] }>
   >
@@ -85,6 +87,10 @@ export function applySettingsPatch(
     if (typeof patch.openai.model === 'string' && patch.openai.model.trim())
       next.openai.model = patch.openai.model.trim()
   }
+
+  if (patch.engine === 'gpt' || patch.engine === 'claude') next.engine = patch.engine
+  if (typeof patch.anthropic?.model === 'string' && /^claude-[a-z0-9.-]+$/.test(patch.anthropic.model.trim()))
+    next.anthropic.model = patch.anthropic.model.trim()
 
   if (patch.modelProfiles) {
     for (const id of ['FAST', 'STANDARD', 'REASONING'] as ModelProfileId[]) {
@@ -292,6 +298,11 @@ export class SettingsService {
           label: openaiState.label,
           apiKeyConfigured: openaiKey,
         },
+        anthropic: {
+          engine: settings.engine,
+          model: settings.anthropic.model,
+          apiKeyConfigured: envConfigured('ANTHROPIC_API_KEY'),
+        },
         codex: {
           available: codex.available,
           enabled: settings.codex.enabled,
@@ -335,6 +346,7 @@ export class SettingsService {
           'OPENAI_IMAGE_MODEL_QUALITY',
         ],
         codexEnvKeys: ['CODEX_BIN', 'CODEX_API_KEY', 'CODEX_TIMEOUT_MS'],
+        anthropicEnvKeys: ['ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL'],
         note: '환경변수 이름은 Advanced에서만 표시합니다. 값은 절대 노출하지 않습니다. OPENAI_API_KEY와 CODEX_API_KEY는 서로 다른 키입니다.',
       },
     }

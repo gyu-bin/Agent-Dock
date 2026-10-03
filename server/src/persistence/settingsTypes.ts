@@ -64,6 +64,11 @@ export interface DeckSettings {
     /** Preferred model id (non-secret). Runtime still uses env until restart. */
     model: string
   }
+  /** Which model family runs agent steps. GPT = the openai block above; Claude = Anthropic API key. */
+  engine: 'gpt' | 'claude'
+  anthropic: {
+    model: string
+  }
   modelProfiles: Record<ModelProfileId, ModelProfile>
   codex: {
     enabled: boolean
@@ -122,6 +127,11 @@ export interface SettingsBoard {
       label: string
       apiKeyConfigured: boolean
     }
+    anthropic: {
+      engine: 'gpt' | 'claude'
+      model: string
+      apiKeyConfigured: boolean
+    }
     codex: {
       available: boolean
       enabled: boolean
@@ -158,6 +168,7 @@ export interface SettingsBoard {
   diagnostics: DiagnosticCheck[]
   advanced?: {
     openaiEnvKeys: string[]
+    anthropicEnvKeys: string[]
     codexEnvKeys: string[]
     note: string
   }
@@ -177,6 +188,8 @@ export function defaultSettings(): DeckSettings {
       enabled: true,
       model: 'gpt-4o-mini',
     },
+    engine: 'gpt',
+    anthropic: { model: 'claude-sonnet-5-5' },
     modelProfiles: {
       FAST: {
         id: 'FAST',

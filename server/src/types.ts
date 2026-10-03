@@ -42,10 +42,10 @@ export interface AgentRecord {
 }
 
 export interface AiProviderState {
-  mode: 'mock' | 'not-configured' | 'openai' | 'chatgpt-plan'
+  mode: 'mock' | 'not-configured' | 'openai' | 'chatgpt-plan' | 'anthropic'
   label: string
   configured: boolean
-  providerName: 'none' | 'openai' | 'openai-chatgpt-plan'
+  providerName: 'none' | 'openai' | 'openai-chatgpt-plan' | 'anthropic'
   authMode?: 'chatgpt-plan' | 'api-key'
   configurationErrorCode?: string
   model?: string

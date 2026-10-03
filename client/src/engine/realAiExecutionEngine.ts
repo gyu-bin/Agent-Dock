@@ -660,9 +660,10 @@ export class RealAIExecutionEngine implements ExecutionEngine {
     const runId = `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
     const selectedProvider = await fetchProvider().catch(() => undefined)
     if (this.aborted.has(task.id) || this.disposed) return false
-    const planMode = selectedProvider?.authMode !== 'api-key'
+    const claude = selectedProvider?.providerName === 'anthropic'
+    const planMode = !claude && selectedProvider?.authMode !== 'api-key'
     const run: AgentRun = {
-      provider: planMode ? 'openai-chatgpt-plan' : 'openai',
+      provider: claude ? 'anthropic' : planMode ? 'openai-chatgpt-plan' : 'openai',
       authMode: planMode ? 'chatgpt-plan' : 'api-key',
       ...(planMode ? { costBasis: 'plan-included' as const } : {}),
       id: runId,

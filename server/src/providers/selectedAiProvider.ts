@@ -1,5 +1,6 @@
 import { OpenAIProvider, requireConfigured, type AiProvider, type ChatMessage, type JsonSchemaSpec } from './aiProvider.js'
 import { ChatGPTPlanProvider } from './chatgptPlanProvider.js'
+import { AnthropicProvider } from './anthropicProvider.js'
 import { chatgptAuthService } from '../chatgpt/chatgptAuthService.js'
 import { settingsRepository } from '../persistence/settingsRepository.js'
 import type { AiProviderState } from '../types.js'
@@ -9,11 +10,26 @@ export class SelectedAiProvider implements AiProvider {
   private state: AiProviderState = { mode: 'not-configured', configured: false, label: 'ChatGPT 연결 필요', providerName: 'openai-chatgpt-plan', authMode: 'chatgpt-plan' }
   private enabled = true
   private account = ''
+  private planReady = false
+  private claude: AnthropicProvider | null = null
+  /** ChatGPT Plan search stays usable for research even when Claude runs the steps. */
+  planSearchReady() { return this.planReady && this.enabled }
   async refresh() {
     const settings = await settingsRepository.load()
     this.enabled = settings.openai.enabled
     planProvider.setPreferredModel(settings.openai.model)
-    if (settings.openai.authMode === 'api-key') {
+    const plan = await chatgptAuthService.getStatus()
+    this.planReady = plan.supported && plan.signedIn && plan.planUsageEnabled && settings.openai.authMode === 'chatgpt-plan'
+    this.claude = null
+    if (settings.engine === 'claude') {
+      const key = process.env.ANTHROPIC_API_KEY?.trim()
+      if (key) {
+        this.claude = new AnthropicProvider(key, settings.anthropic.model)
+        this.state = { ...this.claude.getState(), configured: this.enabled }
+      } else {
+        this.state = { mode: 'not-configured', configured: false, providerName: 'anthropic', authMode: 'api-key', label: 'Claude API 키 필요', model: settings.anthropic.model, configurationErrorCode: 'ANTHROPIC_API_KEY_REQUIRED' }
+      }
+    } else if (settings.openai.authMode === 'api-key') {
       this.state = { mode: process.env.OPENAI_API_KEY?.trim() ? 'openai' : 'not-configured', configured: Boolean(process.env.OPENAI_API_KEY?.trim()) && this.enabled, providerName: 'openai', authMode: 'api-key', label: 'OpenAI API · 별도 API Billing', model: settings.openai.model }
     } else {
       const status = await chatgptAuthService.getStatus()
@@ -30,6 +46,7 @@ export class SelectedAiProvider implements AiProvider {
     await this.refresh()
     input.signal?.throwIfAborted()
     requireConfigured(this)
+    if (this.claude) return this.claude.chat(input)
     if (this.state.authMode === 'api-key') return new OpenAIProvider(process.env.OPENAI_API_KEY!.trim()).chat(input)
     const result = await planProvider.chat(input)
     this.state.model = result.usage.model

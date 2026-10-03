@@ -259,7 +259,7 @@ export interface StoredWebSearchSession {
 }
 
 export interface StoredAgentRun {
-  provider?: 'openai' | 'openai-chatgpt-plan'
+  provider?: 'openai' | 'openai-chatgpt-plan' | 'anthropic'
   authMode?: 'chatgpt-plan' | 'api-key'
   costBasis?: 'plan-included'
   errorCode?: string

@@ -257,7 +257,7 @@ export async function orchestrateAi(input: {
   preferredAgentId?: string
 }): Promise<{
   plan: RoutePlan
-  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
+  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan' | 'anthropic'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
 }> {
   const res = await apiFetch(`${API_BASE}/api/ai/orchestrate`, {
     method: 'POST',
@@ -272,7 +272,7 @@ export async function orchestrateAi(input: {
   }
   return res.json() as Promise<{
     plan: RoutePlan
-    usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
+    usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan' | 'anthropic'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
   }>
 }
 
@@ -295,7 +295,7 @@ export async function runAiStep(input: {
 }, signal?: AbortSignal): Promise<{
   output: string
   inputSummary: string
-  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
+  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan' | 'anthropic'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
   contextMeta?: {
     estimatedChars: number
     includedArtifactIds: string[]
@@ -1309,7 +1309,7 @@ export async function synthesizeAiResult(input: {
   }>
 }, signal?: AbortSignal): Promise<{
   output: string
-  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
+  usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan' | 'anthropic'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
 }> {
   const res = await apiFetch(`${API_BASE}/api/ai/synthesize`, {
     method: 'POST',
@@ -1323,7 +1323,7 @@ export async function synthesizeAiResult(input: {
   }
   return res.json() as Promise<{
     output: string
-    usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
+    usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan' | 'anthropic'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
   }>
 }
 

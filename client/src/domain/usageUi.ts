@@ -7,6 +7,7 @@ import type {
 export const PROVIDER_LABEL: Record<ExecutionProvider, string> = {
   openai: 'OpenAI API',
   'openai-chatgpt-plan': 'ChatGPT Plan',
+  anthropic: 'Claude API',
   'openai-image': 'OpenAI Image',
   threads: 'Threads',
   'media-delivery': 'Media Delivery',
@@ -32,6 +33,7 @@ export const PROVIDER_FILTERS: Array<{
   { id: 'all', label: '전체 프로바이더' },
   { id: 'openai', label: 'OpenAI API' },
   { id: 'openai-chatgpt-plan', label: 'ChatGPT Plan' },
+  { id: 'anthropic', label: 'Claude API' },
   { id: 'openai-image', label: 'OpenAI Image' },
   { id: 'threads', label: 'Threads' },
   { id: 'media-delivery', label: 'Media Delivery' },

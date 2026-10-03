@@ -23,6 +23,7 @@ function migrate(raw: unknown): DeckSettings {
   const obj = raw as Record<string, unknown>
   const openai = (obj.openai ?? {}) as Record<string, unknown>
   const codex = (obj.codex ?? {}) as Record<string, unknown>
+  const anthropic = (obj.anthropic ?? {}) as Record<string, unknown>
   const webSearch = (obj.webSearch ?? {}) as Record<string, unknown>
   const agents = (obj.agents ?? {}) as Record<string, unknown>
   const project = (obj.project ?? {}) as Record<string, unknown>
@@ -57,6 +58,13 @@ function migrate(raw: unknown): DeckSettings {
         typeof openai.model === 'string' && openai.model.trim()
           ? String(openai.model).trim()
           : base.openai.model,
+    },
+    engine: obj.engine === 'claude' ? 'claude' : 'gpt',
+    anthropic: {
+      model:
+        typeof anthropic.model === 'string' && anthropic.model.trim()
+          ? anthropic.model.trim()
+          : base.anthropic.model,
     },
     modelProfiles: {
       FAST: mergeProfile('FAST'),

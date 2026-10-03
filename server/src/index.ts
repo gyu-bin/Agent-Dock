@@ -138,11 +138,13 @@ const HOST = process.env.AGENT_DECK_HOST ?? '127.0.0.1'
 const app = express()
 const aiProvider = new SelectedAiProvider()
 await aiProvider.refresh()
-const chatgptSearch = new ChatGPTPlanSearchProvider(planProvider, () => aiProvider.isConfigured())
+const chatgptSearch = new ChatGPTPlanSearchProvider(planProvider, () => aiProvider.planSearchReady())
+// OpenAI API mode searches with the API key; ChatGPT Plan and Claude use ChatGPT Plan search when connected, else keyless search.
+const openAiApiMode = () => aiProvider.getState().providerName === 'openai'
 const webSearchProvider = {
   id: 'selected-auth-search', label: 'Web Search',
-  isAvailable: () => createWebSearchProvider(aiProvider.getState().authMode === 'api-key').isAvailable(),
-  search: (request: import('./search/types.js').WebSearchRequest) => aiProvider.getState().authMode === 'api-key' ? createWebSearchProvider(true).search(request) : chatgptSearch.search(request),
+  isAvailable: () => createWebSearchProvider(openAiApiMode()).isAvailable(),
+  search: (request: import('./search/types.js').WebSearchRequest) => openAiApiMode() ? createWebSearchProvider(true).search(request) : chatgptSearch.search(request),
 }
 const projects = new ProjectService(projectRepository)
 const cloudWorkspaces = new WorkspaceService()
@@ -890,7 +892,7 @@ app.post('/api/ai/run-step', async (req, res) => {
       if (attachment.imageRef) {
         const bytes = await readFile(attachment.imageRef)
         attachmentImageDataUrls.push({ mimeType, dataUrl: `data:${mimeType};base64,${bytes.toString('base64')}` })
-      } else if (attachment.contentKind === 'document' && attachment.fileRef && aiProvider.getState().authMode === 'chatgpt-plan') {
+      } else if (attachment.contentKind === 'document' && attachment.fileRef && (aiProvider.getState().authMode === 'chatgpt-plan' || aiProvider.getState().providerName === 'anthropic')) {
         const bytes = await readFile(attachment.fileRef)
         attachmentFiles.push({ filename: String(attachment.metadata.name ?? 'attachment.pdf'), fileData: `data:${mimeType};base64,${bytes.toString('base64')}` })
       }

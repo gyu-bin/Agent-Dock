@@ -15,7 +15,7 @@ export interface ChatMessage {
 }
 
 export interface ChatUsage {
-  provider?: 'openai' | 'openai-chatgpt-plan'
+  provider?: 'openai' | 'openai-chatgpt-plan' | 'anthropic'
   authMode?: 'api-key' | 'chatgpt-plan'
   costBasis?: 'plan-included'
   model: string
@@ -54,7 +54,7 @@ export function requireConfigured(provider: AiProvider): void {
   if (provider.isConfigured()) return
   const state = provider.getState()
   const code = state.configurationErrorCode ?? (state.authMode === 'chatgpt-plan' ? 'CHATGPT_SIGNIN_REQUIRED' : 'OPENAI_API_KEY_REQUIRED')
-  const message = code === 'CHATGPT_PLAN_PERMISSION_REQUIRED' ? 'Agent Deck에서 ChatGPT 플랜 사용을 허용해주세요.' : code === 'CHATGPT_LOCAL_ONLY' ? 'ChatGPT 플랜 연결은 로컬 Agent Deck에서 사용할 수 있습니다.' : code === 'AI_PROVIDER_DISABLED' ? '설정에서 AI 기능을 켜주세요.' : state.authMode === 'chatgpt-plan' ? 'ChatGPT 연결이 필요합니다.' : 'OpenAI API Key 설정이 필요합니다.'
+  const message = code === 'ANTHROPIC_API_KEY_REQUIRED' ? 'Claude를 쓰려면 AgentDeck 폴더의 .env에 ANTHROPIC_API_KEY를 넣고 서버를 다시 시작해주세요.' : code === 'CHATGPT_PLAN_PERMISSION_REQUIRED' ? 'Agent Deck에서 ChatGPT 플랜 사용을 허용해주세요.' : code === 'CHATGPT_LOCAL_ONLY' ? 'ChatGPT 플랜 연결은 로컬 Agent Deck에서 사용할 수 있습니다.' : code === 'AI_PROVIDER_DISABLED' ? '설정에서 AI 기능을 켜주세요.' : state.authMode === 'chatgpt-plan' ? 'ChatGPT 연결이 필요합니다.' : 'OpenAI API Key 설정이 필요합니다.'
   throw Object.assign(new Error(message), { code, status: 503 })
 }
 
