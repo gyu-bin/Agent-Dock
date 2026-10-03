@@ -7,7 +7,6 @@ import { fetchRegistry, fetchProjects, fetchProvider, bootstrapSession } from '.
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { PixelOfficeScene } from '../office/pixel/PixelOfficeScene'
-import { EmptyOffice } from '../office/EmptyOffice'
 import { AiChatPanel } from '../panels/AiChatPanel'
 import { ProjectWizard } from '../components/ProjectWizard'
 import { ManageTeamModal } from '../components/ManageTeamModal'
@@ -92,7 +91,7 @@ export function AppShell() {
                   <p>불러오는 중…</p>
                 </div>
               ) : !project ? (
-                <EmptyOffice />
+                <PixelOfficeScene preview />
               ) : (
                 <PixelOfficeScene />
               )}

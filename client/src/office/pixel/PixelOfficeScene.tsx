@@ -8,6 +8,7 @@ import officeMap from '../../../public/assets/pixel-office/office-map.json'
 import charManifest from '../../../public/assets/pixel-office/characters.json'
 import bubbleManifest from '../../../public/assets/pixel-office/bubbles.json'
 import { findPath, type Pt } from './pixelPath'
+import { pickDefaultCrew, simulateCrew } from './defaultCrew'
 import './PixelOfficeScene.css'
 
 const BASE = '/assets/pixel-office'
@@ -114,8 +115,22 @@ const STATUS_KO: Record<Agent['status'], string> = {
   verifying: '검증 중', blocked: '막힘', offline: '오프라인',
 }
 
-export function PixelOfficeScene() {
-  const roster = useDeckStore(useShallow((s) => selectTeamAgents(s).slice(0, 30)))
+export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
+  const teamRoster = useDeckStore(useShallow((s) => selectTeamAgents(s).slice(0, 30)))
+  const registry = useDeckStore((s) => s.registry)
+  const openWizard = useDeckStore((s) => s.openWizard)
+  const crew = useMemo(() => (preview ? pickDefaultCrew(registry) : []), [preview, registry])
+  const [simClock, setSimClock] = useState(() => Date.now())
+  useEffect(() => {
+    if (!preview) return
+    const id = window.setInterval(() => setSimClock(Date.now()), 2000)
+    return () => window.clearInterval(id)
+  }, [preview])
+  const simulated = preview ? simulateCrew(crew, simClock) : null
+  const simKey = simulated ? simulated.map((a) => `${a.id}:${a.status}`).join('|') : ''
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const previewRoster = useMemo(() => simulated ?? [], [simKey])
+  const roster = preview ? previewRoster : teamRoster
   const agents = useMemo(() => roster.filter((a) => a.enabled !== false), [roster])
   const selectAgent = useDeckStore((s) => s.selectAgent)
   const selectedAgentId = useDeckStore((s) => s.selectedAgentId)
@@ -247,10 +262,15 @@ export function PixelOfficeScene() {
     <div className="pxo-scene">
       <header className="pxo-toolbar">
         <div>
-          <span className="pxo-kicker">LIVE OFFICE</span>
+          <span className="pxo-kicker">{preview ? 'PREVIEW · 기본 직원' : 'LIVE OFFICE'}</span>
           <h1>AI 팀 오피스</h1>
         </div>
         <ul className="pxo-stats" aria-label="상태 요약">
+          {preview ? (
+            <li className="pxo-cta">
+              <button type="button" onClick={openWizard}>새 프로젝트로 내 팀 꾸리기</button>
+            </li>
+          ) : null}
           <li><b>{agents.length}</b>명 출근</li>
           <li className="is-working"><i />작업 {counts.working}</li>
           <li className="is-meeting"><i />회의 {counts.meeting}</li>
@@ -280,7 +300,7 @@ export function PixelOfficeScene() {
                   className={`pxo-char${focusId === r.agent.id ? ' is-focus' : ''}`}
                   style={{ left, top, zIndex: Math.round(r.pos.y) + 1 }}
                   aria-label={`${r.agent.name} · ${STATUS_KO[r.agent.status]}`}
-                  onClick={() => selectAgent(r.agent.id)}
+                  onClick={() => (preview ? undefined : selectAgent(r.agent.id))}
                   onMouseEnter={() => setHovered(r.agent.id)}
                   onMouseLeave={() => setHovered((h) => (h === r.agent.id ? null : h))}
                 >

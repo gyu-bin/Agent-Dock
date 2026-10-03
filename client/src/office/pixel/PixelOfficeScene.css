@@ -22,6 +22,9 @@
 .pxo-stats .is-idle i { background: #d6a23a; }
 .pxo-stats .is-blocked i { background: #e04848; }
 .pxo-stats .is-blocked { color: #c03a3a; border-color: #f2c4c4; }
+.pxo-stats li.pxo-cta { padding: 0; border: 0; background: none; }
+.pxo-cta button { height: 100%; padding: 6px 12px; border: 0; border-radius: 8px; background: #3f69c2; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+.pxo-cta button:hover { background: #3459a8; }
 
 .pxo-viewport { max-width: 1160px; margin: 0 auto; display: flex; justify-content: center; }
 .pxo-frame { position: relative; border-radius: 6px; box-shadow: 0 0 0 4px #3b302c, 0 0 0 7px #a98b6d33, 0 16px 34px #2a1f1a33; background: #3b302c; overflow: hidden; }
