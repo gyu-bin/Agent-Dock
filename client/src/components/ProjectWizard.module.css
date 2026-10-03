@@ -203,3 +203,7 @@
 .ghost:disabled {
   opacity: 0.45;
 }
+.linkButton { border: 0; padding: 0; background: none; color: var(--ad-accent, #3b82f6); font: inherit; text-decoration: underline; cursor: pointer; }
+details.sourceFields { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--ad-line, #e5e7eb); border-radius: 10px; }
+details.sourceFields > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.typeGrid + .presetList { margin-top: 16px; }

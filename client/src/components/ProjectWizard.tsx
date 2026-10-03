@@ -20,7 +20,8 @@ const TYPES: Array<{ id: ProjectType; label: string }> = [
   { id: 'custom', label: t('projectType.custom') },
 ]
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6
+type Step = 1 | 2 | 3 | 4
+const LAST_STEP: Step = 4
 
 export function ProjectWizard() {
   const open = useDeckStore((s) => s.wizardOpen)
@@ -53,15 +54,14 @@ export function ProjectWizard() {
     setRepository('')
     setBranch('')
     setAgentIds([])
+    setTeamTouched(false)
     setError(null)
   }, [open, cloud])
 
-  useEffect(() => {
-    if (step === 4) {
-      const ids = matches.map((m) => m.agent?.id).filter(Boolean) as string[]
-      setAgentIds(ids)
-    }
-  }, [step, matches])
+  // The recommended team follows the chosen type until the user edits it in step 3.
+  const recommendedIds = useMemo(() => matches.map((m) => m.agent?.id).filter(Boolean) as string[], [matches])
+  const [teamTouched, setTeamTouched] = useState(false)
+  const team = teamTouched ? agentIds : recommendedIds
 
   if (!open) return null
 
@@ -72,16 +72,17 @@ export function ProjectWizard() {
       const snap = await createProject({
         name: name.trim() || '제목 없는 프로젝트',
         type,
-        sourceType: cloud ? 'github' : sourceType,
-        repository: sourceType === 'github' || cloud ? repository.trim() : undefined,
-        branch: sourceType === 'github' || cloud ? branch.trim() || undefined : undefined,
-        path: sourceType === 'local' && !cloud ? path.trim() || undefined : undefined,
-        agentIds,
+        // Locally the source is optional: GitHub only when a repo was entered, else a (possibly empty) local folder.
+        sourceType: cloud || (sourceType === 'github' && repository.trim()) ? 'github' : 'local',
+        repository: cloud || (sourceType === 'github' && repository.trim()) ? repository.trim() : undefined,
+        branch: cloud || (sourceType === 'github' && repository.trim()) ? branch.trim() || undefined : undefined,
+        path: !cloud && sourceType === 'local' ? path.trim() || undefined : undefined,
+        agentIds: team,
         status: 'active',
       })
       applyProjectsSnapshot(snap)
       useDeckStore.setState({
-        agentRuntime: defaultRuntimeForNewTeam(agentIds),
+        agentRuntime: defaultRuntimeForNewTeam(team),
         activeNav: 'home',
       })
       closeWizard()
@@ -94,9 +95,8 @@ export function ProjectWizard() {
   }
 
   function toggleAgent(id: string) {
-    setAgentIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
+    setAgentIds(team.includes(id) ? team.filter((x) => x !== id) : [...team, id])
+    setTeamTouched(true)
   }
 
   return (
@@ -106,7 +106,7 @@ export function ProjectWizard() {
         <header className={styles.head}>
           <div>
             <h2>{t('project.new')}</h2>
-            <p>6단계 중 {step}단계</p>
+            <p>{LAST_STEP}단계 중 {step}단계</p>
           </div>
           <button type="button" className={styles.close} onClick={closeWizard}>
             <X size={16} />
@@ -127,72 +127,61 @@ export function ProjectWizard() {
           )}
 
           {step === 2 && (
-            <div className={styles.typeGrid}>
-              {TYPES.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={type === item.id ? styles.typeOn : styles.type}
-                  onClick={() => setType(item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className={styles.typeGrid}>
+                {TYPES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={type === item.id ? styles.typeOn : styles.type}
+                    onClick={() => {
+                      setType(item.id)
+                      setTeamTouched(false)
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.presetList}>
+                <p className={styles.hint}>
+                  {matches.length
+                    ? `${TYPES.find((item) => item.id === type)?.label}에 맞춘 추천 팀 ${recommendedIds.length}명입니다. 다음 단계에서 바꿀 수 있어요.`
+                    : '직접 설정은 추천 팀이 없어요. 다음 단계에서 직원을 골라 주세요.'}
+                </p>
+                {matches.length ? (
+                  <ul>
+                    {matches.map((m) => (
+                      <li key={m.role.key}>
+                        <strong>{m.role.label}</strong>
+                        <span>{m.agent ? m.agent.name : '매칭 없음'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </>
           )}
 
           {step === 3 && (
-            <div className={styles.sourceFields}>
-              <div className={styles.sourceOptions} aria-label="프로젝트 소스">
-                {!cloud && <button type="button" className={sourceType === 'local' ? styles.typeOn : styles.type} onClick={() => setSourceType('local')}>로컬 폴더</button>}
-                <button type="button" className={sourceType === 'github' ? styles.typeOn : styles.type} onClick={() => setSourceType('github')}>GitHub Repository</button>
-              </div>
-              {sourceType === 'github' || cloud ? <>
-                <label className={styles.field}>
-                  <span>GitHub 저장소</span>
-                  <input value={repository} onChange={(e) => setRepository(e.target.value)} placeholder="owner/repo 또는 https://github.com/owner/repo" />
-                </label>
-                <label className={styles.field}>
-                  <span>브랜치 (선택)</span>
-                  <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="비워두면 저장소 기본 브랜치" />
-                </label>
-                <p className={styles.hint}>프로젝트를 만든 후 환경 준비를 누르면 Vercel Sandbox에 저장소를 가져옵니다. 비공개 저장소는 서버의 GitHub 인증이 필요합니다.</p>
-              </> : <label className={styles.field}>
-              <span>프로젝트 경로 (선택)</span>
-              <input
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                placeholder="~/Desktop/Coding/my-game"
+            <>
+              {recommendedIds.length ? (
+                <p className={styles.hint}>
+                  {team.length}명 선택됨 ·{' '}
+                  <button type="button" className={styles.linkButton} onClick={() => setTeamTouched(false)}>
+                    추천 팀으로 되돌리기
+                  </button>
+                </p>
+              ) : null}
+              <AgentPicker
+                registry={registry}
+                selectedIds={team}
+                onToggle={toggleAgent}
               />
-              </label>}
-            </div>
+            </>
           )}
 
           {step === 4 && (
-            <div className={styles.presetList}>
-              <p className={styles.hint}>
-                레지스트리 {registry.length}명 기준 추천 팀입니다. 다음 단계에서 수정할 수 있습니다.
-              </p>
-              <ul>
-                {matches.map((m) => (
-                  <li key={m.role.key}>
-                    <strong>{m.role.label}</strong>
-                    <span>{m.agent ? m.agent.name : '매칭 없음'}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {step === 5 && (
-            <AgentPicker
-              registry={registry}
-              selectedIds={agentIds}
-              onToggle={toggleAgent}
-            />
-          )}
-
-          {step === 6 && (
             <div className={styles.summary}>
               <dl>
                 <div>
@@ -204,15 +193,48 @@ export function ProjectWizard() {
                   <dd>{TYPES.find((item) => item.id === type)?.label}</dd>
                 </div>
                 <div>
-                  <dt>{sourceType === 'github' || cloud ? 'GitHub' : t('project.path')}</dt>
-                  <dd>{sourceType === 'github' || cloud ? repository.trim() || '—' : path.trim() || '—'}</dd>
-                </div>
-                {(sourceType === 'github' || cloud) && <div><dt>브랜치</dt><dd>{branch.trim() || '기본 브랜치'}</dd></div>}
-                <div>
                   <dt>팀</dt>
-                  <dd>{agentIds.length}명</dd>
+                  <dd>{team.length}명</dd>
                 </div>
               </dl>
+              {cloud ? (
+                <div className={styles.sourceFields}>
+                  <label className={styles.field}>
+                    <span>GitHub 저장소 (클라우드에서는 필수)</span>
+                    <input value={repository} onChange={(e) => setRepository(e.target.value)} placeholder="owner/repo 또는 https://github.com/owner/repo" />
+                  </label>
+                  <label className={styles.field}>
+                    <span>브랜치 (선택)</span>
+                    <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="비워두면 저장소 기본 브랜치" />
+                  </label>
+                </div>
+              ) : (
+                <details className={styles.sourceFields}>
+                  <summary>코드 폴더 연결 (선택)</summary>
+                  <p className={styles.hint}>코드를 직접 고치는 작업에만 필요해요. 분석·기획만 할 거면 비워 두고, 나중에 프로젝트 화면에서 연결해도 돼요.</p>
+                  <div className={styles.sourceOptions} aria-label="프로젝트 소스">
+                    <button type="button" className={sourceType === 'local' ? styles.typeOn : styles.type} onClick={() => setSourceType('local')}>로컬 폴더</button>
+                    <button type="button" className={sourceType === 'github' ? styles.typeOn : styles.type} onClick={() => setSourceType('github')}>GitHub Repository</button>
+                  </div>
+                  {sourceType === 'github' ? (
+                    <>
+                      <label className={styles.field}>
+                        <span>GitHub 저장소</span>
+                        <input value={repository} onChange={(e) => setRepository(e.target.value)} placeholder="owner/repo" />
+                      </label>
+                      <label className={styles.field}>
+                        <span>브랜치 (선택)</span>
+                        <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="비워두면 저장소 기본 브랜치" />
+                      </label>
+                    </>
+                  ) : (
+                    <label className={styles.field}>
+                      <span>프로젝트 경로</span>
+                      <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="~/Desktop/Coding/my-app" />
+                    </label>
+                  )}
+                </details>
+              )}
               {error ? <p className={styles.error}>{error}</p> : null}
             </div>
           )}
@@ -227,12 +249,12 @@ export function ProjectWizard() {
           >
             뒤로
           </button>
-          {step < 6 ? (
+          {step < LAST_STEP ? (
             <button
               type="button"
               className={styles.primary}
-              onClick={() => setStep((s) => (s < 6 ? ((s + 1) as Step) : s))}
-              disabled={(step === 1 && !name.trim()) || (step === 3 && (sourceType === 'github' || cloud) && !repository.trim())}
+              onClick={() => setStep((s) => (s < LAST_STEP ? ((s + 1) as Step) : s))}
+              disabled={step === 1 && !name.trim()}
             >
               다음
             </button>
@@ -241,7 +263,7 @@ export function ProjectWizard() {
               type="button"
               className={styles.primary}
               onClick={handleCreate}
-              disabled={busy}
+              disabled={busy || (cloud && !repository.trim())}
             >
               {busy ? '생성 중…' : t('project.create')}
             </button>

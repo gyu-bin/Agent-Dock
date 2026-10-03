@@ -18,6 +18,7 @@ import {
   runProjectRoutine,
   setActiveProject,
   setProjectTeam,
+  updateProject,
   updateProjectContext,
   createProjectGoal,
   patchProjectGoal,
@@ -46,6 +47,7 @@ import type { OperationsSnapshot } from '../domain/operations'
 import type { MarketingCampaign } from '../domain/marketing'
 import { formatCost, formatTokens } from '../domain/usageUi'
 import { userFacingTaskStatus } from '../domain/taskDisplay'
+import { useAuthStore } from '../auth/cloudAuth'
 import { displayAgentDescription, displayAgentName } from '../i18n'
 import { t } from '../i18n/ko'
 import { AgentDetailPanel } from '../panels/AgentDetailPanel'
@@ -387,9 +389,15 @@ export function ProjectsPage() {
                     {isActive ? ' · 활성' : ''}
                   </p>
                   <h2>{selected.name}</h2>
-                  <p className={proj.path}>
-                    {selected.sourceType === 'github' ? 'Source: GitHub' : `Path: ${selected.path || '미설정'}`}
-                  </p>
+                  {selected.sourceType === 'github' ? (
+                    <p className={proj.path}>Source: GitHub</p>
+                  ) : (
+                    <ProjectPathField
+                      projectId={selected.id}
+                      path={selected.path}
+                      onSaved={applyProjectsSnapshot}
+                    />
+                  )}
                   <p className={proj.path}>
                     GitHub:{' '}
                     {selected.repository?.fullName ?? (selected.context?.githubUrl?.trim()
@@ -1683,5 +1691,41 @@ export function ProjectsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+/** Code folder is optional at creation; connect or change it here (local projects only). */
+function ProjectPathField({ projectId, path, onSaved }: { projectId: string; path?: string; onSaved: (snap: Awaited<ReturnType<typeof updateProject>>) => void }) {
+  const cloud = useAuthStore((st) => st.status === 'ready')
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(path ?? '')
+  const [err, setErr] = useState<string | null>(null)
+  if (cloud) return <p className={proj.path}>Path: {path || '미설정'}</p>
+  if (!editing) {
+    return (
+      <p className={proj.path}>
+        코드 폴더: {path || '미연결 (분석·기획 작업에는 필요 없어요)'}{' '}
+        <button type="button" className={proj.pathEdit} onClick={() => { setValue(path ?? ''); setEditing(true) }}>
+          {path ? '변경' : '연결'}
+        </button>
+      </p>
+    )
+  }
+  return (
+    <form
+      className={proj.pathForm}
+      onSubmit={(e) => {
+        e.preventDefault()
+        setErr(null)
+        void updateProject(projectId, { path: value.trim() })
+          .then((snap) => { onSaved(snap); setEditing(false) })
+          .catch((er) => setErr(er instanceof Error ? er.message : String(er)))
+      }}
+    >
+      <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} placeholder="~/Desktop/Coding/my-app" />
+      <button type="submit">저장</button>
+      <button type="button" onClick={() => setEditing(false)}>취소</button>
+      {err ? <span className={proj.pathError}>{err}</span> : null}
+    </form>
   )
 }
