@@ -1,6 +1,6 @@
 {
- "frameWidth": 16,
- "frameHeight": 24,
+ "frameWidth": 24,
+ "frameHeight": 32,
  "columns": 4,
  "animations": {
   "idle-down": {

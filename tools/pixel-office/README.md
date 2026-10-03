@@ -1,6 +1,6 @@
 # Pixel Office generator
 
-홈 화면 오피스(`client/src/office/pixel/PixelOfficeScene.tsx`)에서 쓰는 도트 에셋을 **코드로 직접 그리는** 생성기입니다. 외부 에셋이 없으니 라이선스 걱정이 없고, 팔레트와 격자(16px 타일, 캐릭터 16×24)가 한 곳에서 관리됩니다.
+홈 화면 오피스(`client/src/office/pixel/PixelOfficeScene.tsx`)에서 쓰는 도트 에셋을 **코드로 직접 그리는** 생성기입니다. 외부 에셋이 없으니 라이선스 걱정이 없고, 팔레트와 격자(16px 타일, 캐릭터 24×32)가 한 곳에서 관리됩니다.
 
 ```bash
 pip install pillow   # 최초 1회

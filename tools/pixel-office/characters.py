@@ -1,11 +1,12 @@
-"""Layered 16x24 office-worker sprites.
+"""Layered 24x32 office-worker sprites (chibi proportions: big head, short body).
 
 Every layer atlas shares one frame layout so the client can stack
 skin → outfit → hair → accessory with identical background-position.
+Pixel size matches the 16px world tiles; the sprite is simply larger.
 """
 from px import Canvas, hx
 
-FW, FH = 16, 24
+FW, FH = 24, 32
 COLS = 4
 ANIMS = [
     ('idle-down', 'down', 'stand', 2), ('idle-up', 'up', 'stand', 2),
@@ -18,6 +19,10 @@ ANIMS = [
 
 O = hx('3a2e3a')
 EYE = hx('2b2235')
+EYE_HI = hx('ffffff')
+BLUSH = hx('f4a3a3')
+MOUTH = hx('b8544f')
+CLEAR = (0, 0, 0, 0)
 
 
 def shade(c, f):
@@ -34,7 +39,6 @@ HAIR_COLORS = [
 HAIR_STYLES = ['short', 'spiky', 'long', 'bun']
 
 ROLES = {
-    # shirt, pants, shoes, kind
     'pm': dict(shirt=hx('f4f4f2'), pants=hx('59627a'), shoes=hx('2e2633'), kind='vest', trim=hx('2f4a7a'), tie=hx('e45b5b')),
     'developer': dict(shirt=hx('5b8def'), pants=hx('3d5a8a'), shoes=hx('2e2633'), kind='hoodie', trim=hx('ffffff')),
     'game-developer': dict(shirt=hx('9b72e0'), pants=hx('3a3550'), shoes=hx('2e2633'), kind='hoodie', trim=hx('f4c64e')),
@@ -51,262 +55,284 @@ ACCESSORY = {
 
 
 def geo(direction, kind, f):
-    """Shared body geometry for one frame."""
-    g = dict(dir=direction, kind=kind, f=f, blink=False)
+    """Shared body geometry for one frame (all layers read the same numbers)."""
     dy = 0
     if kind == 'walk' and f in (1, 3):
         dy = -1
     if kind == 'sit':
         dy = 3
-    g['h'] = 4 + dy            # head skin top row
-    g['t'] = 11 + dy           # torso top
-    g['tb'] = 16 + dy          # torso bottom (inclusive)
-    g['dy'] = dy
-    g['blink'] = (kind in ('stand', 'sit') and f == 1 and direction != 'up')
-    g['type'] = (kind == 'sit' and direction == 'up' and f == 1)
-    # arm swing for walk: +1 lowers a hand
-    g['armL'] = 1 if (kind == 'walk' and f == 1) else 0
-    g['armR'] = 1 if (kind == 'walk' and f == 3) else 0
-    g['liftL'] = kind == 'walk' and f == 1
-    g['liftR'] = kind == 'walk' and f == 3
-    g['stride'] = {0: 0, 1: 1, 2: 0, 3: -1}[f] if kind == 'walk' else 0
-    return g
+    return dict(
+        dir=direction, kind=kind, f=f, dy=dy,
+        h=6 + dy,            # head skin top row (head is 11 rows tall)
+        t=18 + dy,           # torso top
+        tb=24 + dy,          # torso bottom (inclusive)
+        blink=(kind in ('stand', 'sit') and f == 1 and direction != 'up'),
+        type=(kind == 'sit' and direction == 'up' and f == 1),
+        armL=1 if (kind == 'walk' and f == 1) else (-1 if (kind == 'walk' and f == 3) else 0),
+        armR=1 if (kind == 'walk' and f == 3) else (-1 if (kind == 'walk' and f == 1) else 0),
+        liftL=kind == 'walk' and f == 1,
+        liftR=kind == 'walk' and f == 3,
+        stride={0: 0, 1: 1, 2: 0, 3: -1}[f] if kind == 'walk' else 0,
+    )
+
+
+def _pen(c, ox, oy):
+    P = lambda x, y, col: c.p(ox + x, oy + y, col)
+    R = lambda x, y, w, hh, col: c.rect(ox + x, oy + y, w, hh, col)
+
+    def clear(x, y):
+        if 0 <= ox + x < c.w and 0 <= oy + y < c.h:
+            c.px[ox + x, oy + y] = CLEAR
+    return P, R, clear
 
 
 # ---------------------------------------------------------------- skin
 def draw_skin(c, ox, oy, g, skin):
     sk, sd = skin, shade(skin, 0.86)
-    P = lambda x, y, col: c.p(ox + x, oy + y, col)
-    R = lambda x, y, w, h, col: c.rect(ox + x, oy + y, w, h, col)
-    h = g['h']
-    if g['dir'] in ('down', 'up'):
-        R(4, h, 8, 7, sk)
-        c.px[ox + 4, oy + h] = (0, 0, 0, 0); c.px[ox + 11, oy + h] = (0, 0, 0, 0)
-        c.px[ox + 4, oy + h + 6] = sd; c.px[ox + 11, oy + h + 6] = sd
-        R(6, h + 7, 4, 1, sd)  # neck
-        P(3, h + 3, sd); P(12, h + 3, sd)  # ears
-        if g['dir'] == 'down':
-            if g['blink']:
-                P(6, h + 4, EYE); P(9, h + 4, EYE)
-            else:
-                P(6, h + 3, EYE); P(6, h + 4, EYE); P(9, h + 3, EYE); P(9, h + 4, EYE)
-            P(5, h + 5, hx('f2a0a0')); P(10, h + 5, hx('f2a0a0'))
-            P(7, h + 6, sd); P(8, h + 6, sd)
+    P, R, clear = _pen(c, ox, oy)
+    h, t, d = g['h'], g['t'], g['dir']
+    if d in ('down', 'up'):
+        R(6, h, 12, 11, sk)
+        for (x, y) in ((6, h), (7, h), (6, h + 1), (17, h), (16, h), (17, h + 1), (6, h + 10), (17, h + 10)):
+            clear(x, y)
+        P(7, h + 10, sd); P(16, h + 10, sd)
+        R(5, h + 5, 1, 2, sd); R(18, h + 5, 1, 2, sd)          # ears
+        R(10, h + 11, 4, 1, sd)                                # neck
+        if d == 'down':
+            for ex in (8, 14):
+                if g['blink']:
+                    R(ex, h + 7, 2, 1, EYE)
+                else:
+                    R(ex, h + 5, 2, 3, EYE); P(ex + 1, h + 5, EYE_HI)
+            R(7, h + 8, 2, 1, BLUSH); R(15, h + 8, 2, 1, BLUSH)
+            R(11, h + 9, 2, 1, MOUTH)
     else:  # left
-        R(4, h, 7, 7, sk)
-        c.px[ox + 4, oy + h] = (0, 0, 0, 0); c.px[ox + 10, oy + h] = (0, 0, 0, 0)
-        P(3, h + 4, sk)  # nose
-        R(6, h + 7, 3, 1, sd)
-        P(9, h + 3, sd); P(9, h + 4, sd)
+        R(6, h, 11, 11, sk)
+        for (x, y) in ((6, h), (7, h), (6, h + 1), (16, h), (15, h), (16, h + 1), (6, h + 10), (16, h + 10)):
+            clear(x, y)
+        P(5, h + 6, sk); P(5, h + 7, sd)                       # nose
+        R(13, h + 5, 2, 2, sd)                                 # ear
+        R(10, h + 11, 3, 1, sd)
         if g['blink']:
-            P(5, h + 4, EYE)
+            R(8, h + 7, 2, 1, EYE)
         else:
-            P(5, h + 3, EYE); P(5, h + 4, EYE)
-        P(6, h + 5, hx('f2a0a0'))
+            R(8, h + 5, 2, 3, EYE); P(8, h + 5, EYE_HI)
+        R(8, h + 8, 2, 1, BLUSH)
+        P(7, h + 9, MOUTH)
     # hands
-    t = g['t']
     if g['kind'] == 'sit':
-        if g['dir'] == 'down':
-            P(4, t + 5, sk); P(11, t + 5, sk)
-        elif g['dir'] == 'up':
-            if g['type']:
-                P(3, t + 3, sk); P(12, t + 4, sk)
-            else:
-                P(3, t + 4, sk); P(12, t + 4, sk)
+        if d == 'down':
+            R(8, t + 6, 2, 1, sk); R(14, t + 6, 2, 1, sk)
+        elif d == 'up':
+            R(5, t + 4 - (1 if g['type'] else 0), 2, 2, sk); R(17, t + 4, 2, 2, sk)
         else:
-            P(3, t + 4, sk); P(4, t + 4, sk)
-    elif g['dir'] in ('down', 'up'):
-        P(3, t + 5 + g['armL'], sk); P(12, t + 5 + g['armR'], sk)
+            R(5, t + 6, 2, 2, sk)
+    elif d in ('down', 'up'):
+        R(5, t + 6 + g['armL'], 2, 2, sk); R(17, t + 6 + g['armR'], 2, 2, sk)
     else:
-        sx = 7 - g['stride']
-        P(sx, t + 5, sk)
+        R(10 - g['stride'] * 2, t + 6, 2, 2, sk)
 
 
 # ---------------------------------------------------------------- outfit
 def draw_outfit(c, ox, oy, g, role):
     spec = ROLES[role]
-    sh, sd, sl = spec['shirt'], shade(spec['shirt'], 0.82), shade(spec['shirt'], 1.12)
-    pa, pd = spec['pants'], shade(spec['pants'], 0.8)
-    so = spec['shoes']
+    sh, sd, sl = spec['shirt'], shade(spec['shirt'], 0.82), shade(spec['shirt'], 1.1)
+    pa, pd = spec['pants'], shade(spec['pants'], 0.78)
+    so, sod = spec['shoes'], shade(spec['shoes'], 0.75)
     trim = spec['trim']
-    P = lambda x, y, col: c.p(ox + x, oy + y, col)
-    R = lambda x, y, w, hh, col: c.rect(ox + x, oy + y, w, hh, col)
+    k = spec['kind']
+    P, R, _ = _pen(c, ox, oy)
     t, tb, d, kind = g['t'], g['tb'], g['dir'], g['kind']
     sitting = kind == 'sit'
     if d in ('down', 'up'):
         tb_ = tb + (2 if sitting and d == 'up' else 0)
-        R(4, t, 8, tb_ - t + 1, sh)
-        R(4, t, 1, tb_ - t + 1, sd); R(11, t, 1, tb_ - t + 1, sd)
-        R(5, t, 6, 1, sl)
+        R(7, t, 10, tb_ - t + 1, sh)
+        R(7, t, 1, tb_ - t + 1, sd); R(16, t, 1, tb_ - t + 1, sd)
+        R(8, t, 8, 1, sl)
+        R(7, tb_, 10, 1, sd)
         # sleeves
         if sitting and d == 'up':
-            R(3, t, 1, 4 - (1 if g['type'] else 0), sd); R(12, t, 1, 4, sd)
+            R(5, t, 2, 4 - (1 if g['type'] else 0), sd); R(17, t, 2, 4, sd)
         elif sitting:
-            R(3, t, 1, 4, sd); R(12, t, 1, 4, sd)
-            R(4, t + 4, 1, 1, sd); R(11, t + 4, 1, 1, sd)
+            R(5, t, 2, 5, sd); R(17, t, 2, 5, sd)
+            R(7, t + 5, 2, 1, sd); R(15, t + 5, 2, 1, sd)
         else:
-            R(3, t, 1, 5 + g['armL'], sd); R(12, t, 1, 5 + g['armR'], sd)
+            R(5, t, 2, 6 + g['armL'], sd); R(17, t, 2, 6 + g['armR'], sd)
+            R(5, t, 1, 6 + g['armL'], shade(spec['shirt'], .7)); R(18, t, 1, 6 + g['armR'], shade(spec['shirt'], .7))
         if d == 'down':
-            k = spec['kind']
+            n = tb - t + 1
             if k == 'vest':
-                R(4, t, 2, tb - t + 1, spec['trim']); R(10, t, 2, tb - t + 1, spec['trim'])
-                R(7, t, 2, 4, spec['tie']); P(7, t, shade(spec['tie'], .8)); P(8, t, shade(spec['tie'], .8))
+                R(7, t, 3, n, trim); R(14, t, 3, n, trim)
+                R(11, t, 2, 5, spec['tie']); R(11, t, 2, 1, shade(spec['tie'], .8))
             elif k == 'suit':
-                R(6, t, 4, 3, trim); R(7, t, 2, 4, spec['tie'])
+                R(10, t, 4, 3, trim); R(11, t, 2, 6, spec['tie']); P(9, t, trim); P(14, t, trim)
             elif k == 'hoodie':
-                R(5, t, 6, 1, sd); P(6, t + 1, trim); P(9, t + 1, trim); P(6, t + 2, trim); P(9, t + 2, trim)
-                R(5, t + 4, 6, 1, sd)
+                R(9, t, 6, 1, sd)
+                R(10, t + 1, 1, 3, trim); R(13, t + 1, 1, 3, trim)
+                R(9, t + 4, 6, 1, sd); R(9, t + 5, 1, 1, sd); R(14, t + 5, 1, 1, sd)
             elif k == 'coat':
-                R(7, t, 2, tb - t + 1, trim); P(6, t, sd); P(9, t, sd); P(5, t + 3, sd)
+                R(10, t, 4, n, trim); P(9, t, sd); P(14, t, sd); P(9, t + 1, sd); P(14, t + 1, sd)
+                R(8, t + 4, 2, 1, sd); R(14, t + 4, 2, 1, sd)
             elif k == 'jacket':
-                R(6, t, 4, tb - t + 1, trim); R(7, t + 1, 2, 1, sh)
+                R(10, t, 4, n, trim); R(9, t, 1, 2, sd); R(14, t, 1, 2, sd)
             elif k == 'polo':
-                P(6, t, trim); P(7, t, trim); P(8, t, trim); P(9, t, trim); P(9, t + 2, hx('f4c64e'))
+                R(9, t, 6, 1, trim); P(11, t + 1, trim); P(12, t + 1, trim); P(14, t + 3, hx('f4c64e'))
             elif k == 'sweater':
-                R(4, t + 3, 8, 1, trim)
-        else:  # up / back
-            if spec['kind'] == 'hoodie':
-                R(5, t, 6, 2, sd)
-            if spec['kind'] == 'coat':
-                R(4, tb - 1, 8, 2, shade(sh, .92))
+                R(8, t + 3, 8, 1, trim); R(8, t + 5, 8, 1, trim)
+        else:
+            if k == 'hoodie':
+                R(8, t, 8, 3, sd); R(9, t, 6, 2, shade(spec['shirt'], .7))
+            if k == 'coat':
+                R(7, tb_ - 1, 10, 2, shade(sh, .92)); R(11, t + 2, 2, tb_ - t - 2, shade(sh, .9))
+            if k in ('suit', 'vest'):
+                R(11, t, 2, tb_ - t, shade(sh, .9))
         # legs
         if sitting and d == 'down':
-            R(4, tb + 1, 8, 2, pa); R(4, tb + 2, 8, 1, pd)
-            R(5, tb + 3, 2, 1, pa); R(9, tb + 3, 2, 1, pa)
-            R(5, tb + 4, 3, 1, so); R(8, tb + 4, 3, 1, so)
+            R(7, tb + 1, 10, 2, pa); R(7, tb + 2, 10, 1, pd)
+            R(8, tb + 3, 3, 1, pa); R(13, tb + 3, 3, 1, pa)
+            R(7, tb + 4, 4, 1, so); R(13, tb + 4, 4, 1, so)
         elif sitting and d == 'up':
-            R(4, tb + 3, 8, 2, pd)
+            R(7, tb + 3, 10, 2, pd)
         else:
             base = tb + 1
-            for side, x0, lift in (('L', 5, g['liftL']), ('R', 8, g['liftR'])):
-                ln = (21 - base) - (1 if lift else 0)
+            R(8, base, 8, 1, pa)
+            for x0, lift in ((8, g['liftL']), (13, g['liftR'])):
+                ln = 28 - base + 1 - (1 if lift else 0)
                 R(x0, base, 3, ln, pa)
-                R(x0 + (2 if side == 'L' else 0), base, 1, ln, pd)
-                R(x0, base + ln, 3, 2, so)
-            R(5, base, 6, 1, pd)
-    else:  # left facing
-        R(5, t, 6, tb - t + 1, sh)
-        R(10, t, 1, tb - t + 1, sd); R(5, t, 6, 1, sl)
-        k = spec['kind']
+                shoe_y = base + ln
+                R(x0 - (1 if x0 == 8 else 0), shoe_y, 4, 2, so)
+                R(x0 - (1 if x0 == 8 else 0), shoe_y + 1, 4, 1, sod)
+            R(11, base + 1, 2, 28 - base, (0, 0, 0, 0))
+            R(10, base, 1, 28 - base + 1, pd); R(13, base, 1, 28 - base + 1, pd)
+    else:  # left
+        R(8, t, 8, tb - t + 1, sh)
+        R(15, t, 1, tb - t + 1, sd); R(8, t, 7, 1, sl); R(8, tb, 8, 1, sd)
+        n = tb - t + 1
         if k in ('vest', 'suit'):
-            R(5, t, 2, tb - t + 1, spec['trim'] if k == 'vest' else trim)
+            R(8, t, 2, n, trim if k == 'vest' else trim)
             if 'tie' in spec:
-                P(5, t + 1, spec['tie']); P(5, t + 2, spec['tie'])
+                R(8, t + 1, 1, 4, spec['tie'])
         elif k == 'hoodie':
-            R(8, t, 3, 2, sd)
+            R(12, t, 4, 3, sd); P(8, t + 1, trim); P(8, t + 2, trim)
         elif k == 'coat':
-            P(5, t, spec['trim']); P(5, t + 1, spec['trim'])
+            R(8, t, 1, n, spec['trim']); R(9, t + 4, 2, 1, sd)
         elif k == 'jacket':
-            R(5, t, 1, tb - t + 1, trim)
+            R(8, t, 1, n, trim)
         elif k == 'polo':
-            P(6, t, trim); P(7, t, trim)
+            R(8, t, 3, 1, trim)
         elif k == 'sweater':
-            R(5, t + 3, 6, 1, trim)
+            R(8, t + 3, 8, 1, trim); R(8, t + 5, 8, 1, trim)
         if sitting:
-            R(7, t, 2, 4, sd)  # arm resting forward
-            R(4, t + 4, 3, 1, sd)
-            R(3, tb + 1, 8, 2, pa); R(3, tb + 2, 8, 1, pd)
-            R(3, tb + 3, 2, 1, pa)
-            R(2, tb + 4, 3, 1, so)
+            R(10, t, 3, 5, sd); R(7, t + 5, 4, 1, sd)
+            R(4, tb + 1, 12, 2, pa); R(4, tb + 2, 12, 1, pd)
+            R(4, tb + 3, 3, 1, pa)
+            R(2, tb + 4, 5, 1, so)
         else:
             s = g['stride']
-            ax = 7 - s
-            R(ax, t, 2, 5, sd)
+            R(10 - s * 2, t, 3, 6, sd); R(12 - s * 2, t, 1, 6, shade(spec['shirt'], .7))
             base = tb + 1
             if s == 0:
-                R(6, base, 4, 21 - base, pa); R(9, base, 1, 21 - base, pd)
-                R(5, 21, 5, 2, so)
+                R(9, base, 6, 28 - base + 1, pa); R(14, base, 1, 28 - base + 1, pd); R(11, base + 1, 1, 28 - base, pd)
+                R(7, 29, 8, 2, so); R(7, 30, 8, 1, sod)
             else:
-                # front leg (toward facing) and back leg
-                fx, bx = (4, 8) if s > 0 else (8, 4)
-                R(6, base, 4, 2, pa)
-                R(fx, base + 2, 3, 21 - base - 2, pa)
-                R(bx, base + 2, 3, 21 - base - 3, pd)
-                R(fx - 1, 21, 4, 2, so)
-                R(bx, 20, 3, 2, shade(so, .85))
+                fx, bx = (6, 12) if s > 0 else (12, 6)
+                R(9, base, 6, 2, pa)
+                R(fx, base + 2, 4, 28 - base - 1, pa)
+                R(bx, base + 2, 4, 28 - base - 2, pd)
+                R(fx - 1, 29, 5, 2, so); R(fx - 1, 30, 5, 1, sod)
+                R(bx, 28, 4, 2, sod)
 
 
 # ---------------------------------------------------------------- hair
 def draw_hair(c, ox, oy, g, style, color):
-    hc, hd, hl = color, shade(color, 0.72), shade(color, 1.25)
-    P = lambda x, y, col: c.p(ox + x, oy + y, col)
-    R = lambda x, y, w, hh, col: c.rect(ox + x, oy + y, w, hh, col)
+    hc, hd, hl = color, shade(color, 0.72), shade(color, 1.28)
+    P, R, _ = _pen(c, ox, oy)
     h, d = g['h'], g['dir']
     if d == 'down':
-        R(5, h - 2, 6, 1, hc); R(4, h - 1, 8, 3, hc)
-        R(3, h, 1, 4, hd); R(12, h, 1, 4, hd)
-        P(4, h + 2, hc); P(5, h + 2, hc); P(10, h + 2, hc); P(11, h + 2, hc); P(4, h + 3, hd); P(11, h + 3, hd)
-        R(6, h - 2, 3, 1, hl); P(5, h - 1, hl)
+        R(8, h - 3, 8, 1, hc); R(6, h - 2, 12, 1, hc); R(5, h - 1, 14, 3, hc)
+        for x in (5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 17, 18):
+            P(x, h + 2, hc)
+        for x in (5, 6, 7, 12, 17, 18):
+            P(x, h + 3, hc)
+        R(5, h + 3, 1, 4, hd); R(18, h + 3, 1, 4, hd); P(6, h + 4, hc); P(17, h + 4, hc)
+        R(9, h - 2, 4, 1, hl); R(8, h - 1, 2, 1, hl)
+        R(5, h + 1, 1, 2, hd); R(18, h + 1, 1, 2, hd)
         if style == 'spiky':
-            for x in (4, 6, 8, 10):
-                P(x, h - 3, hc); P(x + 1, h - 3, hd)
-            R(4, h + 1, 8, 1, hc); P(6, h + 2, hc); P(9, h + 2, hc)
+            for x in (6, 9, 12, 15):
+                R(x, h - 4, 2, 1, hc); P(x + 1, h - 5, hc)
+            R(7, h - 3, 10, 1, hc)
+            for x in (5, 8, 10, 13, 16, 18):
+                P(x, h + 3, hc)
         if style == 'long':
-            R(3, h + 4, 2, 7, hc); R(11, h + 4, 2, 7, hc)
-            R(3, h + 4, 1, 7, hd); R(12, h + 4, 1, 7, hd)
+            R(4, h + 3, 3, 12, hc); R(17, h + 3, 3, 12, hc)
+            R(4, h + 3, 1, 12, hd); R(19, h + 3, 1, 12, hd); R(4, h + 14, 3, 1, hd); R(17, h + 14, 3, 1, hd)
         if style == 'bun':
-            R(6, h - 4, 4, 2, hc); P(6, h - 4, hd); P(7, h - 4, hl)
+            R(9, h - 6, 6, 3, hc); R(10, h - 7, 4, 1, hc); R(10, h - 6, 2, 1, hl); R(9, h - 4, 6, 1, hd)
     elif d == 'up':
-        R(5, h - 2, 6, 1, hc); R(3, h - 1, 10, 8, hc)
-        R(3, h - 1, 1, 8, hd); R(12, h - 1, 1, 8, hd); R(4, h + 6, 8, 1, hd)
-        R(6, h - 2, 3, 1, hl); R(5, h, 2, 1, hl)
+        R(8, h - 3, 8, 1, hc); R(6, h - 2, 12, 1, hc); R(5, h - 1, 14, 11, hc)
+        R(5, h - 1, 1, 11, hd); R(18, h - 1, 1, 11, hd); R(6, h + 9, 12, 1, hd)
+        R(9, h - 2, 4, 1, hl); R(7, h, 3, 1, hl)
         if style == 'spiky':
-            for x in (4, 6, 8, 10):
-                P(x, h - 3, hc)
+            for x in (6, 9, 12, 15):
+                R(x, h - 4, 2, 1, hc); P(x + 1, h - 5, hc)
         if style == 'long':
-            R(3, h + 6, 10, 5, hc); R(3, h + 10, 10, 1, hd)
+            R(4, h + 9, 16, 7, hc); R(4, h + 15, 16, 1, hd); R(4, h + 9, 1, 7, hd); R(19, h + 9, 1, 7, hd)
         if style == 'bun':
-            R(6, h - 4, 4, 3, hc); P(7, h - 4, hl)
-    else:  # left
-        R(5, h - 2, 5, 1, hc); R(4, h - 1, 7, 3, hc)
-        R(8, h + 2, 3, 4, hc); R(10, h, 1, 6, hd)
-        P(4, h + 2, hc); P(5, h + 2, hd)
-        R(5, h - 2, 3, 1, hl)
+            R(9, h - 6, 6, 3, hc); R(10, h - 7, 4, 1, hc); R(10, h - 6, 2, 1, hl)
+    else:  # facing left
+        R(8, h - 3, 7, 1, hc); R(6, h - 2, 11, 1, hc); R(5, h - 1, 13, 3, hc)
+        R(12, h + 2, 5, 7, hc); R(17, h, 1, 8, hd); R(16, h + 8, 1, 1, hd)
+        for x in (5, 6, 7, 8, 10):
+            P(x, h + 2, hc)
+        P(5, h + 3, hc); P(6, h + 3, hc); R(12, h + 3, 1, 3, hd)
+        R(8, h - 2, 4, 1, hl); R(7, h - 1, 2, 1, hl)
         if style == 'spiky':
-            for x in (4, 6, 8):
-                P(x, h - 3, hc)
-            P(3, h, hc)
+            for x in (6, 9, 12, 15):
+                R(x, h - 4, 2, 1, hc); P(x + 1, h - 5, hc)
+            P(4, h, hc); P(4, h + 1, hc)
         if style == 'long':
-            R(8, h + 6, 4, 5, hc); R(11, h + 4, 1, 7, hd)
+            R(12, h + 8, 6, 7, hc); R(17, h + 4, 1, 11, hd); R(12, h + 14, 6, 1, hd)
         if style == 'bun':
-            R(10, h - 2, 3, 3, hc); P(11, h - 2, hl)
+            R(16, h - 3, 4, 4, hc); P(17, h - 3, hl); R(16, h + 0, 4, 1, hd)
 
 
 # ---------------------------------------------------------------- accessories
 def draw_acc(c, ox, oy, g, acc):
-    P = lambda x, y, col: c.p(ox + x, oy + y, col)
-    R = lambda x, y, w, hh, col: c.rect(ox + x, oy + y, w, hh, col)
+    P, R, _ = _pen(c, ox, oy)
     h, d = g['h'], g['dir']
-    dark = hx('2f3448'); glass = hx('3a3f58')
+    dark = hx('2f3448'); frame = hx('3a3f58')
     if acc in ('headphones', 'headset'):
         band = dark if acc == 'headphones' else hx('4a5170')
         cup = hx('f4c64e') if acc == 'headphones' else dark
+        top = h - 4 if acc == 'headphones' else h - 3
         if d in ('down', 'up'):
-            R(4, h - 3 if acc == 'headphones' else h - 2, 8, 1, band)
-            R(3, h - 2, 1, 2, band); R(12, h - 2, 1, 2, band)
-            R(2, h + 1, 2, 3, cup); R(12, h + 1, 2, 3, cup)
+            R(7, top, 10, 1, band)
+            R(5, top + 1, 1, h + 3 - top - 1, band); R(18, top + 1, 1, h + 3 - top - 1, band)
+            R(3, h + 3, 3, 4, cup); R(18, h + 3, 3, 4, cup)
+            R(3, h + 3, 3, 1, shade(cup, 1.2)); R(18, h + 3, 3, 1, shade(cup, 1.2))
             if acc == 'headset' and d == 'down':
-                P(4, h + 4, dark); P(5, h + 5, dark); P(6, h + 5, hx('e45b5b'))
+                P(6, h + 7, dark); P(7, h + 8, dark); P(8, h + 9, dark); P(9, h + 9, hx('e45b5b'))
         else:
-            R(5, h - 3 if acc == 'headphones' else h - 2, 5, 1, band)
-            R(8, h + 1, 3, 3, cup)
+            R(8, top, 8, 1, band); R(13, top + 1, 1, h + 3 - top - 1, band)
+            R(12, h + 3, 4, 4, cup); R(12, h + 3, 4, 1, shade(cup, 1.2))
             if acc == 'headset':
-                P(6, h + 4, dark); P(5, h + 5, dark); P(4, h + 5, hx('e45b5b'))
+                P(11, h + 7, dark); P(10, h + 8, dark); P(9, h + 9, dark); P(8, h + 9, hx('e45b5b'))
     elif acc == 'glasses':
         if d == 'down':
-            for x0 in (5, 8):
-                P(x0, h + 3, glass); P(x0 + 2, h + 3, glass); P(x0, h + 4, glass); P(x0 + 2, h + 4, glass)
-                P(x0 + 1, h + 2, glass); P(x0 + 1, h + 5, glass)
-            P(4, h + 3, glass); P(11, h + 3, glass)
+            for x0 in (7, 13):
+                c.frame(ox + x0, oy + h + 4, 4, 5, frame)
+            R(11, h + 5, 2, 1, frame)
+            P(6, h + 5, frame); P(17, h + 5, frame)
         elif d == 'left':
-            P(4, h + 3, glass); P(6, h + 3, glass); P(4, h + 4, glass); P(6, h + 4, glass); P(5, h + 2, glass); P(5, h + 5, glass)
-            R(7, h + 3, 2, 1, glass)
+            c.frame(ox + 7, oy + h + 4, 4, 5, frame)
+            R(11, h + 5, 3, 1, frame)
     elif acc == 'beret':
         col, cd = hx('c0392b'), hx('8e2a20')
         if d in ('down', 'up'):
-            R(4, h - 3, 9, 2, col); R(5, h - 4, 6, 1, col); R(4, h - 1, 9, 1, cd); P(8, h - 5, cd)
+            R(6, h - 4, 13, 3, col); R(8, h - 5, 9, 1, col); R(6, h - 1, 13, 1, cd); R(12, h - 6, 1, 1, cd)
+            R(9, h - 4, 3, 1, shade(col, 1.25))
         else:
-            R(4, h - 3, 8, 2, col); R(5, h - 4, 5, 1, col); R(4, h - 1, 8, 1, cd); P(7, h - 5, cd)
+            R(5, h - 4, 12, 3, col); R(7, h - 5, 8, 1, col); R(5, h - 1, 12, 1, cd); R(11, h - 6, 1, 1, cd)
 
 
 def build_atlas(draw_fn, *args):

@@ -41,12 +41,12 @@
 .pxo-bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; user-select: none; pointer-events: none; }
 .pxo-prop { position: absolute; background-image: url('/assets/pixel-office/props.png'); background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
 
-.pxo-char { position: absolute; width: 16px; height: 24px; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; }
+.pxo-char { position: absolute; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; }
 .pxo-char:focus-visible { outline: 1px solid #ffd54a; outline-offset: 1px; }
 .pxo-layer { position: absolute; inset: 0; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
-.pxo-shadow { position: absolute; left: 3px; bottom: -1px; width: 10px; height: 3px; border-radius: 50%; background: #2a1d1a40; }
+.pxo-shadow { position: absolute; left: 6px; bottom: 0; width: 12px; height: 3px; border-radius: 50%; background: #2a1d1a40; }
 .pxo-char.is-focus .pxo-shadow { background: #ffd54a99; }
-.pxo-bubble { position: absolute; left: 9px; top: -9px; width: 12px; height: 12px; background-image: url('/assets/pixel-office/bubbles.png'); background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; animation: pxo-pop .18s steps(2) both; }
+.pxo-bubble { position: absolute; left: 15px; top: -7px; width: 12px; height: 12px; background-image: url('/assets/pixel-office/bubbles.png'); background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; animation: pxo-pop .18s steps(2) both; }
 @keyframes pxo-pop { from { transform: translateY(2px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .pxo-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2; }

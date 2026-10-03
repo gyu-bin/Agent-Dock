@@ -389,7 +389,7 @@ export function PixelOfficeScene({ preview = false }: { preview?: boolean }) {
                   key={r.agent.id}
                   type="button"
                   className={`pxo-char${focusId === r.agent.id ? ' is-focus' : ''}`}
-                  style={{ left, top, zIndex: Math.round(r.pos.y) + 1 }}
+                  style={{ left, top, width: FW, height: FH, zIndex: Math.round(r.pos.y) + 1 }}
                   aria-label={`${r.agent.name} · ${STATUS_KO[r.agent.status]}`}
                   onClick={() => (preview ? undefined : selectAgent(r.agent.id))}
                   onMouseEnter={() => setHovered(r.agent.id)}
