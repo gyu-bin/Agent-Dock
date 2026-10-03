@@ -56,6 +56,8 @@ export function AiChatPanel({
   const tasks = useDeckStore(useShallow(selectTasksForActive))
   const pipelineSteps = useDeckStore((s) => s.pipelineSteps)
   const [draft, setDraft] = useState('')
+  const [startedProposals, setStartedProposals] = useState<Record<string, string>>({})
+  const startingProposals = useRef(new Set<string>())
   const [showDetails, setShowDetails] = useState<Record<string, boolean>>({})
   const [menuOpen, setMenuOpen] = useState(false)
   const [attachments, setAttachments] = useState<WorkAttachmentDto[]>([])
@@ -246,8 +248,12 @@ export function AiChatPanel({
                       <button
                         type="button"
                         className={styles.startWork}
+                        disabled={Boolean(startedProposals[msg.id])}
                         onClick={() => {
-                          createAndStartTask({
+                          if (startingProposals.current.has(msg.id)) return
+                          startingProposals.current.add(msg.id)
+                          const taskId = createAndStartTask({
+                            proposalMessageId: msg.id,
                             title: msg.workProposal!.title,
                             description: msg.workProposal!.description,
                             autoStart: true,
@@ -259,10 +265,20 @@ export function AiChatPanel({
                             attachmentStagingId:
                               msg.workProposal!.attachmentStagingId,
                           })
+                          if (taskId) {
+                            setStartedProposals((prev) => ({ ...prev, [msg.id]: taskId }))
+                          } else {
+                            startingProposals.current.delete(msg.id)
+                          }
                         }}
                       >
-                        {t('task.start')}
+                        {startedProposals[msg.id] ? '작업 시작됨' : t('task.start')}
                       </button>
+                      {startedProposals[msg.id] ? (
+                        <p className={styles.startNotice} role="status">
+                          실시간 작업에서 진행 상황을 확인하고 중단할 수 있습니다.
+                        </p>
+                      ) : null}
                       <button
                         type="button"
                         className={styles.detailToggle}

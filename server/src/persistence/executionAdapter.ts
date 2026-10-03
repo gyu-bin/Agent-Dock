@@ -32,6 +32,7 @@ function msBetween(start: string, end?: string): number | undefined {
 function mapAgentStatus(
   s: StoredAgentRun['status'],
 ): ExecutionStatus {
+  if (s === 'cancelled') return 'cancelled'
   if (s === 'running') return 'running'
   if (s === 'failed') return 'failed'
   return 'completed'

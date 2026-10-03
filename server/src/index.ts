@@ -1,3 +1,4 @@
+import { requestCancellation, cancellableAi, cancellableSearch } from './runtime/requestCancellation.js'
 import './bootstrapEnv.js'
 import express from 'express'
 import cors from 'cors'
@@ -454,6 +455,7 @@ app.post('/api/execution/lock', (req, res) => {
 app.delete('/api/execution/lock', (req, res) => {
   const projectId = String(req.body?.projectId ?? req.query.projectId ?? '').trim()
   const clientId = String(req.body?.clientId ?? req.query.clientId ?? '').trim()
+  const taskId = String(req.body?.taskId ?? req.query.taskId ?? '').trim()
   if (!projectId) {
     res.status(400).json({ error: 'projectId required' })
     return
@@ -461,6 +463,7 @@ app.delete('/api/execution/lock', (req, res) => {
   const ok = releaseExecutionLock({
     projectId,
     clientId: clientId || undefined,
+    taskId: taskId || undefined,
   })
   res.json({ ok, lock: getExecutionLock(projectId) })
 })
@@ -733,6 +736,8 @@ app.post('/api/ai/orchestrate', async (req, res) => {
 })
 
 app.post('/api/ai/run-step', async (req, res) => {
+  const cancellation = requestCancellation(res)
+  const scopedAi = cancellableAi(aiProvider, cancellation.signal)
   try {
     const body = req.body ?? {}
     const agentId = String(body.agentId ?? '').trim()
@@ -817,7 +822,7 @@ app.post('/api/ai/run-step', async (req, res) => {
     })
 
     if (wantsSearch && taskId) {
-      const pipeline = await runWebSearchPipeline(aiProvider, webSearchProvider, {
+      const pipeline = await runWebSearchPipeline(scopedAi, cancellableSearch(webSearchProvider, cancellation.signal), {
         taskId,
         stepId: body.stepId ? String(body.stepId) : undefined,
         agentId,
@@ -861,7 +866,7 @@ app.post('/api/ai/run-step', async (req, res) => {
       }
     }
 
-    const result = await runAgentStep(aiProvider, {
+    const result = await runAgentStep(scopedAi, {
       agentId,
       stepTask,
       userRequest,
@@ -897,7 +902,9 @@ app.post('/api/ai/run-step', async (req, res) => {
       },
     })
   } catch (err) {
-    sendError(res, err)
+    if (!cancellation.signal.aborted) sendError(res, err)
+  } finally {
+    cancellation.dispose()
   }
 })
 
@@ -977,6 +984,8 @@ app.post('/api/search/requires', (req, res) => {
 })
 
 app.post('/api/ai/synthesize', async (req, res) => {
+  const cancellation = requestCancellation(res)
+  const scopedAi = cancellableAi(aiProvider, cancellation.signal)
   try {
     const body = req.body ?? {}
     const userRequest = String(body.userRequest ?? '').trim()
@@ -986,7 +995,7 @@ app.post('/api/ai/synthesize', async (req, res) => {
       res.status(400).json({ error: 'userRequest, workflow, stepOutputs required' })
       return
     }
-    const result = await synthesizeFinalResult(aiProvider, {
+    const result = await synthesizeFinalResult(scopedAi, {
       userRequest,
       workflow,
       stepOutputs: stepOutputs.map(
@@ -1005,7 +1014,9 @@ app.post('/api/ai/synthesize', async (req, res) => {
     })
     res.json(result)
   } catch (err) {
-    sendError(res, err)
+    if (!cancellation.signal.aborted) sendError(res, err)
+  } finally {
+    cancellation.dispose()
   }
 })
 

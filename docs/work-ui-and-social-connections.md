@@ -39,3 +39,13 @@ Threads has its existing publishing adapter. Instagram/X/YouTube/Reddit have acc
 ## Official references
 
 [OpenAI account model catalog](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference), [X OAuth](https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code), [YouTube OAuth](https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps), [Reddit OAuth](https://github.com/reddit-archive/reddit/wiki/OAuth2), [Instagram Login](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login/).
+
+## Home start and stop correction (2026-10-03)
+
+- Starting a chat proposal from Home preserves Home. Explicit task details and result links can still open their destination.
+- Successful proposal starts disable the button; a session guard prevents repeated creation even if the chat panel remounts.
+- Home status cards have separate detail and stop controls. Stop cancels the task, clears its worker assignment and prevents subsequent steps or late responses from changing the task back to running/completed.
+- Client abort signals reach local AI/search providers when the browser closes its request. Cancellation cannot reverse a request already processed by an upstream provider.
+- Pending execution-lock responses are invalidated after stop. Task-specific release avoids releasing a newer task's lock.
+- The reported `ws://localhost:5173/?token=…` Back-Forward Cache message comes from Vite's development hot-reload connection; the app's task API uses HTTP to the server. No application WebSocket transport is used.
+- Verification: actual store fixture for Home navigation, proposal deduplication and pending-lock cancellation; engine fixtures for in-flight cancellation, late synthesis, AI/Codex preflight cancellation, server disconnect abort and stale lock cleanup; isolated browser start → stop fixture and actual Home stop-button screenshot. No real inference was submitted for these checks. Workspace typecheck/build and diff checks passed.

@@ -1,4 +1,4 @@
-import { Activity, ArrowUpRight, CheckCircle2, CirclePause, Clock3 } from 'lucide-react'
+import { Activity, ArrowUpRight, CheckCircle2, CirclePause, Clock3, Square } from 'lucide-react'
 import { useDeckStore } from '../store/useDeckStore'
 import { taskProgress } from '../engine/types'
 import { userFacingTaskStatus } from '../domain/taskDisplay'
@@ -13,6 +13,7 @@ export function HomeWorkStatus() {
   const runtime = useDeckStore(s => s.agentRuntime)
   const selectTask = useDeckStore(s => s.selectTask)
   const setNav = useDeckStore(s => s.setNav)
+  const cancelTask = useDeckStore(s => s.cancelTask)
   const projectTasks = tasks.filter(t => t.projectId === projectId).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))
   const active = projectTasks.filter(t => ACTIVE.has(t.status)).sort((a,b) => {
     const rank = (status: string) => ['running','review','verifying'].includes(status) ? 0 : status === 'awaiting_approval' ? 1 : 2
@@ -33,13 +34,16 @@ export function HomeWorkStatus() {
       const progress = taskSteps.length ? taskProgress(task.id, steps) : task.progress
       const label = userFacingTaskStatus(task, current)
       const Icon = task.status === 'completed' ? CheckCircle2 : task.status === 'awaiting_approval' ? Clock3 : ACTIVE.has(task.status) ? Activity : CirclePause
-      return <button key={task.id} className={styles.card} onClick={() => openTask(task.id)}>
+      return <article key={task.id} className={styles.card}>
+        <button className={styles.taskLink} onClick={() => openTask(task.id)} aria-label={`${task.title} 작업 상세 보기`}>
         <div className={styles.cardTop}><span><Icon size={13}/>{label}</span><b>{progress}%</b></div>
         <strong>{task.title}</strong>
         <p>{names.length ? `${names.join(', ')}${['paused','interrupted'].includes(task.status) ? ' · 작업 중단됨' : ''}` : task.status === 'awaiting_approval' ? '승인을 기다리고 있어요' : task.status === 'queued' ? '담당자 배정 대기' : '현재 작업 중인 담당자 없음'}</p>
         <div className={styles.detail}><span>{current?.label ?? (task.status === 'completed' ? '결과물을 확인해주세요' : '작업 기록 보기')}</span><ArrowUpRight size={14}/></div>
+        </button>
+        {ACTIVE.has(task.status) ? <button type="button" className={styles.stop} onClick={() => cancelTask(task.id)} aria-label={`${task.title} 작업 중단`}><Square size={11}/>작업 중단</button> : null}
         <div className={styles.track}><i style={{width:`${progress}%`}}/></div>
-      </button>
+      </article>
     })}</div> : <div className={styles.empty}>아직 진행 중인 작업이 없어요. 오른쪽에서 요청하면 담당자와 진행 상황이 여기에 표시됩니다.</div>}
   </section>
 }

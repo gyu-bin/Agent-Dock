@@ -275,7 +275,7 @@ export async function runAiStep(input: {
   role?: string
   skipWebSearch?: boolean
   skipBecausePriorResearch?: boolean
-}): Promise<{
+}, signal?: AbortSignal): Promise<{
   output: string
   inputSummary: string
   usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
@@ -292,6 +292,7 @@ export async function runAiStep(input: {
 }> {
   const res = await apiFetch(`${API_BASE}/api/ai/run-step`, {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
@@ -1289,12 +1290,13 @@ export async function synthesizeAiResult(input: {
     task: string
     output: string
   }>
-}): Promise<{
+}, signal?: AbortSignal): Promise<{
   output: string
   usage: { model: string; inputTokens?: number; outputTokens?: number; provider?: 'openai' | 'openai-chatgpt-plan'; authMode?: 'chatgpt-plan' | 'api-key'; costBasis?: 'plan-included' }
 }> {
   const res = await apiFetch(`${API_BASE}/api/ai/synthesize`, {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
@@ -1508,6 +1510,7 @@ export async function acquireExecutionLock(input: {
 export async function releaseExecutionLock(input: {
   projectId: string
   clientId: string
+  taskId?: string
 }): Promise<void> {
   await apiFetch(`${API_BASE}/api/execution/lock`, {
     method: 'DELETE',

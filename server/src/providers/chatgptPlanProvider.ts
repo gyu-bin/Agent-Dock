@@ -83,24 +83,29 @@ export class ChatGPTPlanProvider implements AiProvider {
     }
     return this.models
   }
-  async chat(input: { messages: ChatMessage[]; model?: string; jsonSchema?: JsonSchemaSpec }): Promise<ChatResult> {
+  async chat(input: { signal?: AbortSignal; messages: ChatMessage[]; model?: string; jsonSchema?: JsonSchemaSpec }): Promise<ChatResult> {
+    input.signal?.throwIfAborted()
     const models = await this.catalog(this.accountKey)
+    input.signal?.throwIfAborted()
     // Existing profile defaults may be API-only: choose an actual catalog entry.
     const model = models.find(m => m.slug === input.model)?.slug ?? models.find(m => m.slug === this.preferredModel)?.slug ?? models[0]?.slug
     if (!model) throw Object.assign(new Error('현재 ChatGPT 계정에서 사용할 수 있는 모델이 없습니다.'), { code: 'CHATGPT_MODEL_UNAVAILABLE', status: 503 })
     const token = await this.auth.getAccessToken()
-    const response = await this.request('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(buildPlanRequest(input.messages, model, input.jsonSchema)), signal: AbortSignal.timeout(180_000) })
+    input.signal?.throwIfAborted()
+    const response = await this.request('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(buildPlanRequest(input.messages, model, input.jsonSchema)), signal: input.signal ? AbortSignal.any([input.signal, AbortSignal.timeout(180_000)]) : AbortSignal.timeout(180_000) })
     if (!response.ok) throw await this.responseError(response)
     const result = await readPlanStream(response, model)
     this.selectedModel = result.usage.model
     return result
   }
-  async webSearch(query: string): Promise<Record<string, any>> {
+  async webSearch(query: string, signal?: AbortSignal): Promise<Record<string, any>> {
+    signal?.throwIfAborted()
     const models = await this.catalog(this.accountKey)
     const model = models.find(m => m.slug === this.preferredModel)?.slug ?? models[0]?.slug
     if (!model) throw Object.assign(new Error('ChatGPT 모델을 사용할 수 없습니다.'), { status: 503, code: 'CHATGPT_MODEL_UNAVAILABLE' })
     const token = await this.auth.getAccessToken()
-    const response = await this.request('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...buildPlanRequest([{ role: 'user', content: `Search the web and cite real sources for: ${query}` }], model), tools: [{ type: 'web_search' }], include: ['web_search_call.action.sources'] }), signal: AbortSignal.timeout(90_000) })
+    signal?.throwIfAborted()
+    const response = await this.request('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...buildPlanRequest([{ role: 'user', content: `Search the web and cite real sources for: ${query}` }], model), tools: [{ type: 'web_search' }], include: ['web_search_call.action.sources'] }), signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(90_000)]) : AbortSignal.timeout(90_000) })
     if (!response.ok) throw await this.responseError(response)
     let completed: Record<string, any> = {}
     await readPlanStream(response, model, data => { completed = data })

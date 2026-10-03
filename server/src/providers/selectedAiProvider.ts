@@ -25,8 +25,10 @@ export class SelectedAiProvider implements AiProvider {
   }
   getState() { return this.state }
   isConfigured() { return this.state.configured }
-  async chat(input: { messages: ChatMessage[]; jsonSchema?: JsonSchemaSpec; temperature?: number; model?: string }) {
+  async chat(input: { signal?: AbortSignal; messages: ChatMessage[]; jsonSchema?: JsonSchemaSpec; temperature?: number; model?: string }) {
+    input.signal?.throwIfAborted()
     await this.refresh()
+    input.signal?.throwIfAborted()
     requireConfigured(this)
     if (this.state.authMode === 'api-key') return new OpenAIProvider(process.env.OPENAI_API_KEY!.trim()).chat(input)
     const result = await planProvider.chat(input)

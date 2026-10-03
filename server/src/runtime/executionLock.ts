@@ -39,10 +39,12 @@ export function tryAcquireExecutionLock(input: {
 export function releaseExecutionLock(input: {
   projectId: string
   clientId?: string
+  taskId?: string
 }): boolean {
   const existing = locks.get(input.projectId)
   if (!existing) return false
   if (input.clientId && existing.clientId !== input.clientId) return false
+  if (input.taskId && existing.taskId !== input.taskId) return false
   locks.delete(input.projectId)
   return true
 }

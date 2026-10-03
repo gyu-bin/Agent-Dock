@@ -29,6 +29,8 @@ import { CodexExecutionEngine } from './codexExecutionEngine'
 export class RealAIExecutionEngine implements ExecutionEngine {
   private aborted = new Set<string>()
   private running = new Set<string>()
+  private requests = new Map<string, AbortController>()
+  private resumePending = new Set<string>()
   private disposed = false
   private store: EngineStoreAccess
   private codex: CodexExecutionEngine
@@ -49,9 +51,12 @@ export class RealAIExecutionEngine implements ExecutionEngine {
 
   pause(taskId: string): void {
     this.aborted.add(taskId)
+    this.resumePending.delete(taskId)
+    this.requests.get(taskId)?.abort()
+    this.closeStoppedRuns(taskId)
     this.codex.cancelTask(taskId)
     const task = this.store.getTasks().find((t) => t.id === taskId)
-    if (!task || task.status !== 'running') return
+    if (!task || !['running', 'verifying', 'queued'].includes(task.status)) return
     const now = new Date().toISOString()
     this.store.patchTask(taskId, { status: 'paused', updatedAt: now })
     const steps = this.store.getSteps().filter((s) => s.taskId === taskId)
@@ -71,7 +76,6 @@ export class RealAIExecutionEngine implements ExecutionEngine {
   }
 
   resume(taskId: string): void {
-    this.aborted.delete(taskId)
     const task = this.store.getTasks().find((t) => t.id === taskId)
     if (
       !task ||
@@ -85,6 +89,11 @@ export class RealAIExecutionEngine implements ExecutionEngine {
     if (task.status === 'awaiting_approval' && task.approval?.status === 'pending') {
       return
     }
+    if (this.running.has(taskId)) {
+      this.resumePending.add(taskId)
+      return
+    }
+    this.aborted.delete(taskId)
     this.store.patchTask(taskId, {
       status: task.status === 'awaiting_approval' ? 'running' : 'running',
       updatedAt: new Date().toISOString(),
@@ -97,6 +106,9 @@ export class RealAIExecutionEngine implements ExecutionEngine {
 
   cancel(taskId: string): void {
     this.aborted.add(taskId)
+    this.resumePending.delete(taskId)
+    this.requests.get(taskId)?.abort()
+    this.closeStoppedRuns(taskId)
     this.codex.cancelTask(taskId)
     const now = new Date().toISOString()
     this.store.patchTask(taskId, {
@@ -119,6 +131,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
     this.disposed = true
     for (const id of this.running) {
       this.aborted.add(id)
+      this.requests.get(id)?.abort()
       this.codex.cancelTask(id)
     }
   }
@@ -126,6 +139,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
   private async runTask(taskId: string): Promise<void> {
     if (this.running.has(taskId)) return
     this.running.add(taskId)
+    this.requests.set(taskId, new AbortController())
     try {
       const task = this.store.getTasks().find((t) => t.id === taskId)
       if (!task) return
@@ -210,6 +224,8 @@ export class RealAIExecutionEngine implements ExecutionEngine {
       }
     } finally {
       this.running.delete(taskId)
+      this.requests.delete(taskId)
+      if (this.resumePending.delete(taskId) && !this.disposed) this.resume(taskId)
     }
   }
 
@@ -600,6 +616,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
 
     const runId = `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
     const selectedProvider = await fetchProvider().catch(() => undefined)
+    if (this.aborted.has(task.id) || this.disposed) return false
     const planMode = selectedProvider?.authMode !== 'api-key'
     const run: AgentRun = {
       provider: planMode ? 'openai-chatgpt-plan' : 'openai',
@@ -655,7 +672,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
         requiresWebSearch: step.requiresWebSearch,
         role: step.role,
         skipBecausePriorResearch: priorHasResearch,
-      })
+      }, this.requests.get(task.id)?.signal)
 
       if (this.aborted.has(task.id) || this.disposed) return false
 
@@ -747,6 +764,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
       this.store.persistSoon()
       return true
     } catch (err) {
+      if (this.aborted.has(task.id) || this.disposed) return false
       const message = err instanceof Error ? err.message : String(err)
       const failure = executionFailure(err)
       const code = failure.errorCode
@@ -835,9 +853,10 @@ export class RealAIExecutionEngine implements ExecutionEngine {
         userRequest: task.description || task.title,
         workflow: task.workflow,
         stepOutputs,
-      })
+      }, this.requests.get(task.id)?.signal)
       finalResult = synth.output
     } catch (error) {
+      if (this.aborted.has(task.id) || this.disposed) return
       const failure = executionFailure(error)
       if (isAgentInstructionError(failure.errorCode, failure.technicalSummary)) {
         const failedAt = new Date().toISOString()
@@ -854,6 +873,7 @@ export class RealAIExecutionEngine implements ExecutionEngine {
       // Keep concatenated fallback
     }
 
+    if (this.aborted.has(task.id) || this.disposed) return
     const now = new Date().toISOString()
     this.store.patchTask(task.id, {
       status: 'completed',
@@ -877,6 +897,15 @@ export class RealAIExecutionEngine implements ExecutionEngine {
     }
 
     this.store.persistSoon()
+  }
+
+  private closeStoppedRuns(taskId: string): void {
+    for (const run of this.store.getAgentRuns?.() ?? []) {
+      if (run.taskId === taskId && run.status === 'running') {
+        this.store.upsertAgentRun?.({ ...run, status: 'cancelled', completedAt: new Date().toISOString(),
+          errorCode: 'CANCELLED', userMessage: '작업이 중단되었습니다.' })
+      }
+    }
   }
 
   private releaseAgent(agentId: string, taskId: string): void {

@@ -29,6 +29,7 @@ export interface WebSearchResult {
 }
 
 export interface WebSearchRequest {
+  signal?: AbortSignal
   query: string
   /** ISO date for freshness context, e.g. 2026-09-22 */
   currentDate?: string

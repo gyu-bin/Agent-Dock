@@ -40,6 +40,7 @@ export class OpenAIResponsesWebSearchProvider implements WebSearchProvider {
   }
 
   async search(request: WebSearchRequest): Promise<WebSearchResult> {
+    request.signal?.throwIfAborted()
     if (!this.apiKey) {
       throw Object.assign(new Error('Web Search unavailable: no API key'), {
         status: 503,
@@ -77,6 +78,7 @@ export class OpenAIResponsesWebSearchProvider implements WebSearchProvider {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: request.signal,
     })
 
     if (!res.ok) {
@@ -236,10 +238,12 @@ export class FallbackWebSearchProvider implements WebSearchProvider {
     return this.primary.isAvailable() || this.fallback.isAvailable()
   }
   async search(request: WebSearchRequest): Promise<WebSearchResult> {
+    request.signal?.throwIfAborted()
     if (this.primary.isAvailable()) {
       try {
         return await this.primary.search(request)
       } catch (err) {
+        request.signal?.throwIfAborted()
         const msg = err instanceof Error ? err.message : String(err)
         const status =
           err && typeof err === 'object' && 'status' in err

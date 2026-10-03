@@ -41,6 +41,7 @@ export interface AiProvider {
   getState(): AiProviderState
   isConfigured(): boolean
   chat(input: {
+    signal?: AbortSignal
     messages: ChatMessage[]
     jsonSchema?: JsonSchemaSpec
     temperature?: number
@@ -126,6 +127,7 @@ export class OpenAIProvider implements AiProvider {
   }
 
   async chat(input: {
+    signal?: AbortSignal
     messages: ChatMessage[]
     jsonSchema?: JsonSchemaSpec
     temperature?: number
@@ -162,6 +164,7 @@ export class OpenAIProvider implements AiProvider {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: input.signal,
     })
 
     if (!res.ok) {

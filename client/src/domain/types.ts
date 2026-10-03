@@ -424,7 +424,7 @@ export interface AgentRun extends ExecutionFailure {
   taskId: string
   stepId: string
   agentId: string
-  status: 'running' | 'completed' | 'failed'
+  status: 'running' | 'completed' | 'failed' | 'cancelled'
   inputSummary: string
   output: string
   startedAt: string

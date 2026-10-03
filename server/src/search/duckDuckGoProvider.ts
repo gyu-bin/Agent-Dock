@@ -26,6 +26,7 @@ export class DuckDuckGoHtmlWebSearchProvider implements WebSearchProvider {
   }
 
   async search(request: WebSearchRequest): Promise<WebSearchResult> {
+    request.signal?.throwIfAborted()
     const maxSources = request.maxSources ?? 8
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(request.query)}`
     const res = await fetch(url, {
@@ -35,6 +36,7 @@ export class DuckDuckGoHtmlWebSearchProvider implements WebSearchProvider {
           Accept: 'text/html',
         },
       redirect: 'follow',
+      signal: request.signal,
     })
     if (!res.ok) {
       throw Object.assign(

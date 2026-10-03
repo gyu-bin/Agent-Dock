@@ -11,7 +11,7 @@ export class ChatGPTPlanSearchProvider implements WebSearchProvider {
   async search(request: WebSearchRequest) {
     if (this.configured()) {
       try {
-        const response = await this.plan.webSearch(request.query)
+        const response = await this.plan.webSearch(request.query, request.signal)
         const sources = extractSourcesFromResponses(response, request.maxSources ?? 8)
         if (sources.length) return { query: request.query, sources, searchedAt: new Date().toISOString(), providerNote: 'ChatGPT Plan Web Search' }
       } catch (error) {

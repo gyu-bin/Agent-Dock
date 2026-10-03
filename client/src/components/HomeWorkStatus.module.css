@@ -4,7 +4,7 @@
 .panel h2 { font-size:13px;color:#263751;margin:0;font-weight:750; }
 .live { font-size:8px;letter-spacing:.1em;padding:3px 5px;background:#e4f5ec;color:#24875d;border-radius:4px;font-weight:800; }
 .cards { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:210px;overflow:auto; }
-.card { text-align:left;min-width:0;background:#fff;border:1px solid #e0e7f0;border-radius:10px;padding:10px 12px;cursor:pointer;color:inherit; }
+.card { text-align:left;min-width:0;background:#fff;border:1px solid #e0e7f0;border-radius:10px;padding:10px 12px;color:inherit; }
 .card:hover { border-color:#7199e0;box-shadow:0 3px 10px #2446760d; }
 .cardTop { display:flex;justify-content:space-between;gap:8px;color:#4973bb;font-size:10px;margin-bottom:6px; }
 .cardTop span { display:flex;align-items:center;gap:5px; }
@@ -16,3 +16,8 @@
 .track i { display:block;height:100%;background:#5785dc;border-radius:3px;transition:width .3s; }
 .empty { font-size:12px;line-height:1.6;color:#7e8da3;padding:8px 0; }
 @media (max-width:720px) { .cards { grid-template-columns:1fr;max-height:155px; } .panel header > span { display:none; } }
+
+.taskLink { display:block;width:100%;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer; }
+.taskLink:focus-visible, .stop:focus-visible { outline:2px solid #5785dc;outline-offset:3px; }
+.stop { display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 8px;border:1px solid #edc8c8;border-radius:6px;background:#fff7f7;color:#b04b4b;font-size:11px;cursor:pointer; }
+.stop:hover { background:#fde9e9; }

@@ -25,6 +25,7 @@ export class SteamStoreWebSearchProvider implements WebSearchProvider {
   }
 
   async search(request: WebSearchRequest): Promise<WebSearchResult> {
+    request.signal?.throwIfAborted()
     const maxSources = request.maxSources ?? 8
     const term = extractSteamTerm(request.query)
     const sources: WebSource[] = []
@@ -35,6 +36,7 @@ export class SteamStoreWebSearchProvider implements WebSearchProvider {
       const searchUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&l=english&cc=US`
       const res = await fetch(searchUrl, {
         headers: { Accept: 'application/json' },
+        signal: request.signal,
       })
       if (res.ok) {
         const data = (await res.json()) as {
@@ -71,6 +73,7 @@ export class SteamStoreWebSearchProvider implements WebSearchProvider {
           'https://store.steampowered.com/api/featuredcategories/?l=english&cc=US'
         const res = await fetch(featUrl, {
           headers: { Accept: 'application/json' },
+        signal: request.signal,
         })
         if (res.ok) {
           const data = (await res.json()) as Record<

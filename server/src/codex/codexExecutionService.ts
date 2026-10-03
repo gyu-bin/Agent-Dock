@@ -34,6 +34,13 @@ const activeRuns = new Map<
   { child: ChildProcess; abort: AbortController }
 >()
 
+// Cancellation can arrive while preflight is still preparing the process.
+const cancelledRunIds = new Map<string, number>()
+function throwIfRunCancelled(runId: string): void {
+  for (const [id, expires] of cancelledRunIds) if (expires < Date.now()) cancelledRunIds.delete(id)
+  if (cancelledRunIds.has(runId)) throw Object.assign(new Error('작업이 중단되었습니다.'), { code: 'CANCELLED', status: 409, userMessageKo: '작업이 중단되었습니다.' })
+}
+
 const FORBIDDEN_PROMPT_PATTERNS = [
   /\bgit\s+commit\b/i,
   /\bgit\s+push\b/i,
@@ -222,7 +229,7 @@ function killProcessTree(child: ChildProcess): void {
       try {
         process.kill(-child.pid, 'SIGTERM')
       } catch {
-        child.kill('SIGTERM')
+        killProcessTree(child)
       }
       setTimeout(() => {
         try {
@@ -246,6 +253,8 @@ function killProcessTree(child: ChildProcess): void {
 }
 
 export function cancelCodexRun(runId: string): boolean {
+  cancelledRunIds.set(runId, Date.now() + 10 * 60_000)
+  if (cancelledRunIds.size > 1000) cancelledRunIds.delete(cancelledRunIds.keys().next().value!)
   const entry = activeRuns.get(runId)
   if (!entry) return false
   entry.abort.abort()
@@ -275,8 +284,9 @@ export function cancelCodexRunsForTask(taskId: string): number {
   return n
 }
 
-async function runAllowlistedVerify(
+export async function runAllowlistedVerify(
   projectPath: string,
+  runId: string,
 ): Promise<VerificationCommand[]> {
   const REQUIRED = ['typecheck', 'lint', 'test', 'build'] as const
   const results: VerificationCommand[] = []
@@ -297,6 +307,7 @@ async function runAllowlistedVerify(
   const scripts = pkg.scripts ?? {}
 
   for (const name of REQUIRED) {
+    throwIfRunCancelled(runId)
     if (!scripts[name]) {
       results.push({
         name,
@@ -324,7 +335,12 @@ async function runAllowlistedVerify(
         cwd: projectPath,
         env: { ...process.env, CI: '1', FORCE_COLOR: '0' },
         stdio: ['ignore', 'pipe', 'pipe'],
+        detached: process.platform !== 'win32',
       })
+      const abort = new AbortController()
+      activeRuns.set(runId, { child, abort })
+      abort.signal.addEventListener('abort', () => killProcessTree(child), { once: true })
+      const cleanup = () => { if (activeRuns.get(runId)?.child === child) activeRuns.delete(runId) }
       let out = ''
       child.stdout?.on('data', (c: Buffer) => {
         out += c.toString('utf8')
@@ -336,6 +352,7 @@ async function runAllowlistedVerify(
         child.kill('SIGTERM')
       }, 120_000)
       child.on('close', (code) => {
+        cleanup()
         clearTimeout(t)
         resolve({
           name,
@@ -346,6 +363,7 @@ async function runAllowlistedVerify(
         })
       })
       child.on('error', (err) => {
+        cleanup()
         clearTimeout(t)
         resolve({
           name,
@@ -356,6 +374,7 @@ async function runAllowlistedVerify(
         })
       })
     })
+    throwIfRunCancelled(runId)
     results.push(outcome)
   }
 
@@ -508,6 +527,7 @@ export async function executeCodexRun(
       userMessageKo: 'Codex 실행에 프로젝트 ID가 필요합니다.',
     })
   }
+  throwIfRunCancelled(input.runId)
   const startedMs = Date.now()
   const startedAt = new Date().toISOString()
   const baseRun: CodexRunRecord = {
@@ -586,7 +606,7 @@ export async function executeCodexRun(
   if (input.mode === 'verify') {
     // Controlled verify path — do not shell out arbitrary user commands
     baseRun.activity = 'Running typecheck / tests'
-    const commands = await runAllowlistedVerify(projectPath)
+    const commands = await runAllowlistedVerify(projectPath, input.runId)
     const anyFail = commands.some((c) => c.status === 'fail')
     const summary = commands
       .map(
@@ -662,6 +682,7 @@ export async function executeCodexRun(
   let retriesUsed = 0
 
   for (let attempt = 1; attempt <= 1 + MAX_UPSTREAM_RETRIES; attempt++) {
+    throwIfRunCancelled(input.runId)
     const attemptStarted = Date.now()
     const procResult = await runCodexProcess({
       runId: attempt === 1 ? input.runId : `${input.runId}_r${attempt}`,

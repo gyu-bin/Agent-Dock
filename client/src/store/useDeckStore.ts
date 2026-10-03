@@ -164,6 +164,8 @@ interface DeckState {
     source?: import('../domain/operations').TaskSource
     attachmentIds?: string[]
     attachmentStagingId?: string
+    /** A chat proposal can create only one task during this app session. */
+    proposalMessageId?: string
   }) => string | null
   startTask: (taskId: string) => void
   pauseTask: (taskId: string) => void
@@ -186,6 +188,8 @@ interface DeckState {
 function createDeckStore() {
   let persistTimer: ReturnType<typeof setTimeout> | null = null
   let eventsWired = false
+  const proposalTasks = new Map<string, string>()
+  const pendingStarts = new Map<string, symbol>()
 
   const store = create<DeckState>((set, get) => {
     const persist = () => {
@@ -677,6 +681,12 @@ function createDeckStore() {
 
       createAndStartTask: (input) => {
         const state = get()
+        if (input.proposalMessageId) {
+          const existingId = proposalTasks.get(input.proposalMessageId)
+          if (existingId && state.tasks.some((task) => task.id === existingId)) {
+            return existingId
+          }
+        }
         const project = selectActiveProject(state)
         if (!project) return null
 
@@ -763,13 +773,14 @@ function createDeckStore() {
             | undefined,
         }))
 
+        if (input.proposalMessageId) proposalTasks.set(input.proposalMessageId, taskId)
         set((s) => ({
           tasks: [task, ...s.tasks],
           pipelineSteps: [...s.pipelineSteps, ...steps],
           selectedTaskId: taskId,
 
           workRequestOpen: false,
-          activeNav: 'projects',
+          activeNav: s.activeNav === 'home' ? 'home' : 'projects',
         }))
         deckEvents.emit({
           type: 'task.created',
@@ -794,13 +805,25 @@ function createDeckStore() {
 
       startTask: (taskId) => {
         const task = get().tasks.find((t) => t.id === taskId)
-        if (!task) return
+        if (!task || pendingStarts.has(taskId) || task.status === 'cancelled' || task.status === 'completed') return
+        const attempt = Symbol(taskId)
+        pendingStarts.set(taskId, attempt)
         void (async () => {
           const lock = await acquireExecutionLock({
             projectId: task.projectId,
             taskId,
             clientId: CLIENT_ID,
           })
+          const current = get().tasks.find((t) => t.id === taskId)
+          const valid = pendingStarts.get(taskId) === attempt &&
+            current?.status === task.status && current.updatedAt === task.updatedAt
+          if (pendingStarts.get(taskId) === attempt) pendingStarts.delete(taskId)
+          if (!valid) {
+            if (lock.ok) {
+              await releaseExecutionLock({ projectId: task.projectId, clientId: CLIENT_ID, taskId })
+            }
+            return
+          }
           if (!lock.ok) {
             get().appendChat({
               role: 'assistant',
@@ -809,15 +832,21 @@ function createDeckStore() {
             return
           }
           ensureEngineForTask(taskId).execute(taskId)
-        })()
+        })().catch(() => {
+          if (pendingStarts.get(taskId) !== attempt) return
+          pendingStarts.delete(taskId)
+          get().appendChat({ role: 'assistant', content: '작업 시작 연결에 실패했습니다. 작업 기록에서 다시 시도해 주세요.' })
+        })
       },
       pauseTask: (taskId) => {
+        pendingStarts.delete(taskId)
         ensureEngineForTask(taskId).pause(taskId)
         const task = get().tasks.find((t) => t.id === taskId)
         if (task) {
           void releaseExecutionLock({
             projectId: task.projectId,
             clientId: CLIENT_ID,
+            taskId,
           })
         }
       },
@@ -825,12 +854,14 @@ function createDeckStore() {
         ensureEngineForTask(taskId).resume(taskId)
       },
       cancelTask: (taskId) => {
+        pendingStarts.delete(taskId)
         ensureEngineForTask(taskId).cancel(taskId)
         const task = get().tasks.find((t) => t.id === taskId)
         if (task) {
           void releaseExecutionLock({
             projectId: task.projectId,
             clientId: CLIENT_ID,
+            taskId,
           })
         }
       },

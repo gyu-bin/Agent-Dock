@@ -313,6 +313,18 @@
   background: var(--ad-primary-hover);
 }
 
+.startWork:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.startNotice {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ad-ink-soft);
+}
+
 .composer {
   display: flex;
   align-items: center;
@@ -465,4 +477,3 @@
 .attachMenu button:hover {
   background: var(--ad-control-hover);
 }
-

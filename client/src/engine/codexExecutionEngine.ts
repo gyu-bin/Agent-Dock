@@ -87,6 +87,7 @@ export class CodexExecutionEngine {
         agentId: step.agentId,
         stepTask: step.label,
       })
+      if (this.activeRunByTask.get(task.id) !== runId) throw Object.assign(new Error('작업이 중단되었습니다.'), { code: 'CANCELLED' })
       if (!pre.ok) {
         throw Object.assign(new Error(pre.error ?? 'Codex preflight failed'), {
           code: pre.code, userMessage: pre.userMessage, technicalSummary: pre.technicalSummary,
@@ -146,6 +147,7 @@ export class CodexExecutionEngine {
         previousResult: prevParts.join('\n\n') || undefined,
       })
 
+      if (this.activeRunByTask.get(task.id) !== runId) throw Object.assign(new Error('작업이 중단되었습니다.'), { code: 'CANCELLED' })
       run = {
         ...result.run,
         status: 'completed',
@@ -197,7 +199,7 @@ export class CodexExecutionEngine {
 
   cancelTask(taskId: string): void {
     const runId = this.activeRunByTask.get(taskId)
-    void cancelCodexRun({ runId, taskId })
+    void cancelCodexRun({ runId, taskId }).catch(() => undefined)
     this.activeRunByTask.delete(taskId)
   }
 }
