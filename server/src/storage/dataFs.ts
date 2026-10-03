@@ -63,7 +63,10 @@ function base(): string {
 }
 
 function headers(extra?: Record<string, string>): Record<string, string> {
-  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY)
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY).trim()
+  // New secret keys (sb_secret_…) are not JWTs: Supabase wants them on `apikey` only.
+  // Legacy service_role keys are JWTs and also go in Authorization.
+  if (key.startsWith('sb_')) return { apikey: key, ...extra }
   return { apikey: key, Authorization: `Bearer ${key}`, ...extra }
 }
 
