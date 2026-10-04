@@ -51,6 +51,8 @@ import {
 import type { CodexMode } from './codex/types.js'
 import { createWebSearchProvider } from './search/webSearchProvider.js'
 import { getStepProgress, reportProgress, withStepProgress } from './ai/runProgress.js'
+import { recommendTeam } from './ai/teamRecommender.js'
+import { requireConfigured } from './providers/aiProvider.js'
 import { runWebSearchPipeline } from './search/searchService.js'
 import { resolveRequiresWebSearch } from './search/requiresWebSearch.js'
 import {
@@ -500,6 +502,31 @@ app.delete('/api/execution/lock', (req, res) => {
     taskId: taskId || undefined,
   })
   res.json({ ok, lock: getExecutionLock(projectId) })
+})
+
+app.post('/api/team/recommend', async (req, res) => {
+  const cancellation = requestCancellation(res)
+  try {
+    const goal = String(req.body?.goal ?? '').trim()
+    if (!goal) {
+      res.status(400).json({ error: 'goal required' })
+      return
+    }
+    requireConfigured(aiProvider)
+    const registry = await loadAgentRegistry()
+    const members = await recommendTeam(cancellableAi(aiProvider, cancellation.signal), {
+      name: String(req.body?.name ?? ''),
+      type: String(req.body?.type ?? 'custom'),
+      goal,
+      candidates: registry.agents,
+      signal: cancellation.signal,
+    })
+    res.json({ members })
+  } catch (err) {
+    if (!cancellation.signal.aborted) sendError(res, err)
+  } finally {
+    cancellation.dispose()
+  }
 })
 
 app.get('/api/agents', async (_req, res) => {

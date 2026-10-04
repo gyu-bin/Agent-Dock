@@ -1755,3 +1755,17 @@ export async function getStepProgress(stepId: string): Promise<StepProgress | nu
   if (!res.ok) return null
   return ((await res.json()) as { progress: StepProgress | null }).progress
 }
+
+export interface TeamRecommendation { agentId: string; role: string; reason: string }
+
+/** AI-picked team for a stated goal (throws when AI is not configured). */
+export async function recommendTeamForGoal(input: { name: string; type: string; goal: string }): Promise<TeamRecommendation[]> {
+  const res = await apiFetch(`${API_BASE}/api/team/recommend`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const body = (await res.json().catch(() => ({}))) as { members?: TeamRecommendation[]; error?: string }
+  if (!res.ok) throw new Error(body.error ?? `팀 추천 실패: ${res.status}`)
+  return body.members ?? []
+}

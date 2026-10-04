@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import type { ProjectType } from '../domain/types'
 import { getPresetMatches } from '../domain/teamMatcher'
-import { createProject } from '../api/client'
+import { createProject, recommendTeamForGoal, type TeamRecommendation } from '../api/client'
+import { displayAgentName } from '../i18n/agentNames'
 import { useDeckStore } from '../store/useDeckStore'
 import { defaultRuntimeForNewTeam } from '../domain/teamRuntime'
 import { useAuthStore } from '../auth/cloudAuth'
@@ -55,11 +56,34 @@ export function ProjectWizard() {
     setBranch('')
     setAgentIds([])
     setTeamTouched(false)
+    setGoal('')
+    setAiTeam(null)
+    setAiError(null)
     setError(null)
   }, [open, cloud])
 
   // The recommended team follows the chosen type until the user edits it in step 3.
-  const recommendedIds = useMemo(() => matches.map((m) => m.agent?.id).filter(Boolean) as string[], [matches])
+  const [goal, setGoal] = useState('')
+  const [aiTeam, setAiTeam] = useState<TeamRecommendation[] | null>(null)
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const presetIds = useMemo(() => matches.map((m) => m.agent?.id).filter(Boolean) as string[], [matches])
+  const recommendedIds = aiTeam ? aiTeam.map((m) => m.agentId) : presetIds
+  async function askAiTeam() {
+    if (!goal.trim()) return
+    setAiBusy(true)
+    setAiError(null)
+    try {
+      const members = await recommendTeamForGoal({ name, type, goal: goal.trim() })
+      if (!members.length) throw new Error('추천 결과가 비었어요.')
+      setAiTeam(members)
+      setTeamTouched(false)
+    } catch (err) {
+      setAiError(`${err instanceof Error ? err.message : String(err)} — 종류별 기본 추천을 그대로 쓸게요.`)
+    } finally {
+      setAiBusy(false)
+    }
+  }
   const [teamTouched, setTeamTouched] = useState(false)
   const team = teamTouched ? agentIds : recommendedIds
 
@@ -143,22 +167,61 @@ export function ProjectWizard() {
                   </button>
                 ))}
               </div>
+              <div className={styles.goalBox}>
+                <label className={styles.field}>
+                  <span>이 프로젝트로 무엇을 하려고 하나요? (선택)</span>
+                  <textarea
+                    value={goal}
+                    onChange={(e) => setGoal(e.target.value)}
+                    rows={2}
+                    placeholder="예: 우리 앱 출시를 알릴 홍보팀이 필요해요. 인스타·틱톡 콘텐츠와 앱스토어 문구까지."
+                  />
+                </label>
+                <div className={styles.goalActions}>
+                  <button type="button" className={styles.primary} disabled={!goal.trim() || aiBusy} onClick={() => void askAiTeam()}>
+                    {aiBusy ? 'AI가 팀을 짜는 중…' : 'AI로 팀 짜기'}
+                  </button>
+                  {aiTeam ? (
+                    <button type="button" className={styles.linkButton} onClick={() => { setAiTeam(null); setTeamTouched(false) }}>
+                      종류별 기본 추천으로 보기
+                    </button>
+                  ) : null}
+                </div>
+                {aiError ? <p className={styles.error}>{aiError}</p> : null}
+              </div>
               <div className={styles.presetList}>
-                <p className={styles.hint}>
-                  {matches.length
-                    ? `${TYPES.find((item) => item.id === type)?.label}에 맞춘 추천 팀 ${recommendedIds.length}명입니다. 다음 단계에서 바꿀 수 있어요.`
-                    : '직접 설정은 추천 팀이 없어요. 다음 단계에서 직원을 골라 주세요.'}
-                </p>
-                {matches.length ? (
-                  <ul>
-                    {matches.map((m) => (
-                      <li key={m.role.key}>
-                        <strong>{m.role.label}</strong>
-                        <span>{m.agent ? m.agent.name : '매칭 없음'}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                {aiTeam ? (
+                  <>
+                    <p className={styles.hint}>목적에 맞춰 AI가 고른 팀 {aiTeam.length}명입니다. 다음 단계에서 바꿀 수 있어요.</p>
+                    <ul>
+                      {aiTeam.map((m) => (
+                        <li key={m.agentId} className={styles.aiRow}>
+                          <strong>{m.role}</strong>
+                          <span>{displayAgentName(m.agentId, registry.find((a) => a.id === m.agentId)?.name ?? m.agentId)}</span>
+                          <small>{m.reason}</small>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    <p className={styles.hint}>
+                      {matches.length
+                        ? `${TYPES.find((item) => item.id === type)?.label} 기본 추천 팀 ${presetIds.length}명입니다. 목적을 적고 "AI로 팀 짜기"를 누르면 거기에 맞춰 다시 골라요.`
+                        : '직접 설정은 기본 추천이 없어요. 목적을 적고 "AI로 팀 짜기"를 누르거나, 다음 단계에서 직접 골라 주세요.'}
+                    </p>
+                    {matches.length ? (
+                      <ul>
+                        {matches.map((m) => (
+                          <li key={m.role.key}>
+                            <strong>{m.role.label}</strong>
+                            <span>{m.agent ? displayAgentName(m.agent.id, m.agent.name) : '매칭 없음'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </>
+                )}
               </div>
             </>
           )}

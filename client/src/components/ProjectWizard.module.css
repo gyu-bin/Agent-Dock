@@ -207,3 +207,8 @@
 details.sourceFields { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--ad-line, #e5e7eb); border-radius: 10px; }
 details.sourceFields > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
 .typeGrid + .presetList { margin-top: 16px; }
+.goalBox { margin-top: 16px; display: grid; gap: 8px; }
+.goalBox textarea { width: 100%; resize: vertical; min-height: 56px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--ad-border, #e5e7eb); background: var(--ad-surface-raised, #fff); color: var(--ad-ink); font: inherit; font-size: 13px; }
+.goalActions { display: flex; align-items: center; gap: 12px; }
+.presetList li.aiRow { display: grid; grid-template-columns: minmax(90px, auto) 1fr; gap: 2px 12px; }
+.presetList li.aiRow small { grid-column: 1 / -1; color: var(--ad-ink-soft); font-size: 12px; }
