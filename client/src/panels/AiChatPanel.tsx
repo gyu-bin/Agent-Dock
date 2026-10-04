@@ -174,6 +174,7 @@ export function AiChatPanel({
     if (!text && attachments.length === 0) return
     proposeWorkFromChat(text, {
       attachmentIds: attachments.map((a) => a.id),
+      attachmentKinds: attachments.map((a) => a.kind),
       attachmentStagingId: stagingId,
     })
     setDraft('')

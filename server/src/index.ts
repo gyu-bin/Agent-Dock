@@ -665,6 +665,21 @@ app.get('/api/codex/status', async (_req, res) => {
   res.json(await getCodexProviderState())
 })
 
+/**
+ * Read-only Codex modes (inspect/review) may run in a folder attached to the task when
+ * the project has no code folder — e.g. "analyse this app" with a folder attached.
+ * Writing modes never fall back: a reference folder is not a writable root.
+ */
+async function codexFolderFor(body: Record<string, unknown>, mode: CodexMode): Promise<string> {
+  const given = String(body.projectPath ?? '').trim()
+  if (given || (mode !== 'inspect' && mode !== 'review')) return given
+  const projectId = String(body.projectId ?? '').trim()
+  const taskId = String(body.taskId ?? '').trim()
+  if (!projectId || !taskId) return ''
+  const list = await attachmentService.list(projectId, { taskId }).catch(() => [])
+  return attachmentService.referenceFolderPaths(list)[0] ?? ''
+}
+
 app.post('/api/codex/preflight', async (req, res) => {
   try {
     const body = req.body ?? {}
@@ -673,8 +688,9 @@ app.post('/api/codex/preflight', async (req, res) => {
       res.status(400).json({ error: 'Invalid Codex mode' })
       return
     }
+    const folder = await codexFolderFor(body, mode)
     const result = await preflightCodex({
-      projectPath: body.projectPath ? String(body.projectPath) : undefined,
+      projectPath: folder || undefined,
       mode,
       agentId: String(body.agentId ?? ''),
       stepTask: String(body.stepTask ?? ''),
@@ -703,7 +719,7 @@ app.post('/api/codex/run', async (req, res) => {
       agentId: String(body.agentId ?? '').trim(),
       mode,
       projectId: String(body.projectId ?? '').trim(),
-      projectPath: String(body.projectPath ?? ''),
+      projectPath: await codexFolderFor(body, mode),
       userRequest: String(body.userRequest ?? '').trim(),
       stepTask: String(body.stepTask ?? '').trim(),
       previousResult: body.previousResult

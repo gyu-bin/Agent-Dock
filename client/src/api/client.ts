@@ -1341,6 +1341,9 @@ export async function fetchCodexStatus(): Promise<{
 
 export async function preflightCodex(input: {
   projectPath?: string
+  /** Lets the server use a folder attached to the task for read-only modes */
+  projectId?: string
+  taskId?: string
   mode: CodexMode
   agentId: string
   stepTask: string

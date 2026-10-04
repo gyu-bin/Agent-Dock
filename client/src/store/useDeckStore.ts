@@ -160,7 +160,7 @@ interface DeckState {
 
   proposeWorkFromChat: (
     text: string,
-    opts?: { attachmentIds?: string[]; attachmentStagingId?: string; skipUserLine?: boolean },
+    opts?: { attachmentIds?: string[]; attachmentStagingId?: string; skipUserLine?: boolean; attachmentKinds?: string[] },
   ) => void
   appendChat: (msg: Omit<ChatMessage, 'id' | 'createdAt'> & { id?: string }) => void
   createAndStartTask: (input: {
@@ -760,6 +760,8 @@ function createDeckStore() {
           attachmentHints: opts?.attachmentIds?.length
             ? {
                 summary: `Attachments present: ${opts.attachmentIds.length} item(s).`,
+                hasLocalFolder: opts.attachmentKinds?.includes('local-folder'),
+                hasGithub: opts.attachmentKinds?.some((k) => /github/.test(k)),
               }
             : undefined,
         })

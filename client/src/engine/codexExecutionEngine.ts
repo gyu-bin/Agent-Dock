@@ -83,6 +83,8 @@ export class CodexExecutionEngine {
     try {
       const pre = await preflightCodex({
         projectPath: project?.path,
+        projectId: project?.id ?? task.projectId,
+        taskId: task.id,
         mode,
         agentId: step.agentId,
         stepTask: step.label,

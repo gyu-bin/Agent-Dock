@@ -185,10 +185,14 @@ export function isAnalysisOnlyRequest(text: string): boolean {
   return ANALYSIS_VERB.test(t) && !BUILD_ORDER.test(t)
 }
 
+const CODE_SUBJECT = /폴더|코드|소스|레포|저장소|repo|codebase|source|프로젝트 구조|이 앱|우리 앱/
+
 export function selectWorkflowTemplate(input: {
   request: string
   projectType?: ProjectType
   preferredTemplateId?: string
+  /** A folder/code/GitHub attachment came with the request */
+  hasCodeSource?: boolean
 }): { template: WorkflowTemplate; confidence: number; rationale: string } {
   if (input.preferredTemplateId) {
     const hit = WORKFLOW_TEMPLATES.find((t) => t.id === input.preferredTemplateId)
@@ -205,6 +209,12 @@ export function selectWorkflowTemplate(input: {
 
   // Analysis-only requests ("…시장 분석해봐", "…조사해줘") must not get build/code steps.
   // A wish like "앱을 만들고 싶은데" is context, not an instruction to build now.
+  // Analysing an attached folder/code must read it, not search the web about it.
+  if (isAnalysisOnlyRequest(text) && (input.hasCodeSource || /(폴더|코드|소스|레포|저장소|repo|codebase).{0,12}(분석|조사|검토|파악|살펴|읽어)/.test(text)) && CODE_SUBJECT.test(text)) {
+    const code = WORKFLOW_TEMPLATES.find((t) => t.id === 'CODE_FOLDER_ANALYSIS')
+    if (code) return { template: code, confidence: 0.9, rationale: `${code.nameKo} 선택 — 첨부 폴더/코드를 읽어서 분석` }
+  }
+
   if (isAnalysisOnlyRequest(text)) {
     const report = WORKFLOW_TEMPLATES.find((t) => t.id === 'RESEARCH_REPORT')
     if (report) {

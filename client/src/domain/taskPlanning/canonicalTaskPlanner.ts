@@ -198,6 +198,7 @@ export function planTask(input: TaskPlanningRequest): TaskPlan {
         request: requestText,
         projectType: input.project.type,
         preferredTemplateId: input.preferredTemplateId,
+        hasCodeSource: Boolean(input.attachmentHints?.hasLocalFolder || input.attachmentHints?.hasCodeFiles || input.attachmentHints?.hasGithub),
       })
 
   const template = selection.template
