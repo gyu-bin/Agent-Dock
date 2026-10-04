@@ -1487,14 +1487,14 @@ const EMPTY_STEPS: PipelineStep[] = []
 const EMPTY_RUNS: AgentRun[] = []
 const EMPTY_CODEX: CodexRun[] = []
 
-let visibleProjectsKey = ''
+let visibleProjectsSource: Project[] | null = null
 let visibleProjectsCache: Project[] = EMPTY_PROJECTS
 
 /** Demo UI list — excludes fixture/e2e project names. Stable reference when unchanged. */
 export function selectVisibleProjects(state: DeckState): Project[] {
-  const key = state.projects.map((p) => `${p.id}:${p.name}`).join('|')
-  if (key === visibleProjectsKey) return visibleProjectsCache
-  visibleProjectsKey = key
+  // Cache on the array itself: an id/name key kept stale objects after path/team/context edits.
+  if (state.projects === visibleProjectsSource) return visibleProjectsCache
+  visibleProjectsSource = state.projects
   const next = state.projects.filter((p) => !isFixtureProjectName(p.name))
   visibleProjectsCache = next.length === 0 ? EMPTY_PROJECTS : next
   return visibleProjectsCache
