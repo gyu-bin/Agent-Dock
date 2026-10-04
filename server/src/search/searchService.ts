@@ -3,6 +3,7 @@ import { planSearchQueries } from './searchPlanner.js'
 import { resolveRequiresWebSearch } from './requiresWebSearch.js'
 import { buildWebSearchDataBlock, dedupeSources } from './sourceUtils.js'
 import { getCachedSearch, setCachedSearch } from './taskSearchCache.js'
+import { reportProgress, reportSearchStep } from '../ai/runProgress.js'
 import type {
   SearchPlan,
   TaskWebSearchSession,
@@ -69,6 +70,7 @@ export async function runWebSearchPipeline(
     })
   }
 
+  reportProgress({ phase: 'planning-search' })
   const plan = await planSearchQueries(ai, {
     userRequest: input.userRequest,
     stepTask: input.stepLabel,
@@ -81,6 +83,7 @@ export async function runWebSearchPipeline(
 
   // Queries run concurrently (max 3 at a time). One slow or failed query must not sink the
   // whole research step: it is skipped, and the step fails only when no query returns sources.
+  reportProgress({ phase: 'searching', searchTotal: plan.queries.length, searchDone: 0 })
   const failures: unknown[] = []
   const settled: Array<WebSearchResult | null> = new Array(plan.queries.length).fill(null)
   let next = 0
@@ -91,16 +94,20 @@ export async function runWebSearchPipeline(
       const cached = getCachedSearch(input.taskId, query)
       if (cached) {
         settled[i] = cached
+        reportSearchStep(query)
         continue
       }
+      reportProgress({ query })
       try {
         const result = await search.search({ query, currentDate, taskId: input.taskId, maxSources: 6 })
         setCachedSearch(input.taskId, result)
         settled[i] = result
+        reportSearchStep(query)
       } catch (err) {
         // A user cancel (AbortError) stops everything; a per-request timeout (TimeoutError) only skips this query.
         if ((err as { name?: string }).name === 'AbortError') throw err
         failures.push(err)
+        reportSearchStep(query)
         console.warn(`[web-search] query skipped (${err instanceof Error ? err.message : String(err)}): "${query.slice(0, 80)}"`)
       }
     }

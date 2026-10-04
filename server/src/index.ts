@@ -50,6 +50,7 @@ import {
 } from './codex/contentSnapshot.js'
 import type { CodexMode } from './codex/types.js'
 import { createWebSearchProvider } from './search/webSearchProvider.js'
+import { getStepProgress, reportProgress, withStepProgress } from './ai/runProgress.js'
 import { runWebSearchPipeline } from './search/searchService.js'
 import { resolveRequiresWebSearch } from './search/requiresWebSearch.js'
 import {
@@ -767,7 +768,13 @@ app.post('/api/ai/orchestrate', async (req, res) => {
   }
 })
 
-app.post('/api/ai/run-step', async (req, res) => {
+app.get('/api/ai/step-progress/:stepId', (req, res) => {
+  res.json({ progress: getStepProgress(String(req.params.stepId)) })
+})
+
+app.post('/api/ai/run-step', (req, res) => withStepProgress(req.body?.stepId ? String(req.body.stepId) : undefined, () => runStepRoute(req, res)).catch(() => undefined))
+
+async function runStepRoute(req: express.Request, res: express.Response) {
   const cancellation = requestCancellation(res)
   const scopedAi = cancellableAi(aiProvider, cancellation.signal)
   try {
@@ -898,6 +905,7 @@ app.post('/api/ai/run-step', async (req, res) => {
       }
     }
 
+    reportProgress({ phase: 'writing', chars: 0 })
     const result = await runAgentStep(scopedAi, {
       agentId,
       stepTask,
@@ -935,10 +943,11 @@ app.post('/api/ai/run-step', async (req, res) => {
     })
   } catch (err) {
     if (!cancellation.signal.aborted) sendError(res, err)
+    throw err
   } finally {
     cancellation.dispose()
   }
-})
+}
 
 app.get('/api/search/status', (_req, res) => {
   res.json({

@@ -1,3 +1,4 @@
+import { reportProgress } from '../ai/runProgress.js'
 import type { AiProvider, ChatMessage, ChatResult, JsonSchemaSpec } from './aiProvider.js'
 import type { AiProviderState } from '../types.js'
 
@@ -35,7 +36,7 @@ export async function readPlanStream(response: Response, model: string, onComple
   if (!response.body) throw Object.assign(new Error('ChatGPT 응답 스트림이 없습니다.'), { code: 'CHATGPT_STREAM_INCOMPLETE', status: 502 })
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
-  let buffer = ''; let content = ''; let completed: Record<string, any> | undefined
+  let buffer = ''; let content = ''; let completed: Record<string, any> | undefined; let reported = 0
   try {
     while (true) {
       const chunk = await reader.read()
@@ -47,7 +48,10 @@ export async function readPlanStream(response: Response, model: string, onComple
         if (!payload || payload === '[DONE]') continue
         let event: Record<string, any>
         try { event = JSON.parse(payload) } catch { throw Object.assign(new Error('ChatGPT 응답 스트림을 읽을 수 없습니다.'), { code: 'CHATGPT_STREAM_INCOMPLETE', status: 502 }) }
-        if (event.type === 'response.output_text.delta') content += event.delta ?? ''
+        if (event.type === 'response.output_text.delta') {
+          content += event.delta ?? ''
+          if (content.length - reported >= 200) { reported = content.length; reportProgress({ chars: content.length }) }
+        }
         if (event.type === 'response.failed' || event.type === 'error') throw planError(502, event.response?.error?.code ?? event.code)
         if (event.type === 'response.completed') completed = event.response
       }
