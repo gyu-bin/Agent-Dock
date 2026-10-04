@@ -130,6 +130,7 @@ import {
   tryAcquireExecutionLock,
   releaseExecutionLock,
   getExecutionLock,
+  liveTaskIds,
   isLockAlive,
 } from './runtime/executionLock.js'
 import { hardenError } from './runtime/hardenErrors.js'
@@ -482,7 +483,7 @@ app.get('/api/execution/lock', (req, res) => {
     return
   }
   const lock = getExecutionLock(projectId)
-  res.json({ lock, alive: isLockAlive(lock) })
+  res.json({ lock, alive: isLockAlive(lock), liveTaskIds: liveTaskIds(projectId) })
 })
 
 app.delete('/api/execution/lock', (req, res) => {

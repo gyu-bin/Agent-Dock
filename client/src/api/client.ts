@@ -1526,11 +1526,14 @@ export async function acquireExecutionLock(input: {
 
 /** Whether a project's execution lock is held by a live tab (heartbeat within TTL). */
 /** Returns null when the lock state is unknown (request failed) — callers must not treat that as "abandoned". */
-export async function getExecutionLockState(projectId: string): Promise<{ taskId: string | null; alive: boolean } | null> {
+export async function getExecutionLockState(projectId: string): Promise<{ taskId: string | null; alive: boolean; liveTaskIds: string[] } | null> {
   const res = await apiFetch(`${API_BASE}/api/execution/lock?projectId=${encodeURIComponent(projectId)}`)
   if (!res.ok) return null
-  const body = (await res.json().catch(() => ({}))) as { lock?: { taskId?: string } | null; alive?: boolean }
-  return { taskId: body.lock?.taskId ?? null, alive: body.alive === true }
+  const body = (await res.json().catch(() => ({}))) as { lock?: { taskId?: string } | null; alive?: boolean; liveTaskIds?: string[] }
+  const taskId = body.lock?.taskId ?? null
+  // Older servers report one lock per project; treat that task as the only live one.
+  const liveTaskIds = Array.isArray(body.liveTaskIds) ? body.liveTaskIds : body.alive === true && taskId ? [taskId] : []
+  return { taskId, alive: body.alive === true, liveTaskIds }
 }
 
 export async function releaseExecutionLock(input: {
