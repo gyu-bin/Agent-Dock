@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { MarkdownView } from '../components/MarkdownView'
 import { Send, Plus, Paperclip, Image, Folder, Link2, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { userFacingTaskStatus } from '../domain/taskDisplay'
@@ -45,7 +46,10 @@ export function AiChatPanel({
   /** When true, render inside Project Control Center (no outer chrome). */
   embedded?: boolean
 }) {
-  const chat = useDeckStore((s) => s.chat)
+  const allChat = useDeckStore((s) => s.chat)
+  const activeProjectId = useDeckStore((s) => s.activeProjectId)
+  // Each project keeps its own conversation.
+  const chat = useMemo(() => allChat.filter((m) => !m.projectId || m.projectId === activeProjectId), [allChat, activeProjectId])
   const chatTab = useDeckStore((s) => s.chatTab)
   const setChatTab = useDeckStore((s) => s.setChatTab)
   const selectTask = useDeckStore((s) => s.selectTask)
@@ -59,6 +63,7 @@ export function AiChatPanel({
   const [startedProposals, setStartedProposals] = useState<Record<string, string>>({})
   const startingProposals = useRef(new Set<string>())
   const [showDetails, setShowDetails] = useState<Record<string, boolean>>({})
+  const [openResults, setOpenResults] = useState<Record<string, boolean>>({})
   const [menuOpen, setMenuOpen] = useState(false)
   const [attachments, setAttachments] = useState<WorkAttachmentDto[]>([])
   const [stagingId] = useState(
@@ -304,20 +309,26 @@ export function AiChatPanel({
                       ) : null}
                     </div>
                   ) : (
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</p>
+                    msg.role === 'assistant' ? <MarkdownView content={msg.content} compact /> : <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</p>
                   )}
                   {msg.taskResult ? (
                     <div className={styles.resultActions}>
                       <button
                         type="button"
                         className={styles.startWork}
-                        onClick={() => {
-                          selectTask(msg.taskResult!.taskId)
-                          setNav('projects')
-                        }}
+                        aria-expanded={Boolean(openResults[msg.id])}
+                        onClick={() => setOpenResults((o) => ({ ...o, [msg.id]: !o[msg.id] }))}
                       >
-                        {t('task.viewResult')}
+                        {openResults[msg.id] ? '결과 접기' : t('task.viewResult')}
                       </button>
+                      {openResults[msg.id] ? (
+                        <div className={styles.fullResult}>
+                          <MarkdownView content={tasks.find((tk) => tk.id === msg.taskResult!.taskId)?.finalResult ?? msg.taskResult!.summary} compact />
+                          <button type="button" className={styles.secondaryLink} onClick={() => { selectTask(msg.taskResult!.taskId); setNav('tasks') }}>
+                            작업 상세에서 보기
+                          </button>
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         className={styles.secondaryLink}
@@ -532,5 +543,7 @@ function stripPreviewPrefix(label: string): string {
 
 function speakerInitials(name: string): string {
   const parts = name.split(/[\s-]+/).filter(Boolean)
+  // Korean names: first two syllables of the first word (리서치 정리 담당 → 리서).
+  if (/[가-힣]/.test(parts[0] ?? '')) return (parts[0] ?? name).slice(0, 2)
   return (parts.length > 1 ? parts[0][0] + parts[1][0] : name.slice(0, 2)).toUpperCase()
 }

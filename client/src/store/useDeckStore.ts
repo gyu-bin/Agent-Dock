@@ -291,7 +291,7 @@ function createDeckStore() {
       persistSoon,
       say: ({ agentId, text, taskId }: { agentId: string; text: string; taskId: string }) => {
         const name = displayAgentName(agentId, get().registry.find((a) => a.id === agentId)?.name ?? agentId)
-        get().appendChat({ role: 'assistant', content: text, speaker: { agentId, name } })
+        get().appendChat({ role: 'assistant', content: text, speaker: { agentId, name }, projectId: get().tasks.find((t) => t.id === taskId)?.projectId })
         const bubble = text.split('\n')[0]
         set((s) => ({
           agentRuntime: {
@@ -408,21 +408,16 @@ function createDeckStore() {
                   taskId: task.id,
                 })
                 if (arts.length) {
-                  artifactLines =
-                    '\n\n생성된 결과물:\n' +
-                    arts
-                      .slice(0, 8)
-                      .map((a) => `- ${a.title} (v${a.version})`)
-                      .join('\n')
+                  // Same-titled artifacts (step output vs. final report) are listed once.
+                  const titles = [...new Set(arts.map((a) => a.title.replace(/\s+—\s+.*$/, '')))]
+                  artifactLines = `\n\n결과물 ${titles.length}개 저장됨: ${titles.slice(0, 6).join(', ')}`
                 }
               } catch {
                 // ignore
               }
               get().appendChat({
                 role: 'assistant',
-                content: `작업 완료\n\n요약:\n${task.finalResult.slice(0, 400)}${
-                  task.finalResult.length > 400 ? '…' : ''
-                }${artifactLines}`,
+                content: `**작업 완료** · ${task.title}\n\n${resultPreview(task.finalResult)}${artifactLines}`,
                 taskResult: {
                   taskId: task.id,
                   title: task.title,
@@ -437,8 +432,9 @@ function createDeckStore() {
           if (task?.executionMode === 'REAL_AI') {
             get().appendChat({
               role: 'assistant',
+              projectId: task.projectId,
               content:
-                '작업을 이어가지 못했습니다.\n\n다시 시도하거나 작업 상세에서 확인해 주세요.',
+                `"${task.title.length > 30 ? `${task.title.slice(0, 29)}…` : task.title}" 작업을 이어가지 못했습니다.\n\n다시 시도하거나 작업 상세에서 확인해 주세요.`,
             })
           }
         }
@@ -612,7 +608,7 @@ function createDeckStore() {
           }
           for (const t of running) {
             if (t.projectId !== projectId) continue
-            if (!(lock.alive && lock.taskId === t.id)) abandoned.add(t.id)
+            if (!lock.liveTaskIds.includes(t.id)) abandoned.add(t.id)
           }
         }
         if (!abandoned.size) return 0
@@ -669,6 +665,8 @@ function createDeckStore() {
 
       appendChat: (msg) =>
         set((s) => ({
+          // Each project has its own conversation: a task's messages go to its project,
+          // everything else to the project open right now.
           chat: [
             ...s.chat,
             {
@@ -680,6 +678,11 @@ function createDeckStore() {
               workProposal: msg.workProposal,
               taskResult: msg.taskResult,
               speaker: msg.speaker,
+              projectId:
+                msg.projectId ??
+                (msg.taskResult ? s.tasks.find((t) => t.id === msg.taskResult!.taskId)?.projectId : undefined) ??
+                s.activeProjectId ??
+                undefined,
             },
           ],
         })),
@@ -1522,6 +1525,19 @@ export function selectVisibleProjects(state: DeckState): Project[] {
 
 function readSidebarCollapsed(): boolean {
   try { return localStorage.getItem('agentdeck.sidebarCollapsed') === '1' } catch { return false }
+}
+
+/** First part of a result for the chat: whole paragraphs up to ~700 chars. */
+function resultPreview(result: string): string {
+  const blocks = result.split(/\n{2,}/)
+  const out: string[] = []
+  let n = 0
+  for (const b of blocks) {
+    if (n + b.length > 700 && out.length) break
+    out.push(b)
+    n += b.length
+  }
+  return out.join('\n\n') + (out.length < blocks.length ? '\n\n…' : '')
 }
 
 let teamCacheKey = ''

@@ -181,7 +181,7 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: #e2e8f0;
+  background: var(--ad-control-hover);
   display: grid;
   place-items: center;
   font-size: 10px;
@@ -484,3 +484,6 @@
   font-weight: 700;
   color: var(--ad-ink-soft);
 }
+
+.fullResult { margin-top: 8px; padding: 12px; max-height: 60vh; overflow: auto; border-radius: 8px; border: 1px solid var(--ad-border-soft); background: var(--ad-surface); text-align: left; }
+.fullResult > button { margin-top: 10px; }

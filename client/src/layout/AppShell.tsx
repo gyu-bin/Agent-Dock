@@ -62,12 +62,9 @@ export function AppShell() {
   const isHome = activeNav === 'home'
 
   useEffect(() => {
-    // 오피스(홈)는 항상 라이트 — 다크 모드는 다른 페이지에만 적용
-    document.documentElement.setAttribute(
-      'data-theme',
-      isHome ? 'light' : theme,
-    )
-  }, [isHome, theme])
+    // The whole app follows the theme; only the pixel art keeps its own colors.
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     let cancelled = false

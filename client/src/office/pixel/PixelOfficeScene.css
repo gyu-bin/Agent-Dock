@@ -95,3 +95,10 @@
 .pxo-roster li button:hover { background: var(--pxo-line); }
 .pxo-roster li span { color: var(--pxo-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pxo-roster p { margin: 4px 0; color: var(--pxo-muted); }
+
+/* Dark theme: the toolbar/frame follow the app theme; the pixel art itself is unchanged. */
+[data-theme='dark'] .pxo-scene { --pxo-ink: #e8eaef; --pxo-muted: #9aa3b5; --pxo-card: #1a1e28; --pxo-line: #2a3140; background: linear-gradient(160deg, #161a22 0%, #12151c 100%); }
+[data-theme='dark'] .pxo-kicker { color: #d9a462; }
+[data-theme='dark'] .pxo-card { background: var(--pxo-card); box-shadow: 0 0 0 2px #0b0d12, 0 10px 24px #0008; }
+[data-theme='dark'] .pxo-card .pxo-desc { color: var(--pxo-muted); }
+[data-theme='dark'] .pxo-hint { color: #d9b46a; }

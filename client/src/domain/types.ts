@@ -564,6 +564,8 @@ export interface ChatMessage {
   createdAt: string
   /** Agent who said this (team talk); absent = the assistant itself */
   speaker?: { agentId: string; name: string }
+  /** Project conversation this belongs to; absent = shown everywhere (welcome text) */
+  projectId?: string
   suggestedAgents?: Array<{
     agentId: string
     label: string

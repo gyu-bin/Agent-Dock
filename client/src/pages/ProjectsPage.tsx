@@ -272,6 +272,11 @@ export function ProjectsPage() {
     if (!ok) return
     setDeleteBusy(true)
     try {
+      // Stop work still running in this project first so its tab stops writing to it.
+      const store = useDeckStore.getState()
+      for (const t of store.tasks) {
+        if (t.projectId === selected.id && ['running', 'verifying', 'queued', 'awaiting_approval', 'paused'].includes(t.status)) store.cancelTask(t.id)
+      }
       const snap = await deleteProject(selected.id)
       applyProjectsSnapshot(snap)
       setSelectedId(snap.activeProjectId)
@@ -405,6 +410,7 @@ export function ProjectsPage() {
                       : '미연결')}
                   </p>
                 </div>
+                <div className={proj.heroActions}>
                 <button
                   type="button"
                   className={proj.teamBtn}
@@ -417,6 +423,16 @@ export function ProjectsPage() {
                 >
                   <Users size={14} /> 팀 편집
                 </button>
+                <button
+                  type="button"
+                  className={proj.teamBtn}
+                  disabled={deleteBusy}
+                  onClick={() => void removeProject()}
+                  title="프로젝트 삭제"
+                >
+                  <Trash2 size={14} /> 삭제
+                </button>
+                </div>
               </div>
 
               <div className={proj.metrics}>

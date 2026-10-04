@@ -58,7 +58,7 @@ export const STATUS_FILTERS: Array<{
 
 export function formatCost(agg: Pick<UsageAggregation, 'estimatedCost' | 'hasUnknownCost'>): string {
   // Plan usage and unpriced models have no per-call price.
-  if (agg.hasUnknownCost || agg.estimatedCost == null) return '플랜 포함 · 별도 비용 없음'
+  if (agg.hasUnknownCost || agg.estimatedCost == null) return '플랜 포함'
   if (agg.estimatedCost === 0) return '$0'
   return `$${agg.estimatedCost.toFixed(4)}`
 }
@@ -69,7 +69,7 @@ export function formatRecordCost(r: {
   costBasis?: 'plan-included'
 }): string {
   if (r.costBasis === 'plan-included') return 'ChatGPT 플랜 사용량'
-  if (r.costUnknown) return 'Unknown'
+  if (r.costUnknown) return '—'
   if (r.estimatedCost == null) return '—'
   if (r.estimatedCost === 0) return '$0'
   return `$${r.estimatedCost.toFixed(4)}`

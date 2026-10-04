@@ -74,18 +74,37 @@ export function handoffLine(input: {
   const toName = displayName(input.to.agentId, input.registry)
   const summary = gist(input.output)
   const sources = input.sourceCount ? ` (출처 ${input.sourceCount}건 정리해 뒀어요)` : ''
-  return [
+  const v = variant(input.from.id)
+  const opener = [
     `${toName}님, ${input.from.label} 끝났어요${sources}.`,
-    summary ? `핵심: ${summary}` : '',
+    `${toName}님, ${input.from.label} 마무리했어요${sources}.`,
+    `${input.from.label} 정리 끝! ${toName}님께 넘길게요${sources}.`,
+  ][v % 3]
+  const ask = [
     `이어서 "${input.to.label}" 부탁드려요.`,
-  ]
+    `"${input.to.label}"은 ${toName}님이 맡아 주세요.`,
+    `이걸 바탕으로 "${input.to.label}" 진행해 주시면 돼요.`,
+  ][(v >> 2) % 3]
+  return [opener, summary ? `핵심: ${summary}` : '', ask]
     .filter(Boolean)
     .join('\n')
 }
 
 /** Next agent acknowledges. */
 export function ackLine(step: PipelineStep): string {
-  return `넵, 받았어요. ${step.label} 시작할게요.`
+  return [
+    `넵, 받았어요. ${step.label} 시작할게요.`,
+    `확인했어요! ${step.label} 바로 들어갈게요.`,
+    `좋아요, 넘겨주신 내용 보고 ${step.label} 할게요.`,
+    `알겠습니다. ${step.label}, 제가 이어서 할게요.`,
+  ][variant(step.id) % 4]!
+}
+
+/** Stable per-step variety (same step → same wording, different steps differ). */
+function variant(key: string): number {
+  let h = 0
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0
+  return h
 }
 
 export function approvalLine(step: PipelineStep): string {

@@ -1,24 +1,24 @@
-.panel { flex: none; padding: 12px 16px 14px; border-top: 1px solid #dfe5ed; background: #f8fafc; color: #263751; }
-.panel header { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 11px; color: #72819a; }
-.panel header > div { display:flex;align-items:center;gap:7px;color:#3f69c2; }
-.panel h2 { font-size:13px;color:#263751;margin:0;font-weight:750; }
-.live { font-size:8px;letter-spacing:.1em;padding:3px 5px;background:#e4f5ec;color:#24875d;border-radius:4px;font-weight:800; }
+.panel { flex: none; padding: 12px 16px 14px; border-top: 1px solid var(--ad-border-soft); background: var(--ad-surface); color: var(--ad-ink); }
+.panel header { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 11px; color: var(--ad-ink-faint); }
+.panel header > div { display:flex;align-items:center;gap:7px;color:var(--ad-primary); }
+.panel h2 { font-size:13px;color:var(--ad-ink);margin:0;font-weight:750; }
+.live { font-size:8px;letter-spacing:.1em;padding:3px 5px;background:color-mix(in srgb, #24875d 18%, transparent);color:#2fa36e;border-radius:4px;font-weight:800; }
 .cards { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:210px;overflow:auto; }
-.card { text-align:left;min-width:0;background:#fff;border:1px solid #e0e7f0;border-radius:10px;padding:10px 12px;color:inherit; }
-.card:hover { border-color:#7199e0;box-shadow:0 3px 10px #2446760d; }
-.cardTop { display:flex;justify-content:space-between;gap:8px;color:#4973bb;font-size:10px;margin-bottom:6px; }
+.card { text-align:left;min-width:0;background:var(--ad-surface-raised);border:1px solid var(--ad-border-soft);border-radius:10px;padding:10px 12px;color:inherit; }
+.card:hover { border-color:var(--ad-primary);box-shadow:0 3px 10px #2446760d; }
+.cardTop { display:flex;justify-content:space-between;gap:8px;color:var(--ad-primary);font-size:10px;margin-bottom:6px; }
 .cardTop span { display:flex;align-items:center;gap:5px; }
 .card strong { display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px; }
-.card p { font-size:11px;margin:5px 0;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-.detail { display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#8a97a9;gap:4px; }
+.card p { font-size:11px;margin:5px 0;color:var(--ad-ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.detail { display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--ad-ink-faint);gap:4px; }
 .detail span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-.track { height:3px;background:#edf1f7;border-radius:3px;margin-top:8px;overflow:hidden; }
-.track i { display:block;height:100%;background:#5785dc;border-radius:3px;transition:width .3s; }
-.empty { font-size:12px;line-height:1.6;color:#7e8da3;padding:8px 0; }
+.track { height:3px;background:var(--ad-border-soft);border-radius:3px;margin-top:8px;overflow:hidden; }
+.track i { display:block;height:100%;background:var(--ad-primary);border-radius:3px;transition:width .3s; }
+.empty { font-size:12px;line-height:1.6;color:var(--ad-ink-faint);padding:8px 0; }
 @media (max-width:720px) { .cards { grid-template-columns:1fr;max-height:155px; } .panel header > span { display:none; } }
 
 .taskLink { display:block;width:100%;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer; }
 .taskLink:focus-visible, .stop:focus-visible { outline:2px solid #5785dc;outline-offset:3px; }
-.stop { display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 8px;border:1px solid #edc8c8;border-radius:6px;background:#fff7f7;color:#b04b4b;font-size:11px;cursor:pointer; }
-.stop:hover { background:#fde9e9; }
-.tokens { float: right; margin-left: 6px; color: #8a97a9; font-variant-numeric: tabular-nums; }
+.stop { display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 8px;border:1px solid color-mix(in srgb, var(--ad-danger) 35%, transparent);border-radius:6px;background:transparent;color:var(--ad-danger);font-size:11px;cursor:pointer; }
+.stop:hover { background:color-mix(in srgb, var(--ad-danger) 10%, transparent); }
+.tokens { float: right; margin-left: 6px; color: var(--ad-ink-faint); font-variant-numeric: tabular-nums; }

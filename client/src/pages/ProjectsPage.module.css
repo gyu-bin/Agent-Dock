@@ -417,3 +417,4 @@
 .pathForm input { flex: 1 1 220px; min-width: 0; padding: 5px 8px; border: 1px solid var(--ad-border-soft, #e5e7eb); border-radius: 6px; font-size: 12px; }
 .pathForm button { padding: 4px 10px; border: 1px solid var(--ad-border-soft, #e5e7eb); border-radius: 6px; background: var(--ad-surface, #fff); font-size: 12px; cursor: pointer; }
 .pathError { width: 100%; color: #c2410c; font-size: 12px; }
+.heroActions { display: flex; gap: 8px; flex-shrink: 0; align-items: flex-start; }

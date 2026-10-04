@@ -74,3 +74,16 @@
   background: var(--ad-control-hover);
   font-weight: var(--ad-weight-semibold);
 }
+
+.h1 { font-size: 1.35em; }
+.p { white-space: pre-line; }
+.hr { border: 0; border-top: 1px solid var(--ad-border-soft); margin: 1em 0; }
+.inlineCode { padding: 1px 5px; border-radius: 4px; background: var(--ad-control-hover); font-family: var(--ad-font-mono); font-size: 0.88em; }
+.root a { color: var(--ad-primary); }
+.root ol.ul { padding-left: 1.5em; }
+/* Compact: inside chat bubbles */
+.compact { font-size: 12.5px; line-height: 1.6; max-width: none; }
+.compact .h { margin: 0.9em 0 0.35em; font-size: 1.05em; }
+.compact .h1 { font-size: 1.12em; }
+.compact .p, .compact .ul { margin-bottom: 0.6em; }
+.compact > :last-child { margin-bottom: 0; }
