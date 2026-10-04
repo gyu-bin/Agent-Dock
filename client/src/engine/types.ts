@@ -53,5 +53,7 @@ export function taskProgress(taskId: string, steps: PipelineStep[]): number {
   const mine = steps.filter((s) => s.taskId === taskId)
   if (mine.length === 0) return 0
   const done = mine.filter((s) => s.status === 'completed').length
-  return Math.round((done / mine.length) * 100)
+  // Steps done ≠ task done: the final synthesis still runs after the last step.
+  // Completion itself writes 100.
+  return Math.min(97, Math.round((done / mine.length) * 100))
 }

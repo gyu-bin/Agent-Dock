@@ -1,3 +1,4 @@
+import { liveTaskPercent, useStepProgress } from '../domain/liveProgress'
 import { useEffect, useMemo, useState } from 'react'
 import { ListTodo, Search, ArrowUpRight } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
@@ -142,7 +143,7 @@ export function TasksPage() {
                     label={statusFor(task)}
                   />
                   <strong>{task.title}</strong>
-                  <div className={md.progressRow}><span className={md.progress}><span style={{ width: `${Math.max(0, Math.min(100, task.progress))}%` }} /></span><span>{task.progress}%</span></div>
+                  <LiveProgressRow task={task} className={md.progressRow} barClass={md.progress} />
                   <span className={md.meta}>
                     {userFacingWorkflowLabel(task)} ·{' '}
                     {new Date(task.updatedAt).toLocaleString('ko-KR', {
@@ -171,4 +172,13 @@ export function TasksPage() {
       </div>
     </div>
   )
+}
+
+/** Same live percent as the task detail (running step's own progress included). */
+function LiveProgressRow({ task, className, barClass }: { task: Task; className: string; barClass: string }) {
+  const steps = useDeckStore(useShallow((st) => st.pipelineSteps.filter((p) => p.taskId === task.id)))
+  const running = steps.find((p) => p.status === 'running')
+  const live = useStepProgress(running?.id, Boolean(running))
+  const pct = steps.length ? liveTaskPercent(steps, running, live, task.status) : task.progress
+  return <div className={className}><span className={barClass}><span style={{ width: `${pct}%` }} /></span><span>{pct}%</span></div>
 }

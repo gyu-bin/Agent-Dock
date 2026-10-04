@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { activityLine, isFinalizing, liveTaskPercent, taskTokens, useStepProgress } from '../domain/liveProgress'
 import {
   X,
   Play,
@@ -128,6 +129,10 @@ export function TaskDetailPanel({
     failedCodexRun?.technicalSummary || failedCodexRun?.userMessageKo ||
     failedCodexRun?.error ||
     task?.webSearchFailure?.message
+  const liveProgress = useStepProgress(currentStep?.id, currentStep?.status === 'running')
+  const livePercent = task && steps.length ? liveTaskPercent(steps, currentStep, liveProgress, task.status) : (task?.progress ?? 0)
+  const tokensUsed = useDeckStore((s) => (task ? taskTokens(s.agentRuns, task.id) : 0))
+  const activity = task && isFinalizing(steps, task.status) ? '최종 결과를 정리하는 중' : activityLine(liveProgress)
 
   useEffect(() => {
     if (!task) {
@@ -221,7 +226,7 @@ export function TaskDetailPanel({
             <p className={styles.workflow}>{userFacingWorkflowLabel(task)}</p>
             <h2>{task.title}</h2>
             <p className={styles.meta}>
-              {statusLabel} · {task.progress}%
+              {statusLabel} · {livePercent}%
             </p>
           </div>
           {!embedded ? (
@@ -232,9 +237,9 @@ export function TaskDetailPanel({
         </header>
 
         <div className={styles.progressOverview}>
-          <div><span>전체 진행률</span><strong>{task.progress}<small>%</small></strong></div>
-          <div className={styles.progressTrack} role="progressbar" aria-label="작업 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={task.progress}><span style={{ width: `${Math.max(0, Math.min(100, task.progress))}%` }} /></div>
-          <p>{steps.filter((step) => step.status === 'completed').length} / {steps.length} 단계 완료 <span>· {currentStep ? `${worker} · ${currentStep.label}` : statusLabel}</span></p>
+          <div><span>전체 진행률</span><strong>{livePercent}<small>%</small></strong></div>
+          <div className={styles.progressTrack} role="progressbar" aria-label="작업 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={livePercent}><span style={{ width: `${Math.max(0, Math.min(100, livePercent))}%` }} /></div>
+          <p>{steps.filter((step) => step.status === 'completed').length} / {steps.length} 단계 완료 <span>· {currentStep ? `${worker} · ${currentStep.label}` : statusLabel}</span>{tokensUsed ? <span> · 토큰 {tokensUsed.toLocaleString()}</span> : null}</p>
         </div>
 
         {/* ── Basic surface ── */}
@@ -243,6 +248,7 @@ export function TaskDetailPanel({
             <li>
               <strong>지금</strong> {statusLabel}
               {currentStep ? ` — ${currentStep.label}` : ''}
+              {activity ? <span className={styles.activity}>{activity}</span> : null}
             </li>
             <li>
               <strong>요청</strong>{' '}
@@ -286,7 +292,7 @@ export function TaskDetailPanel({
               <strong>작업자</strong> {worker}
             </li>
             <li>
-              <strong>진행</strong> {task.progress}%
+              <strong>진행</strong> {livePercent}%
             </li>
             <li>
               <strong>승인</strong>{' '}
@@ -699,7 +705,7 @@ export function TaskDetailPanel({
                 <h3>{t('task.executionSummary')}</h3>
                 <ul className={styles.fileList}>
                   <li>AI 호출: {usageAgg.openaiCalls + usageAgg.mockCalls}</li>
-                  <li>Tokens: {formatTokens(usageAgg.totalTokens)}</li>
+                  <li>토큰: {formatTokens(usageAgg.totalTokens)}</li>
                   <li>예상 비용: {formatCost(usageAgg)}</li>
                   <li>코드 실행: {usageAgg.codexRuns}</li>
                   <li>웹 검색: {usageAgg.webSearches}</li>
@@ -756,38 +762,36 @@ export function TaskDetailPanel({
               <section className={styles.pipeline}>
                 <h3>
                   {t('task.openaiRuns')} {runs.length}
-                  {tokenTotal > 0 ? ` · 토큰 ${tokenTotal}` : ''}
+                  {tokenTotal > 0 ? ` · 토큰 ${tokenTotal.toLocaleString()}` : ''}
                 </h3>
-                <ol>
-                  {runs.map((run) => (
-                    <li key={run.id} data-status={run.status}>
-                      <div>
-                        <strong>{agentName(run.agentId)}</strong>
-                        <em>{run.inputSummary}</em>
-                        <small>
-                          {run.status}
-                          {run.error ? ` — ${run.error}` : ''}
-                        </small>
+                <ol className={styles.runCards}>
+                  {runs.map((run) => {
+                    const step = steps.find((st) => st.id === run.stepId)
+                    const tokens = (run.inputTokens ?? 0) + (run.outputTokens ?? 0)
+                    return (
+                      <li key={run.id} data-status={run.status}>
+                        <header>
+                          <strong>{agentName(run.agentId)}</strong>
+                          <span className={styles.runStatus} data-status={run.status}>{RUN_STATUS_KO[run.status] ?? run.status}</span>
+                        </header>
+                        <p className={styles.runMeta}>
+                          {step?.label ?? '단계'}
+                          {tokens ? ` · 토큰 ${tokens.toLocaleString()}` : ''}
+                          {run.completedAt && run.startedAt ? ` · ${formatDuration(Date.parse(run.completedAt) - Date.parse(run.startedAt))}` : ''}
+                        </p>
+                        {run.error ? <p className={styles.runError}>{run.error}</p> : null}
                         {run.output ? (
-                          <button
-                            type="button"
-                            className={styles.speed}
-                            style={{ marginTop: 6 }}
-                            onClick={() =>
-                              setExpandedRun(expandedRun === run.id ? null : run.id)
-                            }
-                          >
-                            {expandedRun === run.id
-                              ? t('task.hideResult')
-                              : t('task.viewResult')}
-                          </button>
+                          <>
+                            {expandedRun !== run.id ? <p className={styles.runPreview}>{run.output.replace(/[#*`>]/g, '').replace(/\s+/g, ' ').slice(0, 160)}</p> : null}
+                            <button type="button" className={styles.speed} onClick={() => setExpandedRun(expandedRun === run.id ? null : run.id)}>
+                              {expandedRun === run.id ? t('task.hideResult') : t('task.viewResult')}
+                            </button>
+                          </>
                         ) : null}
-                        {expandedRun === run.id && run.output ? (
-                          <pre className={styles.resultPre}>{run.output}</pre>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
+                        {expandedRun === run.id && run.output ? <pre className={styles.resultPre}>{run.output}</pre> : null}
+                      </li>
+                    )
+                  })}
                 </ol>
               </section>
             ) : null}
@@ -797,7 +801,7 @@ export function TaskDetailPanel({
                 <h3>
                   {t('task.codexRuns')} {codexRuns.length}
                 </h3>
-                <ol>
+                <ol className={styles.runCards}>
                   {codexRuns.map((run) => (
                     <li key={run.id} data-status={run.status}>
                       <div>
@@ -911,4 +915,12 @@ export function TaskDetailPanel({
       {panel}
     </div>
   )
+}
+
+const RUN_STATUS_KO: Record<string, string> = { running: '진행 중', completed: '완료', failed: '실패', cancelled: '취소', queued: '대기' }
+
+function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return ''
+  const sec = Math.round(ms / 1000)
+  return sec < 60 ? `${sec}초` : `${Math.floor(sec / 60)}분 ${sec % 60}초`
 }

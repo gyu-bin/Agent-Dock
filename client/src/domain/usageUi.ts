@@ -57,7 +57,8 @@ export const STATUS_FILTERS: Array<{
 ]
 
 export function formatCost(agg: Pick<UsageAggregation, 'estimatedCost' | 'hasUnknownCost'>): string {
-  if (agg.hasUnknownCost || agg.estimatedCost == null) return 'Unknown'
+  // Plan usage and unpriced models have no per-call price.
+  if (agg.hasUnknownCost || agg.estimatedCost == null) return '플랜 포함 · 별도 비용 없음'
   if (agg.estimatedCost === 0) return '$0'
   return `$${agg.estimatedCost.toFixed(4)}`
 }

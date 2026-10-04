@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { displayAgentName } from '../i18n/agentNames'
 import { SEED_AI_PROVIDER, SEED_CHAT, SEED_USER } from '../data/seed'
 import { MOCK_REGISTRY, MOCK_REGISTRY_COUNT } from '../data/mockRegistry'
 import { isFixtureProjectName } from '../domain/demoData'
@@ -118,6 +119,11 @@ interface DeckState {
   workRequestOpen: boolean
 
   setNav: (nav: NavId) => void
+  /** Pages visited before the current one (for the back button). */
+  navHistory: NavId[]
+  goBack: () => void
+  sidebarCollapsed: boolean
+  toggleSidebar: () => void
   setChatTab: (tab: 'chat' | 'history') => void
   setTheme: (theme: ThemeMode) => void
   toggleTheme: () => void
@@ -284,7 +290,7 @@ function createDeckStore() {
         })),
       persistSoon,
       say: ({ agentId, text, taskId }: { agentId: string; text: string; taskId: string }) => {
-        const name = get().registry.find((a) => a.id === agentId)?.name ?? agentId
+        const name = displayAgentName(agentId, get().registry.find((a) => a.id === agentId)?.name ?? agentId)
         get().appendChat({ role: 'assistant', content: text, speaker: { agentId, name } })
         const bubble = text.split('\n')[0]
         set((s) => ({
@@ -472,7 +478,21 @@ function createDeckStore() {
       manageTeamOpen: false,
       workRequestOpen: false,
 
-      setNav: (nav) => set({ activeNav: nav }),
+      setNav: (nav) =>
+        set((s) => (nav === s.activeNav ? {} : { activeNav: nav, navHistory: [...s.navHistory, s.activeNav].slice(-30) })),
+      navHistory: [],
+      goBack: () =>
+        set((s) => {
+          const prev = s.navHistory.at(-1)
+          return prev ? { activeNav: prev, navHistory: s.navHistory.slice(0, -1) } : {}
+        }),
+      sidebarCollapsed: readSidebarCollapsed(),
+      toggleSidebar: () =>
+        set((s) => {
+          const next = !s.sidebarCollapsed
+          try { localStorage.setItem('agentdeck.sidebarCollapsed', next ? '1' : '0') } catch { /* per-viewer convenience only */ }
+          return { sidebarCollapsed: next }
+        }),
       setChatTab: (tab) => set({ chatTab: tab }),
       setTheme: (theme) => {
         try {
@@ -1498,6 +1518,10 @@ export function selectVisibleProjects(state: DeckState): Project[] {
   const next = state.projects.filter((p) => !isFixtureProjectName(p.name))
   visibleProjectsCache = next.length === 0 ? EMPTY_PROJECTS : next
   return visibleProjectsCache
+}
+
+function readSidebarCollapsed(): boolean {
+  try { return localStorage.getItem('agentdeck.sidebarCollapsed') === '1' } catch { return false }
 }
 
 let teamCacheKey = ''

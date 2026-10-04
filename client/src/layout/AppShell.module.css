@@ -73,3 +73,7 @@
     grid-template-columns: 72px 1fr;
   }
 }
+
+.resizer { cursor: col-resize; background: transparent; position: relative; touch-action: none; }
+.resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px; background: var(--ad-border-soft, #e5e7eb); transition: background .15s; }
+.resizer:hover::after { background: var(--ad-primary, #5785dc); }

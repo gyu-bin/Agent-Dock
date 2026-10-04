@@ -1734,3 +1734,21 @@ export async function projectWorkspaceAction(id: string, action: 'provision' | '
   if (!res.ok) throw executionApiError(data, '작업 환경 요청을 완료하지 못했습니다.')
   return data.workspace ?? null
 }
+
+export interface StepProgress {
+  stepId: string
+  phase: 'preparing' | 'planning-search' | 'searching' | 'writing' | 'done' | 'failed'
+  searchDone?: number
+  searchTotal?: number
+  query?: string
+  chars?: number
+  startedAt: string
+  updatedAt: string
+}
+
+/** Live progress of a running step (server memory; null when unknown). */
+export async function getStepProgress(stepId: string): Promise<StepProgress | null> {
+  const res = await apiFetch(`${API_BASE}/api/ai/step-progress/${encodeURIComponent(stepId)}`)
+  if (!res.ok) return null
+  return ((await res.json()) as { progress: StepProgress | null }).progress
+}

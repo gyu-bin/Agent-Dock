@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   useDeckStore,
   selectActiveProject,
@@ -29,8 +29,33 @@ export function AppShell() {
   const project = useDeckStore(selectActiveProject)
   const hydrated = useDeckStore((s) => s.hydrated)
   const theme = useDeckStore((s) => s.theme)
+  const sidebarCollapsed = useDeckStore((s) => s.sidebarCollapsed)
 
   const authStatus = useAuthStore((s) => s.status)
+  const [chatWidth, setChatWidth] = useState(readChatWidth)
+  const drag = useRef<{ x: number; w: number } | null>(null)
+  function saveChatWidth(w: number) {
+    const next = clampChatWidth(w)
+    setChatWidth(next)
+    try { localStorage.setItem(CHAT_W_KEY, String(next)) } catch { /* per-viewer convenience only */ }
+  }
+  function startResize(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault()
+    drag.current = { x: e.clientX, w: chatWidth }
+    document.body.style.userSelect = 'none'
+    const move = (ev: PointerEvent) => { if (drag.current) setChatWidth(clampChatWidth(drag.current.w + (drag.current.x - ev.clientX))) }
+    const up = (ev: PointerEvent) => {
+      if (drag.current) saveChatWidth(drag.current.w + (drag.current.x - ev.clientX))
+      drag.current = null
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.body.style.cursor = 'col-resize'
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('settings') === 'sns') useDeckStore.getState().setNav('settings')
   }, [])
@@ -95,12 +120,12 @@ export function AppShell() {
   }
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} style={sidebarCollapsed ? { gridTemplateColumns: '64px minmax(0, 1fr)' } : undefined}>
       <Sidebar />
       <div className={styles.main}>
         <TopBar />
         {isHome ? (
-          <div className={styles.workspace}>
+          <div className={styles.workspace} style={{ gridTemplateColumns: `minmax(0, 1fr) 6px ${chatWidth}px` }}>
             <section className={styles.officePane} aria-label="2D Office">
               <div className={styles.officeScene}>
               {!hydrated ? (
@@ -115,6 +140,15 @@ export function AppShell() {
               </div>
               <HomeWorkStatus />
             </section>
+            <div
+              className={styles.resizer}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="채팅 영역 너비 조절"
+              title="끌어서 채팅 영역 너비 조절 · 두 번 클릭하면 기본값"
+              onPointerDown={startResize}
+              onDoubleClick={() => saveChatWidth(DEFAULT_CHAT_W)}
+            />
             <AiChatPanel />
           </div>
         ) : (
@@ -135,4 +169,19 @@ export function AppShell() {
       <WorkRequestModal />
     </div>
   )
+}
+
+const CHAT_W_KEY = 'agentdeck.chatWidth'
+const DEFAULT_CHAT_W = 380
+function clampChatWidth(w: number): number {
+  const max = Math.max(360, Math.min(900, window.innerWidth - 520))
+  return Math.round(Math.min(max, Math.max(300, w)))
+}
+function readChatWidth(): number {
+  try {
+    const v = Number(localStorage.getItem(CHAT_W_KEY))
+    return v ? clampChatWidth(v) : DEFAULT_CHAT_W
+  } catch {
+    return DEFAULT_CHAT_W
+  }
 }

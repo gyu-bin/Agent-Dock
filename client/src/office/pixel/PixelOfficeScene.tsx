@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { displayAgentName } from '../../i18n/agentNames'
 import { useShallow } from 'zustand/react/shallow'
 import { selectActiveProject, selectTeamAgents, useDeckStore } from '../../store/useDeckStore'
 import type { Agent } from '../../domain/types'
@@ -101,7 +102,6 @@ function targetFor(agent: Agent, assignmentKey: string | undefined, overflowInde
 
 /** Integer device-pixel scaling keeps every art pixel the same size. */
 type ViewMode = 'fill' | 'fit'
-const VIEW_KEY = 'agent-deck-office-view'
 
 /**
  * fill = cover the pane (pan to see the rest), fit = whole office visible.
@@ -134,12 +134,12 @@ function snapPx(v: number): number {
   return Math.round(v * dpr) / dpr
 }
 
-function readViewMode(): ViewMode {
-  try {
-    return localStorage.getItem(VIEW_KEY) === 'fit' ? 'fit' : 'fill'
-  } catch {
-    return 'fill'
-  }
+type ChipKind = 'working' | 'meeting' | 'verifying' | 'idle' | 'blocked'
+const CHIP_LABEL: Record<ChipKind, string> = { working: '작업 중', meeting: '회의 중', verifying: '검증 중', idle: '쉬는 중', blocked: '막힘' }
+function inChip(kind: ChipKind, status: Agent['status']): boolean {
+  if (kind === 'meeting') return status === 'reviewing'
+  if (kind === 'idle') return status === 'idle' || status === 'waiting'
+  return status === kind
 }
 
 type Bubble = (typeof bubbleManifest.names)[number]
@@ -200,10 +200,10 @@ function AgentCard({
   else if (busy) doing = '작업 단계 정보를 아직 받지 못했어요.'
   else doing = '맡은 작업 없이 대기 중이에요.'
   return (
-    <aside className="pxo-card" aria-label={`${a.name} 정보`} onPointerDown={(e) => e.stopPropagation()}>
+    <aside className="pxo-card" aria-label={`${displayAgentName(a.id, a.name)} 정보`} onPointerDown={(e) => e.stopPropagation()}>
       <header>
         <div>
-          <b>{a.name}</b>
+          <b>{displayAgentName(a.id, a.name)}</b>
           <span>{role}</span>
         </div>
         <button type="button" className="pxo-card-close" onClick={onClose} aria-label="닫기">×</button>
@@ -315,22 +315,16 @@ function OfficeScene({ preview, layoutId }: { preview: boolean; layoutId: Office
   const [hovered, setHovered] = useState<string | null>(null)
   const viewport = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
-  const [mode, setMode] = useState<ViewMode>(readViewMode)
+  // Whole office always visible ('fill' cropped the map; removed on request).
+  const mode: ViewMode = 'fit'
+  const [chip, setChip] = useState<ChipKind | null>(null)
+  const tasks = useDeckStore((s) => s.tasks)
   const scale = viewScale(mode, box.w, box.h)
   // pan offset in screen px; null = not yet centred for this scale
   const [pan, setPan] = useState<Pt | null>(null)
   const drag = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean } | null>(null)
   const justDragged = useRef(false)
   const offset = clampOffset(pan ?? { x: box.w / 2 - (MAP_W / 2) * scale, y: box.h / 2 - (MAP_H / 2) * scale }, scale, box.w, box.h)
-  const changeMode = (next: ViewMode) => {
-    setMode(next)
-    setPan(null)
-    try {
-      localStorage.setItem(VIEW_KEY, next)
-    } catch {
-      /* per-viewer convenience only */
-    }
-  }
 
   // sync roster → runners (place on first sight, walk on change)
   useEffect(() => {
@@ -461,17 +455,33 @@ function OfficeScene({ preview, layoutId }: { preview: boolean; layoutId: Office
               <button type="button" onClick={openWizard}>새 프로젝트로 내 팀 꾸리기</button>
             </li>
           ) : null}
-          <li className="pxo-view" role="group" aria-label="보기 방식">
-            <button type="button" aria-pressed={mode === 'fill'} onClick={() => changeMode('fill')}>꽉 채우기</button>
-            <button type="button" aria-pressed={mode === 'fit'} onClick={() => changeMode('fit')}>전체 보기</button>
-          </li>
           <li><b>{agents.length}</b>명 출근</li>
-          <li className="is-working"><i />작업 {counts.working}</li>
-          <li className="is-meeting"><i />회의 {counts.meeting}</li>
-          <li className="is-verify"><i />검증 {counts.verifying}</li>
-          <li className="is-idle"><i />대기 {counts.idle}</li>
-          {counts.blocked ? <li className="is-blocked"><i />막힘 {counts.blocked}</li> : null}
+          {([['working', 'is-working', '작업', counts.working], ['meeting', 'is-meeting', '회의', counts.meeting], ['verifying', 'is-verify', '검증', counts.verifying], ['idle', 'is-idle', '휴식', counts.idle], ...(counts.blocked ? [['blocked', 'is-blocked', '막힘', counts.blocked]] : [])] as Array<[ChipKind, string, string, number]>).map(([kind, cls, label, n]) => (
+            <li key={kind} className={`${cls} pxo-chip`}>
+              <button type="button" aria-expanded={chip === kind} onClick={() => setChip((c) => (c === kind ? null : kind))}><i />{label} {n}</button>
+            </li>
+          ))}
         </ul>
+        {chip ? (
+          <div className="pxo-roster" role="dialog" aria-label={`${CHIP_LABEL[chip]} 직원`}>
+            <header><b>{CHIP_LABEL[chip]}</b><button type="button" onClick={() => setChip(null)} aria-label="닫기">×</button></header>
+            {agents.filter((a) => inChip(chip, a.status)).length ? (
+              <ul>
+                {agents.filter((a) => inChip(chip, a.status)).map((a) => {
+                  const task = a.currentTaskId ? tasks.find((t) => t.id === a.currentTaskId) : undefined
+                  return (
+                    <li key={a.id}>
+                      <button type="button" onClick={() => { setPinned(a.id); setChip(null) }}>
+                        <strong>{displayAgentName(a.id, a.name)}</strong>
+                        <span>{a.currentTaskLabel ? `${a.currentTaskLabel}${task ? ` · ${task.title}` : ''}` : chip === 'idle' ? '휴게실·가든에서 쉬는 중' : a.speech ?? '—'}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : <p>지금은 없어요.</p>}
+          </div>
+        ) : null}
       </header>
 
       <div
@@ -505,10 +515,6 @@ function OfficeScene({ preview, layoutId }: { preview: boolean; layoutId: Office
           // a drag that just ended should not click the character underneath
           if (justDragged.current) e.stopPropagation()
         }}
-        onWheel={(e) => {
-          if (mode !== 'fill') return
-          setPan({ x: offset.x - e.deltaX, y: offset.y - e.deltaY })
-        }}
       >
         <div className="pxo-frame" style={{ width: MAP_W * scale, height: MAP_H * scale, transform: `translate(${snapPx(offset.x)}px, ${snapPx(offset.y)}px)` }}>
           <div className="pxo-map" style={{ width: MAP_W, height: MAP_H, transform: `scale(${scale})` }}>
@@ -528,7 +534,7 @@ function OfficeScene({ preview, layoutId }: { preview: boolean; layoutId: Office
                   type="button"
                   className={`pxo-char${focusId === r.agent.id ? ' is-focus' : ''}`}
                   style={{ left, top, width: FW, height: FH, zIndex: Math.round(r.pos.y) + 1 }}
-                  aria-label={`${r.agent.name} · ${STATUS_KO[r.agent.status]}`}
+                  aria-label={`${displayAgentName(r.agent.id, r.agent.name)} · ${STATUS_KO[r.agent.status]}`}
                   onClick={() => {
                     setPinned((p) => (p === r.agent.id ? null : r.agent.id))
                     if (!preview) selectAgent(r.agent.id)
@@ -568,7 +574,7 @@ function OfficeScene({ preview, layoutId }: { preview: boolean; layoutId: Office
                 className="pxo-nametag"
                 style={{ left: focus.pos.x * scale, top: (focus.pos.y - FH - 3) * scale }}
               >
-                <b>{focus.agent.name}</b>
+                <b>{displayAgentName(focus.agent.id, focus.agent.name)}</b>
                 <em>{preview ? `${STATUS_KO[focus.agent.status]} · 미리보기` : focus.agent.currentTaskLabel || focus.agent.speech || STATUS_KO[focus.agent.status]}</em>
               </span>
             ) : null}

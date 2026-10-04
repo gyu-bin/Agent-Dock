@@ -213,3 +213,18 @@
     padding: 0;
   }
 }
+
+/* Collapsed: icon rail */
+.collapsed { width: 64px; overflow: hidden; }
+.collapsed .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+.collapsed .nav, .collapsed .footer { padding-left: 8px; padding-right: 8px; }
+.collapsed .brand > div:not(.logoMark),
+.collapsed .navItem span,
+.collapsed .navItemActive span,
+.collapsed .footer > button:not(:first-child),
+.collapsed .profile > div:not(.avatar) { display: none; }
+.collapsed .navItem,
+.collapsed .navItemActive { justify-content: center; }
+.collapsed .badge { position: absolute; top: 2px; right: 6px; }
+.collapsed .navItem, .collapsed .navItemActive { position: relative; }
+.collapsed .profile { justify-content: center; }

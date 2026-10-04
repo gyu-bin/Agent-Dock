@@ -34,6 +34,7 @@ export function Sidebar() {
   const executionMode = useDeckStore((s) => s.executionMode)
   const developerAllowMock = useDeckStore((s) => s.developerAllowMock)
   const user = useDeckStore((s) => s.user)
+  const collapsed = useDeckStore((s) => s.sidebarCollapsed)
 
   const providerLabel =
     executionMode === 'MOCK' && developerAllowMock
@@ -43,7 +44,7 @@ export function Sidebar() {
         : 'AI 설정 필요'
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar}${collapsed ? ` ${styles.collapsed}` : ''}`}>
       <div className={styles.brand}>
         <div className={styles.logoMark} aria-hidden>
           <span />
@@ -71,6 +72,7 @@ export function Sidebar() {
                   : styles.navItem
               }
               onClick={() => setNav(item.id)}
+              title={t(item.labelKey)}
             >
               <Icon size={16} strokeWidth={2} />
               <span>{t(item.labelKey)}</span>
@@ -89,6 +91,7 @@ export function Sidebar() {
             activeNav === 'settings' ? styles.navItemActive : styles.navItem
           }
           onClick={() => setNav('settings')}
+          title={t('nav.settings')}
         >
           <Settings size={16} strokeWidth={2} />
           <span>{t('nav.settings')}</span>

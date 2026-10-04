@@ -21,3 +21,4 @@
 .taskLink:focus-visible, .stop:focus-visible { outline:2px solid #5785dc;outline-offset:3px; }
 .stop { display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 8px;border:1px solid #edc8c8;border-radius:6px;background:#fff7f7;color:#b04b4b;font-size:11px;cursor:pointer; }
 .stop:hover { background:#fde9e9; }
+.tokens { float: right; margin-left: 6px; color: #8a97a9; font-variant-numeric: tabular-nums; }

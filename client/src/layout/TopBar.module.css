@@ -196,3 +196,4 @@
     display: none;
   }
 }
+.iconBtn:disabled { opacity: .35; cursor: default; }

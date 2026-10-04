@@ -3,6 +3,7 @@
  * Lines are built from the real plan and the real step output; no extra LLM call.
  */
 import type { Agent, PipelineStep, Project } from './types'
+import { displayAgentName } from '../i18n/agentNames'
 
 const PM_PREFERENCE = [
   'senior-project-manager',
@@ -28,7 +29,7 @@ export function pickManager(project: Project | undefined, registry: Agent[]): Ag
 }
 
 export function displayName(agentId: string, registry: Agent[]): string {
-  return registry.find((a) => a.id === agentId)?.name ?? agentId
+  return displayAgentName(agentId, registry.find((a) => a.id === agentId)?.name ?? agentId)
 }
 
 /** PM kickoff: who does what, in which order. */

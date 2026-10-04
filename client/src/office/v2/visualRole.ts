@@ -56,12 +56,15 @@ const HINT_RULES: HintRule[] = [
   },
   {
     role: 'qa',
-    patterns: [/qa\b/, /test(er|ing)?/, /검증/, /quality/],
+    patterns: [/qa\b/, /test(er|ing)?/, /검증/, /quality/, /secur/, /audit/],
   },
   {
     role: 'game-developer',
     patterns: [
       /game[-_ ]?dev/,
+      /game[-_ ]?audio/,
+      /godot/,
+      /roblox/,
       /game[-_ ]?engineer/,
       /unity/,
       /unreal/,
@@ -83,7 +86,7 @@ const HINT_RULES: HintRule[] = [
   },
   {
     role: 'researcher',
-    patterns: [/research/, /trend/, /analyst/, /synthesist/, /조사/],
+    patterns: [/research/, /trend/, /analyst/, /synthesist/, /조사/, /summary/, /report/],
   },
   {
     role: 'marketer',
@@ -125,11 +128,20 @@ function haystack(agent: Agent): string {
  * Deterministic: same agent → same role forever.
  */
 export function resolveOfficeV2VisualRole(agent: Agent): OfficeV2VisualRole {
+  // The agent's own id/name decides first; its description only breaks ties.
+  // (Descriptions mention other fields — a trend researcher's mentions "games",
+  // a UX researcher's mentions "testing" — which sent them to the wrong room.)
+  const title = `${agent.id} ${agent.name}`.toLowerCase()
+  for (const rule of HINT_RULES) {
+    if (rule.patterns.some((p) => p.test(title))) return rule.role
+  }
+  const byDivision = DIVISION_ROLE[agent.division]
+  if (byDivision) return byDivision
   const text = haystack(agent)
   for (const rule of HINT_RULES) {
     if (rule.patterns.some((p) => p.test(text))) return rule.role
   }
-  return DIVISION_ROLE[agent.division] ?? FALLBACK
+  return FALLBACK
 }
 
 /** Stable variation seed for future hair/outfit/skin/accessory kits. */

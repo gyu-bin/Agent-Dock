@@ -622,8 +622,10 @@ export class RealAIExecutionEngine implements ExecutionEngine {
     all: PipelineStep[],
   ): Promise<boolean> {
     const now = new Date().toISOString()
-    const isLast = step.order === Math.max(...all.map((s) => s.order))
-    const status = isLast && all.length > 1 ? 'reviewing' : 'running'
+    // Only an actual review step is a "meeting"; a last step that writes (e.g. the final
+    // report) is desk work — otherwise the writer sits alone in the meeting room.
+    const isReview = /검토|리뷰|review|현실성|reality/i.test(`${step.label} ${step.agentId}`)
+    const status = isReview && all.length > 1 ? 'reviewing' : 'running'
 
     for (const s of all) {
       if (s.id !== step.id && s.status === 'completed') {

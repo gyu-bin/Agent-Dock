@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, Moon, Plus, Sun, Users } from 'lucide-react'
+import { ArrowLeft, Bell, ChevronDown, Moon, PanelLeftClose, PanelLeftOpen, Plus, Sun, Users } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { setActiveProject } from '../api/client'
 import { t } from '../i18n'
@@ -27,6 +27,10 @@ export function TopBar() {
   const theme = useDeckStore((s) => s.theme)
   const toggleTheme = useDeckStore((s) => s.toggleTheme)
   const pendingCount = useDeckStore(selectPendingApprovalCount)
+  const sidebarCollapsed = useDeckStore((s) => s.sidebarCollapsed)
+  const toggleSidebar = useDeckStore((s) => s.toggleSidebar)
+  const canGoBack = useDeckStore((s) => s.navHistory.length > 0)
+  const goBack = useDeckStore((s) => s.goBack)
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -58,6 +62,12 @@ export function TopBar() {
   return (
     <header className={styles.topbar}>
       <div className={styles.left}>
+        <button type="button" className={styles.iconBtn} onClick={toggleSidebar} aria-label={sidebarCollapsed ? '메뉴 펼치기' : '메뉴 접기'} title={sidebarCollapsed ? '메뉴 펼치기' : '메뉴 접기'}>
+          {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+        </button>
+        <button type="button" className={styles.iconBtn} onClick={goBack} disabled={!canGoBack} aria-label="뒤로" title="뒤로">
+          <ArrowLeft size={16} />
+        </button>
         <div className={styles.projectWrap} ref={menuRef}>
           <button
             type="button"
