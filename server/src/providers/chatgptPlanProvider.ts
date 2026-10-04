@@ -37,6 +37,9 @@ export async function readPlanStream(response: Response, model: string, onComple
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''; let content = ''; let completed: Record<string, any> | undefined; let reported = 0
+  // Output items as they finish. The final 'response.completed' event may carry an
+  // empty output list (seen with plan streaming), which lost every web search source.
+  const items: Record<string, any>[] = []
   try {
     while (true) {
       const chunk = await reader.read()
@@ -53,12 +56,14 @@ export async function readPlanStream(response: Response, model: string, onComple
           if (content.length - reported >= 200) { reported = content.length; reportProgress({ chars: content.length }) }
         }
         if (event.type === 'response.failed' || event.type === 'error') throw planError(502, event.response?.error?.code ?? event.code)
+        if (event.type === 'response.output_item.done' && event.item) items.push(event.item)
         if (event.type === 'response.completed') completed = event.response
       }
       if (chunk.done || completed) break
     }
   } finally { await reader.cancel().catch(() => undefined) }
   if (!completed || completed.status && completed.status !== 'completed') throw Object.assign(new Error('ChatGPT 응답이 완료되기 전에 연결이 종료됐습니다.'), { code: 'CHATGPT_STREAM_INCOMPLETE', status: 502 })
+  if (!completed.output?.length && items.length) completed = { ...completed, output: items }
   onCompleted?.(completed)
   const finalText = (completed.output ?? []).flatMap((item: any) => (item.content ?? []).filter((part: any) => part.type === 'output_text').map((part: any) => part.text)).join('')
   content = finalText || content

@@ -222,9 +222,13 @@ export function createWebSearchProvider(allowApiBilling = false): WebSearchProvi
   return fallback
 }
 
-/** Steam store search only makes sense for game/Steam questions. */
+/**
+ * Steam store search only answers questions about Steam itself. A generic "games"
+ * in a query (e.g. "Google Play top charts apps games") must not route to Steam,
+ * whose fallback returns unrelated featured PC games.
+ */
 export function isGameQuery(query: string): boolean {
-  return /steam|스팀|게임|game|gaming|indie|인디|rpg|fps|moba|roguelike|로그라이크/i.test(query)
+  return /steam|스팀/i.test(query) && !/app\s*store|앱\s*스토어|google\s*play|구글\s*플레이|플레이\s*스토어|mobile|모바일/i.test(query)
 }
 
 /**

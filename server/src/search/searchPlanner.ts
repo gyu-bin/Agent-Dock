@@ -44,7 +44,7 @@ export async function planSearchQueries(
           role: 'system',
           content: `You plan web search queries for Agent Deck research.
 Return 2–5 focused queries. Do not answer the user request.
-Prefer English queries for global markets (Steam, tech) plus one local-language query when the user wrote Korean.
+Prefer English queries for global markets plus one local-language query when the user wrote Korean. Match the platform the user asked about (e.g. App Store/Google Play for mobile apps, Steam only for Steam/PC games).
 Include the year ${input.currentDate.slice(0, 4)} when recency matters.
 Never invent source URLs.`,
         },
