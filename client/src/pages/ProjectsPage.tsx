@@ -19,6 +19,7 @@ import {
   setActiveProject,
   setProjectTeam,
   updateProject,
+  pickLocalFolder,
   updateProjectContext,
   createProjectGoal,
   patchProjectGoal,
@@ -1721,9 +1722,20 @@ function ProjectPathField({ projectId, path, onSaved }: { projectId: string; pat
     return (
       <p className={proj.path}>
         코드 폴더: {path || '미연결 (분석·기획 작업에는 필요 없어요)'}{' '}
-        <button type="button" className={proj.pathEdit} onClick={() => { setValue(path ?? ''); setEditing(true) }}>
+        <button
+          type="button"
+          className={proj.pathEdit}
+          onClick={() => {
+            setErr(null)
+            void pickLocalFolder('코드 폴더 절대 경로')
+              .then((picked) => (picked ? updateProject(projectId, { path: picked }).then(onSaved) : undefined))
+              .catch((er) => { setErr(er instanceof Error ? er.message : String(er)); setValue(path ?? ''); setEditing(true) })
+          }}
+        >
           {path ? '변경' : '연결'}
         </button>
+        <button type="button" className={proj.pathEdit} onClick={() => { setValue(path ?? ''); setEditing(true) }}>직접 입력</button>
+        {err ? <span className={proj.pathError}>{err}</span> : null}
       </p>
     )
   }

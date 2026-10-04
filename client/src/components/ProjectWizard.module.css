@@ -212,3 +212,4 @@ details.sourceFields > summary { cursor: pointer; font-size: 13px; font-weight: 
 .goalActions { display: flex; align-items: center; gap: 12px; }
 .presetList li.aiRow { display: grid; grid-template-columns: minmax(90px, auto) 1fr; gap: 2px 12px; }
 .presetList li.aiRow small { grid-column: 1 / -1; color: var(--ad-ink-soft); font-size: 12px; }
+.pathRow { display: flex; gap: 8px; } .pathRow input { flex: 1; min-width: 0; }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import type { ProjectType } from '../domain/types'
 import { getPresetMatches } from '../domain/teamMatcher'
-import { createProject, recommendTeamForGoal, type TeamRecommendation } from '../api/client'
+import { createProject, pickLocalFolder, recommendTeamForGoal, type TeamRecommendation } from '../api/client'
 import { displayAgentName } from '../i18n/agentNames'
 import { useDeckStore } from '../store/useDeckStore'
 import { defaultRuntimeForNewTeam } from '../domain/teamRuntime'
@@ -293,7 +293,10 @@ export function ProjectWizard() {
                   ) : (
                     <label className={styles.field}>
                       <span>프로젝트 경로</span>
-                      <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="~/Desktop/Coding/my-app" />
+                      <div className={styles.pathRow}>
+                        <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="~/Desktop/Coding/my-app" />
+                        <button type="button" className={styles.ghost} onClick={() => void pickLocalFolder('프로젝트 폴더 절대 경로').then((p) => { if (p) setPath(p) }).catch(() => undefined)}>폴더 선택</button>
+                      </div>
                     </label>
                   )}
                 </details>

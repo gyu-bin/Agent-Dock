@@ -8,7 +8,7 @@ import {
   selectTasksForActive,
   useDeckStore,
 } from '../store/useDeckStore'
-import {
+import { pickLocalFolder,
   stageAttachmentFile,
   stageAttachmentFolder,
   stageAttachmentUrl,
@@ -134,13 +134,15 @@ export function AiChatPanel({
       setAttachError('활성 Project가 필요합니다.')
       return
     }
-    const folderPath = window.prompt(
-      '로컬 폴더 절대 경로 (브라우저만으로는 경로를 알 수 없습니다)',
-    )
-    if (!folderPath?.trim()) {
-      setAttachError('로컬 폴더 선택이 필요합니다.')
+    setMenuOpen(false)
+    let folderPath: string | null
+    try {
+      folderPath = await pickLocalFolder('첨부할 폴더의 절대 경로')
+    } catch (err) {
+      setAttachError(err instanceof Error ? err.message : String(err))
       return
     }
+    if (!folderPath) return
     setBusy(true)
     setAttachError(null)
     try {

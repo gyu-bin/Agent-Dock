@@ -1769,3 +1769,22 @@ export async function recommendTeamForGoal(input: { name: string; type: string; 
   if (!res.ok) throw new Error(body.error ?? `팀 추천 실패: ${res.status}`)
   return body.members ?? []
 }
+
+/**
+ * Pick a local folder's absolute path. Uses the native macOS dialog through the local
+ * server; where that is not available, asks for the path. null = cancelled.
+ */
+export async function pickLocalFolder(fallbackLabel = '폴더 절대 경로'): Promise<string | null> {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/local/pick-folder`, { method: 'POST' })
+    if (res.ok) {
+      const body = (await res.json()) as { path?: string; cancelled?: boolean }
+      return body.path ?? null
+    }
+    if (res.status !== 501 && res.status !== 404) throw new Error(`폴더 선택 실패: ${res.status}`)
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('폴더 선택 실패')) throw err
+  }
+  const typed = window.prompt(fallbackLabel)
+  return typed?.trim() || null
+}

@@ -504,6 +504,35 @@ app.delete('/api/execution/lock', (req, res) => {
   res.json({ ok, lock: getExecutionLock(projectId) })
 })
 
+/**
+ * Native folder picker for the local app. Browsers never reveal a folder's real path,
+ * but this server runs on the user's Mac, so it can show the macOS "choose folder"
+ * dialog and return the absolute path. Elsewhere (cloud, other OS) → 501, and the
+ * client falls back to typing the path.
+ */
+app.post('/api/local/pick-folder', async (_req, res) => {
+  if (isCloudRuntime() || process.platform !== 'darwin') {
+    res.status(501).json({ error: '이 환경에서는 폴더 선택 창을 열 수 없어요.', code: 'FOLDER_PICKER_UNSUPPORTED' })
+    return
+  }
+  const { execFile } = await import('node:child_process')
+  execFile(
+    'osascript',
+    ['-e', 'activate', '-e', 'POSIX path of (choose folder with prompt "Agent Deck에 연결할 폴더를 고르세요")'],
+    { timeout: 5 * 60_000 },
+    (err, stdout, stderr) => {
+      if (err) {
+        // -128 = user pressed Cancel
+        if (/-128/.test(String(stderr)) || /-128/.test(err.message)) res.json({ cancelled: true })
+        else res.status(500).json({ error: '폴더 선택 창을 열지 못했어요.', code: 'FOLDER_PICKER_FAILED' })
+        return
+      }
+      const picked = stdout.trim().replace(/\/$/, '')
+      res.json(picked ? { path: picked } : { cancelled: true })
+    },
+  )
+})
+
 app.post('/api/team/recommend', async (req, res) => {
   const cancellation = requestCancellation(res)
   try {
